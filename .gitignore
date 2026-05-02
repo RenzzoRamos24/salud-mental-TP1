@@ -1,5 +1,29 @@
+# ─── Python ───
 venv/
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+
+# ─── Secrets / config local ───
 .env
+.env.local
+
+# ─── Base de datos local ───
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Frontend ───
+project/node_modules/
+project/dist/
+project/.vite/
+
+# ─── Logs ───
+*.log
+
+# ─── Editor / OS ───
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -6,7 +6,8 @@ from app.utils.logger import get_logger
 from app.services.nlp_service import NLPService
 import logging
 
-# Configura logging global
+# Configura logging global (handler en el logger "app" — todos los hijos heredan)
+get_logger("app")
 logger = get_logger(__name__)
 
 # Crea tablas

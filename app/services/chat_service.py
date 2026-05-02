@@ -199,9 +199,11 @@ class ChatService:
                 "fecha_analisis": datetime.utcnow().isoformat(),
                 "respuestas_analizadas": len(respuestas_dict),
                 "resultado": {
-                    "nivel_riesgo": resultado_nlp["nivel_riesgo"].value,
-                    "confianza": f"{resultado_nlp['score']*100:.1f}%",
-                    "explicacion": resultado_nlp["explicacion"]
+                    "nivel_riesgo": resultado_nlp["nivel_riesgo"],
+                    "condiciones_detectadas": resultado_nlp["condiciones_detectadas"],
+                    "scores_completos": resultado_nlp["scores_completos"],
+                    "explicacion": resultado_nlp["explicacion"],
+                    "modelo": resultado_nlp["modelo"],
                 }
             }
         

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 # ═════════════════════════════════════════════════════════════════
@@ -44,7 +44,7 @@ class AnswerResponse(BaseModel):
 
 class ConversacionItem(BaseModel):
     """Item de conversación"""
-    pregunta_numero: int
+    numero: int
     pregunta: str
     respuesta: str
 
@@ -58,15 +58,31 @@ class ConversationResponse(BaseModel):
     total_respuestas: int
 
 
+# ═════════════════════════════════════════════════════════════════
+# ANÁLISIS MULTI-CONDICIÓN
+# ═════════════════════════════════════════════════════════════════
+
+class CondicionDetectada(BaseModel):
+    """Una condición clínica detectada con su nivel de confianza"""
+    etiqueta: str = Field(..., description="Nombre legible de la condición")
+    confianza: float = Field(..., description="Confianza del modelo (0-100)")
+
+
 class AnalysisResultado(BaseModel):
-    """Resultado del análisis"""
-    nivel_riesgo: str
-    confianza: str
-    explicacion: str
+    """Resultado detallado del análisis multi-condición"""
+    nivel_riesgo: str = Field(..., description="CRÍTICO | ALTO | MEDIO | BAJO")
+    condiciones_detectadas: Dict[str, CondicionDetectada] = Field(
+        ..., description="Mapa clave→condición detectada con confianza"
+    )
+    scores_completos: Dict[str, float] = Field(
+        ..., description="Scores (%) de TODAS las condiciones evaluadas"
+    )
+    explicacion: str = Field(..., description="Interpretación clínica en español")
+    modelo: str = Field(..., description="Modelo BERT usado")
 
 
 class AnalysisResponse(BaseModel):
-    """Response del análisis"""
+    """Response completa del análisis"""
     session_id: str
     usuario: str
     fecha_analisis: str
