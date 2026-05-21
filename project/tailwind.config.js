@@ -7,91 +7,82 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Pastel Empático — paleta principal lavanda (salud mental / calma / confianza)
+        // Verde agua — vivo, fresco, no militar.
+        green: {
+          50:  '#ECFDF5',
+          100: '#D1FAE5',
+          200: '#A7F3D0',
+          300: '#6EE7B7',
+          400: '#34D399',
+          500: '#10B981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065F46',
+          900: '#064E3B',
+        },
+        // Aliases mantenidos por compatibilidad — todos remapeados al verde nuevo.
         brand: {
-          50:  '#F6F3FF',
-          100: '#EDE7FE',
-          200: '#DDD3FD',
-          300: '#C5B3FB',
-          400: '#A78BFA',
-          500: '#8B6CF0',
-          600: '#7551E0',
-          700: '#5E3FC1',
-          800: '#4A3299',
-          900: '#3A2876',
+          50: '#ECFDF5', 100: '#D1FAE5', 200: '#A7F3D0', 300: '#6EE7B7',
+          400: '#34D399', 500: '#10B981', 600: '#059669', 700: '#047857',
+          800: '#065F46', 900: '#064E3B',
         },
-        // Melocotón cálido — empatía / acción suave
-        peach: {
-          50:  '#FFF6F2',
-          100: '#FFE9DF',
-          200: '#FFD2BD',
-          300: '#FFB597',
-          400: '#FB9573',
-          500: '#F2754F',
-          600: '#D85B36',
-        },
-        // Menta — calma / éxito
         mint: {
-          50:  '#EFFBF4',
-          100: '#D4F5E2',
-          200: '#A8EBC4',
-          300: '#74DBA1',
-          400: '#3DC57E',
-          500: '#1FA862',
-          600: '#138A4E',
+          50: '#ECFDF5', 100: '#D1FAE5', 200: '#A7F3D0', 300: '#6EE7B7',
+          400: '#34D399', 500: '#10B981', 600: '#059669',
         },
-        // Cielo — info
+        // Peach y sky neutralizados a grises FRÍOS (no cremosos) para no
+        // ensuciar el fondo blanco con un tinte amarillento.
+        peach: {
+          50: '#FFFFFF', 100: '#F4F5F6', 200: '#E5E7EB', 300: '#CBD0D6',
+          400: '#9CA3AF', 500: '#6B7280', 600: '#4B5563',
+        },
         sky2: {
-          50:  '#EFF8FE',
-          100: '#D9EEFC',
-          200: '#B0DBF8',
-          300: '#7DC1F1',
-          400: '#4BA5E6',
-          500: '#2486CC',
+          50: '#FFFFFF', 100: '#F4F5F6', 200: '#E5E7EB',
+          300: '#CBD0D6', 400: '#9CA3AF', 500: '#6B7280',
         },
-        // Niveles de riesgo (alineado con backend)
+        // Riesgo: dejamos el rojo de crisis para SOS y emergencia.
         risk: {
-          bajo:    '#3DC57E',
-          medio:   '#F2A93B',
-          alto:    '#F2754F',
-          critico: '#E0413A',
-          sin:     '#9A93A4',
+          bajo:    '#10B981',
+          medio:   '#F59E0B',
+          alto:    '#F97316',
+          critico: '#DC2626',
+          sin:     '#9CA3AF',
         },
-        // Fondos
         cream: {
-          50:  '#FBF7F2',
-          100: '#F5EFE6',
-          200: '#ECE3D4',
+          50:  '#FFFFFF',
+          100: '#F8F9FA',
+          200: '#EEF0F2',
         },
-        // Texto / tinta cálida (no negro puro)
         ink: {
-          900: '#1F1B24',
-          800: '#2E2735',
-          700: '#3F3A45',
-          600: '#55505C',
-          500: '#6B6471',
-          400: '#928B98',
-          300: '#B7B0BD',
-          200: '#DCD7E0',
-          100: '#EDEAF0',
+          900: '#0A0A0A',
+          800: '#1A1A1A',
+          700: '#262626',
+          600: '#3D3D3D',
+          500: '#5C5C5C',
+          400: '#8A8A8A',
+          300: '#B4B4B4',
+          200: '#D6D6D6',
+          100: '#EEF0F2',
         },
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
-        serif: ['Fraunces', 'Georgia', 'serif'],
+        sans:    ['"Work Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Work Sans"', 'system-ui', 'sans-serif'],
+        serif:   ['"Work Sans"', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        'xl2': '1.25rem',
-        '2xl2': '1.75rem',
+        'xl2': '1rem',
+        '2xl2': '1.25rem',
       },
       boxShadow: {
-        'soft':   '0 2px 8px -2px rgba(94, 63, 193, 0.08), 0 1px 3px -1px rgba(94, 63, 193, 0.06)',
-        'pastel': '0 8px 24px -8px rgba(139, 108, 240, 0.18), 0 2px 6px -2px rgba(139, 108, 240, 0.10)',
-        'lift':   '0 20px 50px -20px rgba(94, 63, 193, 0.30)',
+        'soft':   '0 1px 2px rgba(10, 10, 10, 0.04), 0 2px 6px rgba(10, 10, 10, 0.04)',
+        'pastel': '0 2px 6px rgba(10, 10, 10, 0.05), 0 8px 24px rgba(10, 10, 10, 0.06)',
+        'lift':   '0 6px 16px rgba(10, 10, 10, 0.08), 0 24px 48px rgba(10, 10, 10, 0.12)',
+        'card':   '0 1px 3px rgba(10, 10, 10, 0.05), 0 4px 12px rgba(10, 10, 10, 0.05)',
+        'green':  '0 6px 20px rgba(16, 185, 129, 0.30)',
       },
       backgroundImage: {
-        'pastel-hero': 'radial-gradient(at 0% 0%, #EDE7FE 0%, transparent 50%), radial-gradient(at 100% 0%, #FFE9DF 0%, transparent 50%), radial-gradient(at 50% 100%, #D4F5E2 0%, transparent 55%)',
+        'pastel-hero': 'none',
       },
     },
   },

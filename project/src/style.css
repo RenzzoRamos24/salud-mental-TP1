@@ -5,255 +5,167 @@
 html, body, #app { height: 100%; }
 
 body {
-  background: #FBF1E6;
-  color: #1F1B24;
+  background: #FFFFFF;
+  color: #0A0A0A;
+  font-family: "Work Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar pastel */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #DDD3FD; border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: #C5B3FB; }
+::-webkit-scrollbar-thumb { background: #D6D6D6; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #B4B4B4; }
 
-/* ------------------------------------------------------------------ */
-/* Layout helpers                                                     */
-/* ------------------------------------------------------------------ */
 @layer components {
-  .page-shell {
-    @apply max-w-6xl mx-auto px-4 sm:px-6 py-8;
-  }
-  .page-shell-wide {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 py-8;
-  }
+  .page-shell      { @apply max-w-5xl mx-auto px-5 sm:px-8 py-10; }
+  .page-shell-wide { @apply max-w-6xl mx-auto px-5 sm:px-8 py-10; }
 
-  /* Card pastel — superficie blanca sobre cream, esquinas suaves */
-  .card {
-    @apply bg-white rounded-2xl border border-ink-100 shadow-soft;
-  }
-  .card-hero {
-    @apply bg-white rounded-2xl2 border border-brand-100 shadow-pastel;
-  }
-  .card-pastel {
-    @apply rounded-2xl bg-brand-50 border border-brand-100;
-  }
-  .card-peach {
-    @apply rounded-2xl bg-peach-50 border border-peach-100;
-  }
-  .card-mint {
-    @apply rounded-2xl bg-mint-50 border border-mint-100;
-  }
+  /* Superficies */
+  .card        { @apply bg-white rounded-xl border border-ink-100 shadow-card; }
+  .card-hero   { @apply bg-white rounded-xl border border-ink-100 shadow-card; }
+  .card-pastel { @apply bg-white rounded-xl border border-ink-100 shadow-card; }
+  .card-peach  { @apply bg-white rounded-xl border border-ink-100 shadow-card; }
+  .card-mint   { @apply bg-white rounded-xl border-l-4 border-l-green-600 border border-ink-100 shadow-card; }
 
-  /* Sección con título */
-  .section-title {
-    @apply text-lg font-semibold text-ink-900 mb-3 flex items-center gap-2;
-  }
-  .section-subtitle {
-    @apply text-sm text-ink-500;
-  }
+  .section-title    { @apply text-lg font-semibold text-ink-900 mb-3; }
+  .section-subtitle { @apply text-sm text-ink-500; }
 
   /* Botones */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md font-medium text-sm
+           transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-300
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  .btn-primary {
-    @apply btn bg-brand-500 text-white shadow-soft hover:bg-brand-600 active:bg-brand-700 focus-visible:ring-brand-300;
-  }
-  .btn-secondary {
-    @apply btn bg-white text-brand-700 border border-brand-200 hover:bg-brand-50 focus-visible:ring-brand-200;
-  }
-  .btn-ghost {
-    @apply btn bg-transparent text-ink-700 hover:bg-ink-100 focus-visible:ring-ink-200;
-  }
-  .btn-peach {
-    @apply btn bg-peach-400 text-white hover:bg-peach-500 focus-visible:ring-peach-200;
-  }
-  .btn-mint {
-    @apply btn bg-mint-400 text-white hover:bg-mint-500 focus-visible:ring-mint-200;
-  }
-  .btn-danger {
-    @apply btn bg-risk-critico text-white hover:opacity-90 focus-visible:ring-red-200;
-  }
-  .btn-sm {
-    @apply px-3 py-1.5 text-xs;
-  }
+  .btn-primary   { @apply btn bg-green-600 text-white hover:bg-green-700 shadow-green; }
+  .btn-secondary { @apply btn bg-white text-ink-900 border border-ink-200 hover:border-green-500 shadow-soft; }
+  .btn-ghost     { @apply btn bg-transparent text-ink-700 hover:bg-ink-100; }
+  .btn-peach     { @apply btn bg-white text-ink-900 border border-ink-200 hover:border-green-500 shadow-soft; }
+  .btn-mint      { @apply btn bg-green-600 text-white hover:bg-green-700 shadow-green; }
+  .btn-danger    { @apply btn bg-risk-critico text-white hover:opacity-90 shadow-soft; }
+  .btn-sm        { @apply px-3 py-1.5 text-xs; }
 
   /* Inputs */
   .input {
-    @apply w-full px-4 py-2.5 rounded-xl border border-ink-200 bg-white text-ink-900 placeholder:text-ink-400 transition focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100;
+    @apply w-full px-3.5 py-2.5 rounded-md border border-ink-200 bg-white text-ink-900
+           placeholder:text-ink-400 transition focus:outline-none focus:border-green-500;
   }
-  .input-lg {
-    @apply input px-4 py-3 text-base;
-  }
-  .label {
-    @apply block text-sm font-medium text-ink-700 mb-1.5;
-  }
-  .field-hint {
-    @apply mt-1 text-xs text-ink-500;
-  }
-  .field-error {
-    @apply mt-1 text-xs text-risk-critico;
-  }
+  .input-lg { @apply input py-3 text-base; }
+  .label    { @apply block text-sm font-medium text-ink-800 mb-1.5; }
+  .field-hint  { @apply mt-1 text-xs text-ink-500; }
+  .field-error { @apply mt-1 text-xs text-risk-critico; }
 
   /* Etiquetas / chips */
-  .chip {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium;
-  }
-  .chip-brand   { @apply chip bg-brand-100 text-brand-700; }
-  .chip-peach   { @apply chip bg-peach-100 text-peach-600; }
-  .chip-mint    { @apply chip bg-mint-100 text-mint-600; }
-  .chip-ink     { @apply chip bg-ink-100 text-ink-700; }
+  .chip       { @apply inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium; }
+  .chip-brand { @apply chip bg-green-50 text-green-700 border border-green-100; }
+  .chip-peach { @apply chip bg-white text-ink-700 border border-ink-200; }
+  .chip-mint  { @apply chip bg-green-50 text-green-700 border border-green-100; }
+  .chip-ink   { @apply chip bg-ink-100 text-ink-700; }
 
-  /* DSM-5 tag (criterio clínico) — borde lavanda con punto */
   .dsm5-tag {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide
-           bg-white border border-brand-200 text-brand-700;
-  }
-  .dsm5-tag::before {
-    content: '';
-    width: 6px; height: 6px;
-    border-radius: 9999px;
-    background: #8B6CF0;
+    @apply inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider
+           bg-white border border-ink-200 text-ink-700;
   }
 
-  /* Badges de riesgo */
-  .risk-badge {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
-  }
-  .risk-bajo     { @apply risk-badge bg-mint-100 text-mint-600; }
-  .risk-medio    { @apply risk-badge bg-amber-100 text-amber-700; }
-  .risk-alto     { @apply risk-badge bg-peach-100 text-peach-600; }
-  .risk-critico  { @apply risk-badge bg-red-100 text-risk-critico; }
-  .risk-sin      { @apply risk-badge bg-ink-100 text-ink-500; }
+  .risk-badge   { @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border; }
+  .risk-bajo    { @apply risk-badge bg-green-50 border-green-200 text-green-700; }
+  .risk-medio   { @apply risk-badge bg-white border-ink-300 text-ink-800; }
+  .risk-alto    { @apply risk-badge bg-white border-ink-400 text-ink-900; }
+  .risk-critico { @apply risk-badge bg-white border-risk-critico text-risk-critico; }
+  .risk-sin     { @apply risk-badge bg-white border-ink-200 text-ink-500; }
 
-  /* Avatar circular */
-  .avatar {
-    @apply inline-flex items-center justify-center rounded-full bg-brand-100 text-brand-700 font-semibold;
-  }
-  .avatar-sm { @apply avatar w-8 h-8 text-xs; }
-  .avatar-md { @apply avatar w-10 h-10 text-sm; }
-  .avatar-lg { @apply avatar w-14 h-14 text-base; }
+  /* Avatares */
+  .avatar    { @apply inline-flex items-center justify-center rounded-full bg-green-100 text-green-700 font-medium; }
+  .avatar-sm { @apply avatar w-7 h-7 text-xs; }
+  .avatar-md { @apply avatar w-9 h-9 text-sm; }
+  .avatar-lg { @apply avatar w-12 h-12 text-base; }
 
-  /* Topbar Pastel Empático */
+  /* Topbar */
   .topbar-pastel {
-    @apply bg-white/85 backdrop-blur-md border-b border-brand-100 shadow-soft sticky top-0 z-30 no-print;
+    @apply bg-white border-b border-ink-100 sticky top-0 z-30 no-print shadow-soft;
   }
 
-  /* Sidebar item */
-  .nav-item {
-    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-700 hover:bg-brand-50 hover:text-brand-700 transition;
-  }
-  .nav-item-active {
-    @apply nav-item bg-brand-100 text-brand-800;
-  }
+  .nav-item        { @apply inline-flex items-center px-3 py-2 rounded-md text-sm text-ink-700 hover:bg-ink-100 transition; }
+  .nav-item-active { @apply nav-item bg-green-50 text-green-700; }
 
   /* Burbujas de chat */
   .bubble-bot {
-    @apply max-w-[80%] px-5 py-4 rounded-3xl rounded-tl-md bg-cream-50 border border-cream-200 text-ink-800 shadow-soft;
+    @apply max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm bg-white border border-ink-200 text-ink-900 shadow-soft;
   }
   .bubble-user {
-    @apply max-w-[80%] px-5 py-4 rounded-3xl rounded-tr-md bg-mint-400 text-white shadow-soft;
+    @apply max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm bg-green-600 text-white shadow-green;
   }
   .bubble-info {
-    @apply max-w-[80%] px-5 py-4 rounded-3xl rounded-tl-md bg-peach-50 border border-peach-200 text-peach-600 shadow-soft;
+    @apply max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm bg-white border-l-4 border-l-green-600 border border-ink-200 text-ink-900 shadow-soft;
   }
 
-  /* Chips clínicos tipo DASS / OPINION-BERT */
   .dass-tag {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-           bg-mint-100 text-mint-600;
-  }
-  .dass-tag::before {
-    content: '';
-    width: 6px; height: 6px;
-    border-radius: 9999px;
-    background: #1FA862;
+    @apply inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider
+           bg-white border border-green-200 text-green-700;
   }
   .opinion-tag {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-           bg-peach-100 text-peach-600;
-  }
-  .opinion-tag::before {
-    content: '';
-    width: 6px; height: 6px;
-    border-radius: 9999px;
-    background: #F2754F;
+    @apply inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider
+           bg-white border border-ink-300 text-ink-700;
   }
 
-  /* SOS pill flotante — peach/coral, esquina derecha */
+  /* SOS — sobrio, sin gradiente */
   .sos-fab {
-    @apply fixed bottom-8 right-6 z-40 inline-flex items-center gap-2 text-white font-bold
-           px-5 py-3 rounded-full shadow-lift transition no-print pulse-soft;
-    background: linear-gradient(135deg, #F88474, #E0413A);
+    @apply fixed bottom-6 right-6 z-40 inline-flex items-center gap-2
+           bg-risk-critico hover:bg-red-800 text-white font-semibold text-sm
+           px-4 py-2.5 rounded-md no-print transition shadow-lift;
   }
-  .sos-fab:hover { transform: translateY(-2px); }
 
-  /* Hero serif (titulares grandes tipo "Bienvenido a tu espacio…") */
+  /* Titulares */
   .hero-serif {
-    @apply font-serif font-semibold text-ink-900 tracking-tight leading-tight;
-    font-feature-settings: 'ss01';
+    @apply font-sans font-semibold text-ink-900 tracking-tight leading-tight;
   }
-  .hero-mint { @apply text-mint-500; }
+  .hero-mint { @apply text-green-700; }
 
-  /* Card del menú con flecha en esquina */
+  /* Card del menú */
   .menu-card {
-    @apply relative bg-white rounded-3xl border border-cream-200 shadow-soft p-6 transition
-           hover:-translate-y-0.5 hover:shadow-pastel cursor-pointer;
+    @apply relative bg-white rounded-xl border border-ink-100 p-6 transition shadow-card
+           hover:border-green-500 hover:shadow-pastel hover:-translate-y-0.5 cursor-pointer;
   }
   .menu-card-arrow {
-    @apply absolute top-5 right-5 w-7 h-7 inline-flex items-center justify-center
-           rounded-full text-ink-400 transition group-hover:text-brand-600 group-hover:bg-brand-50;
+    @apply absolute top-5 right-5 w-6 h-6 inline-flex items-center justify-center
+           text-ink-400 transition group-hover:text-green-700 group-hover:translate-x-0.5;
   }
-  .icon-box {
-    @apply w-14 h-14 rounded-2xl flex items-center justify-center text-2xl;
-  }
-  .icon-box-mint   { @apply icon-box bg-mint-200 text-mint-600; }
-  .icon-box-sky    { @apply icon-box bg-sky2-100 text-sky2-500; }
-  .icon-box-brand  { @apply icon-box bg-brand-100 text-brand-700; }
-  .icon-box-peach  { @apply icon-box bg-peach-100 text-peach-600; }
-  .icon-box-amber  { @apply icon-box bg-amber-100 text-amber-600; }
+  .icon-box       { @apply w-10 h-10 rounded-md flex items-center justify-center text-base font-medium; }
+  .icon-box-mint  { @apply icon-box bg-green-100 text-green-700; }
+  .icon-box-sky   { @apply icon-box bg-ink-100 text-ink-800; }
+  .icon-box-brand { @apply icon-box bg-green-100 text-green-700; }
+  .icon-box-peach { @apply icon-box bg-ink-100 text-ink-800; }
+  .icon-box-amber { @apply icon-box bg-ink-100 text-ink-800; }
 
-  /* Topbar minimal estilo Sami */
+  /* Wordmark */
   .sami-wordmark {
-    @apply font-serif text-xl font-semibold text-ink-900 tracking-tight;
+    @apply font-sans text-base font-semibold text-ink-900 tracking-tight;
   }
-  .sami-wordmark .accent { @apply text-mint-500 font-normal; }
+  .sami-wordmark .accent { @apply text-green-700 font-medium; }
   .user-pill {
-    @apply inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white border border-cream-200 text-sm;
+    @apply inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-md bg-white border border-ink-200 text-sm shadow-soft;
   }
 
   /* Banners */
-  .banner {
-    @apply rounded-2xl px-5 py-4 flex items-start gap-3 border;
-  }
-  .banner-info    { @apply banner bg-sky2-50 border-sky2-200 text-sky2-500; }
-  .banner-warn    { @apply banner bg-amber-50 border-amber-200 text-amber-700; }
-  .banner-danger  { @apply banner bg-red-50 border-red-200 text-risk-critico; }
-  .banner-success { @apply banner bg-mint-50 border-mint-200 text-mint-600; }
-  .banner-brand   { @apply banner bg-brand-50 border-brand-200 text-brand-700; }
+  .banner         { @apply rounded-md px-4 py-3 flex items-start gap-3 border text-sm shadow-soft; }
+  .banner-info    { @apply banner bg-white border-ink-200 text-ink-800; }
+  .banner-warn    { @apply banner bg-white border-ink-300 text-ink-800; }
+  .banner-danger  { @apply banner bg-white border-l-4 border-l-risk-critico border-ink-200 text-risk-critico; }
+  .banner-success { @apply banner bg-white border-l-4 border-l-green-600 border-ink-200 text-ink-800; }
+  .banner-brand   { @apply banner bg-white border-l-4 border-l-green-600 border-ink-200 text-ink-800; }
 }
 
-/* ------------------------------------------------------------------ */
-/* Animaciones                                                        */
-/* ------------------------------------------------------------------ */
-@keyframes dot-pulse {
-  0%, 80%, 100% { opacity: 0.2; }
-  40% { opacity: 1; }
-}
-.dot-1 { animation: dot-pulse 1.4s infinite; animation-delay: 0s; }
-.dot-2 { animation: dot-pulse 1.4s infinite; animation-delay: 0.2s; }
-.dot-3 { animation: dot-pulse 1.4s infinite; animation-delay: 0.4s; }
+@keyframes dot-pulse { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+.dot-1 { animation: dot-pulse 1.4s infinite; }
+.dot-2 { animation: dot-pulse 1.4s infinite .2s; }
+.dot-3 { animation: dot-pulse 1.4s infinite .4s; }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-in-up { animation: fade-in-up 0.35s ease-out; }
+.fade-in-up { animation: fade-in-up .25s ease-out; }
 
-@keyframes pulse-soft {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 117, 79, 0.5); }
-  50%      { box-shadow: 0 0 0 12px rgba(242, 117, 79, 0); }
-}
-.pulse-soft { animation: pulse-soft 2s infinite; }
+.pulse-soft { /* disabled: too AI-decorative */ }
 
 @media print {
   .no-print { display: none !important; }

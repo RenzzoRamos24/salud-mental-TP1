@@ -1,34 +1,35 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { api } from '../api'
-import { authStore } from '../store/auth'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { api } from "../api";
+import { authStore } from "../store/auth";
 
-const router = useRouter()
+const router = useRouter();
 
-const VERSION = '1.0'
-const aceptado = ref(false)
-const cargando = ref(false)
-const error = ref('')
+const VERSION = "1.0";
+const aceptado = ref(false);
+const cargando = ref(false);
+const error = ref("");
 
 async function aceptar() {
   if (!aceptado.value) {
-    error.value = 'Debes marcar la casilla para continuar'
-    return
+    error.value = "Debes marcar la casilla para continuar";
+    return;
   }
-  cargando.value = true
-  error.value = ''
+  cargando.value = true;
+  error.value = "";
   try {
-    await api.aceptarConsentimiento(VERSION)
+    await api.aceptarConsentimiento(VERSION);
     authStore.setUser({
       consentimiento_aceptado: true,
       consentimiento_version: VERSION,
-    })
-    router.push('/menu')
+    });
+    router.push("/menu");
   } catch (e) {
-    error.value = e.response?.data?.detail || 'Error registrando consentimiento'
+    error.value =
+      e.response?.data?.detail || "Error registrando consentimiento";
   } finally {
-    cargando.value = false
+    cargando.value = false;
   }
 }
 </script>
@@ -37,80 +38,92 @@ async function aceptar() {
   <div class="min-h-screen py-10 px-4">
     <div class="max-w-3xl mx-auto fade-in-up">
       <div class="text-center mb-8">
-        <p class="sami-wordmark text-xl">Sami <span class="accent">· Salud Mental Juvenil</span></p>
-        <h1 class="hero-serif text-3xl sm:text-4xl mt-4">
-          Consentimiento <span class="hero-mint">informado</span>
-        </h1>
-        <p class="text-ink-500 text-sm mt-3">Versión {{ VERSION }} · Lee antes de comenzar tu evaluación</p>
+        <p class="sami-wordmark text-xl">
+          Sami <span class="accent">· Salud Mental Juvenil</span>
+        </p>
+        <h1 class="hero-serif text-3xl sm:text-4xl mt-4">Antes de empezar</h1>
+        <p class="text-ink-500 text-sm mt-3">
+          Léelo con calma. Versión {{ VERSION }}.
+        </p>
       </div>
 
-      <div class="bg-white rounded-3xl border border-cream-200 shadow-soft p-6 sm:p-8">
+      <div
+        class="bg-white rounded-xl border border-ink-200 shadow-soft p-6 sm:p-8"
+      >
         <div class="space-y-4 text-ink-700 leading-relaxed">
           <p>
-            Bienvenido/a al sistema de evaluación de bienestar emocional para estudiantes,
-            desarrollado como prototipo de tesis con tecnología de Procesamiento de Lenguaje Natural (BERT).
-            Antes de comenzar, lee y acepta los siguientes puntos:
+            Esto es un espacio para que cuentes cómo te sientes y recibas una
+            orientación. Antes de que empieces, queremos que sepas tres cosas.
           </p>
 
           <div class="card-pastel p-5">
             <h3 class="section-title !mb-2">
               <span class="dsm5-tag">1</span>
-              Naturaleza informativa
+              Esto no es un diagnóstico
             </h3>
             <p class="text-sm">
-              Este sistema realiza un <strong>cribado preliminar</strong> mediante análisis automático
-              de tus respuestas. <strong>No constituye un diagnóstico clínico</strong> ni reemplaza la
-              evaluación de un profesional de salud mental.
+              Sami lee tus respuestas y te da una orientación general. No
+              reemplaza a un psicólogo o psicóloga de verdad. Si algo te
+              preocupa, lo conversamos con un profesional.
             </p>
           </div>
 
           <div class="card-pastel p-5">
             <h3 class="section-title !mb-2">
               <span class="dsm5-tag">2</span>
-              Uso de tus datos
+              Qué pasa con lo que escribes
             </h3>
-            <ul class="list-disc list-inside text-sm space-y-1 marker:text-brand-400">
-              <li>Tus respuestas se almacenan de forma confidencial en nuestra base de datos.</li>
-              <li>Los resultados pueden ser revisados por un psicólogo/a asignado/a.</li>
-              <li>No se comparten con terceros fuera del marco académico de la tesis.</li>
-              <li>Puedes solicitar la eliminación de tus datos en cualquier momento.</li>
+            <ul
+              class="list-disc list-inside text-sm space-y-1 marker:text-green-400"
+            >
+              <li>
+                Lo guardamos de forma confidencial. No lo ven tus compañeros ni
+                tus profesores.
+              </li>
+              <li>Puede revisarlo la psicóloga del colegio que te acompañe.</li>
+              <li>No se lo compartimos a nadie más.</li>
+              <li>
+                Si en algún momento quieres que borremos todo, nos avisas y lo
+                hacemos.
+              </li>
             </ul>
           </div>
 
           <div class="card-mint p-5">
             <h3 class="section-title !mb-2">
               <span class="dsm5-tag">3</span>
-              Voluntariedad
+              Tú decides
             </h3>
             <p class="text-sm">
-              Tu participación es completamente voluntaria. Puedes interrumpir la evaluación
-              en cualquier momento sin consecuencias.
+              No tienes que terminar la conversación si no quieres. Puedes parar
+              cuando lo necesites, sin que pase nada.
             </p>
           </div>
 
           <div class="banner-danger">
-            <span class="text-xl">⚠️</span>
             <div>
-              <p class="font-semibold mb-1">Si estás en crisis ahora mismo</p>
+              <p class="font-semibold mb-1">Si lo necesitas ahora</p>
               <p class="text-sm">
-                Comunícate de inmediato con la <strong>Línea 113 (MINSA), opción 5</strong> —
-                atención 24/7 en salud mental, o acude a la emergencia más cercana.
+                Llama a la <strong>Línea 113, opción 5</strong> — atienden a
+                cualquier hora — o ve a la emergencia más cercana.
               </p>
             </div>
           </div>
         </div>
 
         <div class="mt-6 border-t border-ink-100 pt-6">
-          <label class="flex items-start gap-3 cursor-pointer p-4 rounded-2xl bg-brand-50 border border-brand-100 hover:border-brand-200 transition">
+          <label
+            class="flex items-start gap-3 cursor-pointer p-4 rounded-xl bg-green-50 border border-green-100 hover:border-green-200 transition"
+          >
             <input
               v-model="aceptado"
               type="checkbox"
-              class="mt-1 w-5 h-5 rounded border-ink-300 text-brand-500 focus:ring-brand-400"
+              class="mt-1 w-5 h-5 rounded border-ink-300 text-green-500 focus:ring-green-400"
               :disabled="cargando"
             />
             <span class="text-ink-800 text-sm">
-              <strong>He leído y acepto</strong> los términos del consentimiento informado y
-              autorizo el tratamiento de mis datos según lo descrito.
+              Lo leí y entiendo. Acepto que mis respuestas se usen como se
+              describe arriba.
             </span>
           </label>
 
@@ -121,7 +134,7 @@ async function aceptar() {
             :disabled="cargando || !aceptado"
             class="btn-mint w-full mt-4 py-3 text-base"
           >
-            {{ cargando ? 'Guardando…' : 'Aceptar y continuar' }}
+            {{ cargando ? "Guardando…" : "Aceptar y continuar" }}
           </button>
         </div>
       </div>

@@ -1,27 +1,27 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import ResultsScreen from '../components/ResultsScreen.vue'
+import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import ResultsScreen from "../components/ResultsScreen.vue";
 
-const router = useRouter()
-const resultado = ref(null)
+const router = useRouter();
+const resultado = ref(null);
 
 onMounted(() => {
-  const raw = sessionStorage.getItem('sm_upc_resultado')
+  const raw = sessionStorage.getItem("sm_upc_resultado");
   if (!raw) {
-    router.replace('/chat')
-    return
+    router.replace("/chat");
+    return;
   }
   try {
-    resultado.value = JSON.parse(raw)
+    resultado.value = JSON.parse(raw);
   } catch {
-    router.replace('/chat')
+    router.replace("/chat");
   }
-})
+});
 
 function reiniciar() {
-  sessionStorage.removeItem('sm_upc_resultado')
-  router.push('/chat')
+  sessionStorage.removeItem("sm_upc_resultado");
+  router.push("/chat");
 }
 </script>
 

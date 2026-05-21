@@ -1,30 +1,30 @@
-import { reactive, computed, readonly } from 'vue'
+import { reactive, computed, readonly } from "vue";
 
-const STORAGE_KEY = 'sm_upc_auth'
+const STORAGE_KEY = "sm_upc_auth";
 
 function leerStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    return null
+    return null;
   }
 }
 
 function escribirStorage(data) {
-  if (data) localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  else localStorage.removeItem(STORAGE_KEY)
+  if (data) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  else localStorage.removeItem(STORAGE_KEY);
 }
 
 const state = reactive({
   token: null,
   user: null,
-})
+});
 
-const inicial = leerStorage()
+const inicial = leerStorage();
 if (inicial) {
-  state.token = inicial.token
-  state.user = inicial.user
+  state.token = inicial.token;
+  state.user = inicial.user;
 }
 
 export const authStore = {
@@ -35,19 +35,19 @@ export const authStore = {
   rol: computed(() => state.user?.role || null),
 
   setSession(token, user) {
-    state.token = token
-    state.user = user
-    escribirStorage({ token, user })
+    state.token = token;
+    state.user = user;
+    escribirStorage({ token, user });
   },
 
   setUser(user) {
-    state.user = { ...state.user, ...user }
-    escribirStorage({ token: state.token, user: state.user })
+    state.user = { ...state.user, ...user };
+    escribirStorage({ token: state.token, user: state.user });
   },
 
   clear() {
-    state.token = null
-    state.user = null
-    escribirStorage(null)
+    state.token = null;
+    state.user = null;
+    escribirStorage(null);
   },
-}
+};

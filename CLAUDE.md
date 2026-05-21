@@ -113,16 +113,22 @@ Imágenes que el usuario fue compartiendo para alinear el frontend:
 
 Cuando el usuario mande nuevos mocks suele dejarlos en `/home/renzo/` con un nombre descriptivo.
 
-## Estado del trabajo (rediseño visual)
+## Estado del trabajo
 
-Aplicado siguiendo los mocks anteriores:
-- ✅ AppTopbar minimalista (wordmark serif + user pill + cerrar sesión).
-- ✅ MainMenuView reconstruido (hero serif + 2-col cards con flecha + banner crisis peach + SOS pill).
-- ✅ ChatView reconstruido (sub-header con chip DASS-7, bubbles cream/mint, etiquetas DASS-X · TÍTULO, card "Analizando con Opinion-BERT").
-- ✅ AuthShell + LoginView rehechos según LOGIN.png (degradado peach→mint, card blanca, logo planta, inputs peach-50, botón mint pill).
-- ✅ ConsentView, ProfileView, MiHistorialView, SatisfactionSurveyView, RecursosView, ResultsScreen ajustados al criterio (hero-serif + CTAs mint en flujo estudiante).
-- ⏳ RegisterView, ForgotPasswordView, ResetPasswordView: heredan el nuevo AuthShell pero pueden necesitar ajuste de inputs/botón a mint cuando llegue su mock.
-- ⏳ Vistas psicólogo/admin: heredan PageHeader serif, falta refinar a nivel de cada card cuando se decida estilo final.
+### Implementación funcional (HUs)
+- **37 de 40 HUs completas.**
+- Pendientes documentadas en `PENDIENTES.md` (raíz): HU-32 (filtro por riesgo), HU-34 (PDF programático), HU-37 (WebSocket de logs).
+
+### Rediseño visual (estado actual)
+Identidad final: **verde agua (emerald) + blanco + negro**, sin pastel ni emojis.
+- Paleta única `green-*` (`#10B981` principal, `#34D399` claro, `#ECFDF5` fondos). Aliases `brand`/`mint` apuntan al mismo verde; `peach`/`sky2`/`cream` neutralizados a grises fríos (#F4F5F6).
+- Fondo body blanco puro (#FFFFFF), texto `#0A0A0A`.
+- Tipografía: **Work Sans** (humanista, sobria). No serif.
+- Sombras suaves (`shadow-soft`, `shadow-card`, `shadow-green`) en cards, botones, topbar. Hover de cards eleva con `-translate-y-0.5`.
+- Banners y cards de éxito/info: blancas con barra lateral verde (`border-l-4 border-l-green-600`).
+- Sin emojis decorativos. Todas las vistas barridas y formateadas con Prettier.
+- Recursos diferenciado por rol: estudiante ve líneas de ayuda + consejos; psicólogo/admin ven escalas (PHQ-9, GAD-7, ASRS, UCLA-3, C-SSRS), protocolos por nivel de riesgo y líneas de derivación.
+- Copies en tono conversacional, no spec-sheet ("Cuéntale a Sami cómo te has sentido", "Si lo necesitas ahora", "Borrar tu cuenta").
 
 ## SPRINTS.md
 
