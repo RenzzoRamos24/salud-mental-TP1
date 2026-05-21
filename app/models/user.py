@@ -21,6 +21,20 @@ class User(Base):
 
     activo = Column(Boolean, default=True, nullable=False)
 
+    # ── Sprint 8 ────────────────────────────────────────────────────
+    # HU-35: estado del caso (solo aplica a estudiantes).
+    #   "activo"      → caso abierto, evaluándose
+    #   "seguimiento" → el psicólogo lo está acompañando
+    #   "cerrado"     → caso resuelto / dado de alta
+    estado_caso = Column(String(20), nullable=True, default="activo", index=True)
+
+    # HU-38: psicólogo asignado al estudiante (FK suave por simplicidad — apunta a users.id).
+    # Solo se llena cuando role="estudiante".
+    psicologo_id = Column(String(36), nullable=True, index=True)
+
+    # Grado / sección (contexto secundaria) — opcional, lo llena el estudiante en su perfil.
+    grado = Column(String(20), nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

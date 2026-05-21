@@ -2,77 +2,33 @@ import uuid
 from sqlalchemy.orm import Session
 from app.models.session import UserSession
 from app.models.response import UserResponse
+from app.config import settings
 from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
 
 class SessionService:
+    """
+    Sesión de evaluación basada en escalas clínicas validadas:
+      - PHQ-9 (9 ítems, depresión, DSM-5)
+      - GAD-7 (7 ítems, ansiedad generalizada, DSM-5)
 
-    # 10 preguntas alineadas a escalas clínicas validadas.
-    # Cada una apunta a detectar una condición específica pero está redactada
-    # de forma conversacional y abierta para que el modelo BERT capture matices.
-    #
-    # Mapeo diagnóstico:
-    #   1 → Depresión (PHQ-9 ítem 2: anhedonia)
-    #   2 → Depresión (PHQ-9 ítems 1, 6: ánimo, autoestima)
-    #   3 → Ansiedad (GAD-7 ítems 1-3)
-    #   4 → TDAH - inatención (ASRS-v1.1 ítems 1-4)
-    #   5 → TDAH - hiperactividad/impulsividad (ASRS-v1.1 ítems 5-6)
-    #   6 → Estrés académico y adaptación provincia→Lima
-    #   7 → Soledad (UCLA-3 Loneliness Scale)
-    #   8 → Sueño y somatización (PHQ-9 ítem 3)
-    #   9 → Ideación suicida / autolesión (PHQ-9 ítem 9, C-SSRS screening)
-    #  10 → Red de apoyo y búsqueda de ayuda profesional
-    PREGUNTAS = [
-        # 1. Depresión — anhedonia
-        "En las últimas dos semanas, ¿has sentido poco interés o placer al hacer "
-        "cosas que antes disfrutabas (música, salir, estudiar, hobbies)? "
-        "Cuéntame con tus palabras.",
+    Total: 16 ítems estructurados. Cada ítem se puntúa en escala Likert 0-3
+    (frecuencia en las últimas 2 semanas). El usuario responde con texto libre
+    y BERT propone el score; si la confianza es baja se muestra el selector
+    de 4 botones en el frontend.
+    """
 
-        # 2. Depresión — ánimo y autoestima
-        "¿Has experimentado sentimientos de tristeza profunda, desesperanza, "
-        "vacío o la sensación de ser un fracaso últimamente? Descríbeme cómo te has sentido.",
+    # Banco "canónico" de 16 ítems (PHQ-9 luego GAD-7). El orden REAL de cada
+    # sesión se decide en el triage de apertura y se guarda en
+    # `UserSession.modulos_orden`. `obtener_item_para_sesion` respeta ese orden.
+    PREGUNTAS = settings.PHQ9_ITEMS + settings.GAD7_ITEMS
 
-        # 3. Ansiedad — preocupación y tensión
-        "¿Cómo manejas las situaciones que te generan nervios o preocupación? "
-        "¿Sientes que la ansiedad se te vuelve difícil de controlar, o tienes "
-        "episodios de pánico, taquicardia o sensación de ahogo?",
-
-        # 4. TDAH — inatención
-        "¿Te cuesta concentrarte en clases o al leer, terminas las tareas que "
-        "empiezas, o sueles postergar mucho aunque sepas que es importante? "
-        "Descríbeme cómo te va con eso.",
-
-        # 5. TDAH — hiperactividad/impulsividad
-        "¿Sueles sentirte inquieto/a, con la mente acelerada, interrumpes a "
-        "otros o actúas sin pensar? ¿Te cuesta quedarte quieto/a o esperar tu turno?",
-
-        # 6. Estrés académico y migración provincia→Lima
-        "Como estudiante en UPC San Isidro (y si vienes de provincia, tomándolo "
-        "en cuenta): ¿cómo has sentido la carga académica, los exámenes y la "
-        "adaptación a Lima? ¿Te sientes sobrepasado/a?",
-
-        # 7. Soledad (UCLA-3)
-        "¿Con qué frecuencia te sientes solo/a, aislado/a o sientes que te "
-        "falta compañía real con quien hablar de lo que te pasa? ¿Sientes que "
-        "estás lejos de tu familia o de tu red de siempre?",
-
-        # 8. Sueño y somatización
-        "¿Cómo está tu sueño y tu apetito? ¿Duermes bien, te cuesta conciliar "
-        "el sueño, te despiertas muy cansado/a, o has notado cambios fuertes "
-        "en cuánto comes?",
-
-        # 9. Ideación suicida / autolesión (pregunta sensible pero directa)
-        "Esta pregunta es importante y sensible: ¿en las últimas semanas has "
-        "tenido pensamientos de hacerte daño, de que sería mejor no estar, "
-        "de desaparecer, o pensamientos que te asustan? Responde con confianza.",
-
-        # 10. Red de apoyo y búsqueda de ayuda
-        "¿Cuentas con una red de apoyo (familia, amigos cercanos, pareja, un "
-        "psicólogo o consejero)? ¿Has considerado buscar ayuda profesional, "
-        "o ya lo estás haciendo?",
-    ]
+    MODULOS_DISPONIBLES = {
+        "PHQ-9": settings.PHQ9_ITEMS,
+        "GAD-7": settings.GAD7_ITEMS,
+    }
 
     @staticmethod
     def crear_sesion(db: Session, user_id: str, nombre: str = None) -> UserSession:
@@ -83,7 +39,9 @@ class SessionService:
             user_id=user_id,
             nombre=nombre,
             estado="activa",
-            pregunta_actual=0
+            pregunta_actual=0,
+            fase="apertura",
+            modulos_orden=None,
         )
 
         db.add(nueva_sesion)
@@ -93,16 +51,58 @@ class SessionService:
         return nueva_sesion
 
     @staticmethod
+    def items_en_orden(modulos_orden: str = None) -> list:
+        """
+        Devuelve la lista completa de ítems en el orden indicado.
+        Si `modulos_orden` es None usa el orden canónico (PHQ-9 → GAD-7).
+        """
+        orden = (modulos_orden or "PHQ-9,GAD-7").split(",")
+        items = []
+        for mod in orden:
+            mod = mod.strip()
+            if mod in SessionService.MODULOS_DISPONIBLES:
+                items.extend(SessionService.MODULOS_DISPONIBLES[mod])
+        return items
+
+    @staticmethod
+    def obtener_item_para_sesion(session: UserSession, numero_pregunta: int) -> dict:
+        """Devuelve el ítem en posición `numero_pregunta` respetando el orden de la sesión."""
+        items = SessionService.items_en_orden(session.modulos_orden)
+        if 0 <= numero_pregunta < len(items):
+            return items[numero_pregunta]
+        return None
+
+    @staticmethod
+    def actualizar_fase(db: Session, session_id: str, fase: str, modulos_orden: str = None,
+                        apertura_texto: str = None) -> None:
+        sesion = SessionService.obtener_sesion(db, session_id)
+        if not sesion:
+            return
+        sesion.fase = fase
+        if modulos_orden is not None:
+            sesion.modulos_orden = modulos_orden
+        if apertura_texto is not None:
+            sesion.apertura_texto = apertura_texto
+        db.commit()
+
+    @staticmethod
     def obtener_sesion(db: Session, session_id: str) -> UserSession:
         return db.query(UserSession).filter(
             UserSession.id == session_id
         ).first()
 
     @staticmethod
-    def obtener_pregunta_actual(numero_pregunta: int) -> str:
+    def obtener_item(numero_pregunta: int) -> dict:
+        """Devuelve el dict completo del ítem clínico en esa posición."""
         if 0 <= numero_pregunta < len(SessionService.PREGUNTAS):
             return SessionService.PREGUNTAS[numero_pregunta]
         return None
+
+    @staticmethod
+    def obtener_pregunta_actual(numero_pregunta: int) -> str:
+        """Compat: devuelve solo el texto de la pregunta."""
+        item = SessionService.obtener_item(numero_pregunta)
+        return item["texto"] if item else None
 
     @staticmethod
     def guardar_respuesta(
@@ -110,14 +110,28 @@ class SessionService:
         session_id: str,
         numero_pregunta: int,
         pregunta: str,
-        respuesta: str
+        respuesta: str,
+        item: dict = None,
+        score_likert: int = None,
+        confianza_likert: float = None,
+        score_origen: str = None,
     ) -> UserResponse:
         nueva_respuesta = UserResponse(
             session_id=session_id,
             numero_pregunta=numero_pregunta,
             pregunta=pregunta,
-            respuesta=respuesta
+            respuesta=respuesta,
         )
+        if item is not None:
+            nueva_respuesta.item_codigo = item.get("id")
+            nueva_respuesta.modulo = item.get("modulo")
+            nueva_respuesta.criterio_dsm5 = item.get("criterio_dsm5")
+        if score_likert is not None:
+            nueva_respuesta.score_likert = score_likert
+        if confianza_likert is not None:
+            nueva_respuesta.confianza_likert = confianza_likert
+        if score_origen is not None:
+            nueva_respuesta.score_origen = score_origen
 
         db.add(nueva_respuesta)
         db.commit()
@@ -141,7 +155,12 @@ class SessionService:
         return [{
             "numero": r.numero_pregunta,
             "pregunta": r.pregunta,
-            "respuesta": r.respuesta
+            "respuesta": r.respuesta,
+            "item_codigo": r.item_codigo,
+            "modulo": r.modulo,
+            "criterio_dsm5": r.criterio_dsm5,
+            "score_likert": r.score_likert,
+            "score_origen": r.score_origen,
         } for r in respuestas]
 
     @staticmethod

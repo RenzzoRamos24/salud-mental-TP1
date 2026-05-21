@@ -1,8 +1,11 @@
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Chart, registerables } from 'chart.js'
 import { api } from '../api'
+import PageHeader from '../components/PageHeader.vue'
+import StatCard from '../components/StatCard.vue'
+import RiskBadge from '../components/RiskBadge.vue'
 
 Chart.register(...registerables)
 
@@ -16,100 +19,55 @@ const sesionAbierta = ref(null)
 const chartCanvas = ref(null)
 let chartInstance = null
 
-const colorRiesgo = {
-  'CRÍTICO': 'bg-red-100 text-red-800 border-red-300',
-  'ALTO':    'bg-orange-100 text-orange-800 border-orange-300',
-  'MEDIO':   'bg-amber-100 text-amber-800 border-amber-300',
-  'BAJO':    'bg-emerald-100 text-emerald-800 border-emerald-300',
-}
-
 const nivelANumero = { 'BAJO': 1, 'MEDIO': 2, 'ALTO': 3, 'CRÍTICO': 4 }
 const numeroANivel = { 1: 'BAJO', 2: 'MEDIO', 3: 'ALTO', 4: 'CRÍTICO' }
 
 function fechaCorta(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-PE', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  })
+  return new Date(iso).toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' })
 }
-
 function fechaLarga(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PE', {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+  return new Date(iso).toLocaleString('es-PE', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
-
-function toggleSesion(id) {
-  sesionAbierta.value = sesionAbierta.value === id ? null : id
-}
+function toggleSesion(id) { sesionAbierta.value = sesionAbierta.value === id ? null : id }
 
 const tieneSerie = computed(() => data.value?.serie_temporal?.length > 0)
 
 function dibujarGrafico() {
   if (!chartCanvas.value || !tieneSerie.value) return
-
-  if (chartInstance) {
-    chartInstance.destroy()
-    chartInstance = null
-  }
-
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null }
   const serie = data.value.serie_temporal
   const labels = serie.map(p => fechaCorta(p.fecha))
   const valores = serie.map(p => nivelANumero[p.nivel] || 0)
   const colores = serie.map(p => {
-    if (p.nivel === 'CRÍTICO') return '#dc2626'
-    if (p.nivel === 'ALTO') return '#ea580c'
-    if (p.nivel === 'MEDIO') return '#d97706'
-    return '#059669'
+    if (p.nivel === 'CRÍTICO') return '#E0413A'
+    if (p.nivel === 'ALTO') return '#F2754F'
+    if (p.nivel === 'MEDIO') return '#F2A93B'
+    return '#3DC57E'
   })
 
   chartInstance = new Chart(chartCanvas.value.getContext('2d'), {
     type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Nivel de riesgo',
-        data: valores,
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.3,
-        pointBackgroundColor: colores,
-        pointBorderColor: colores,
-        pointRadius: 6,
-        pointHoverRadius: 8,
-      }],
-    },
+    data: { labels, datasets: [{
+      label: 'Nivel de riesgo', data: valores,
+      borderColor: '#8B6CF0', backgroundColor: 'rgba(139, 108, 240, 0.10)',
+      borderWidth: 2.5, fill: true, tension: 0.35,
+      pointBackgroundColor: colores, pointBorderColor: '#fff',
+      pointBorderWidth: 2, pointRadius: 7, pointHoverRadius: 9,
+    }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const p = serie[ctx.dataIndex]
-              return `${p.nivel} (score: ${p.score?.toFixed(2) ?? '—'})`
-            },
-          },
-        },
+        tooltip: { callbacks: { label: (ctx) => {
+          const p = serie[ctx.dataIndex]
+          return `${p.nivel} (score: ${p.score?.toFixed(2) ?? '—'})`
+        } } },
       },
       scales: {
-        y: {
-          min: 0,
-          max: 4,
-          ticks: {
-            stepSize: 1,
-            callback: (v) => numeroANivel[v] || '',
-          },
-          grid: { color: '#e2e8f0' },
-        },
-        x: {
-          grid: { display: false },
-        },
+        y: { min: 0, max: 4, ticks: { stepSize: 1, callback: (v) => numeroANivel[v] || '' }, grid: { color: '#EDEAF0' } },
+        x: { grid: { display: false } },
       },
     },
   })
@@ -120,134 +78,153 @@ onMounted(async () => {
     data.value = await api.historialEstudiante(route.params.id)
     await nextTick()
     dibujarGrafico()
-  } catch (e) {
-    error.value = e.response?.data?.detail || e.message
-  } finally {
-    cargando.value = false
-  }
+  } catch (e) { error.value = e.response?.data?.detail || e.message }
+  finally { cargando.value = false }
 })
+
+// Modal cita
+const modalCita = reactive({ abierto: false, fecha: '', hora: '', modalidad: 'presencial', notas: '', guardando: false, error: '', exito: false })
+function abrirModalCita() { Object.assign(modalCita, { abierto: true, fecha: '', hora: '', modalidad: 'presencial', notas: '', error: '', exito: false }) }
+function cerrarModal() { modalCita.abierto = false }
+async function guardarCita() {
+  modalCita.error = ''
+  if (!modalCita.fecha || !modalCita.hora) { modalCita.error = 'Fecha y hora son obligatorias'; return }
+  modalCita.guardando = true
+  try {
+    await api.crearCita({
+      estudiante_id: parseInt(route.params.id),
+      fecha: modalCita.fecha, hora: modalCita.hora,
+      modalidad: modalCita.modalidad,
+      notas: modalCita.notas || null,
+    })
+    modalCita.exito = true
+    setTimeout(cerrarModal, 1500)
+  } catch (e) { modalCita.error = e.response?.data?.detail || e.message }
+  finally { modalCita.guardando = false }
+}
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3rem)] bg-slate-50 py-8 px-4">
-    <div class="max-w-5xl mx-auto">
-      <button @click="router.push('/psicologo')"
-        class="text-sm text-slate-600 hover:text-brand-700 mb-4 inline-flex items-center gap-1">
-        ← Volver a estudiantes
-      </button>
+  <div class="page-shell-wide">
+    <button @click="router.push('/psicologo')" class="btn-ghost btn-sm mb-3">← Volver a estudiantes</button>
 
-      <div v-if="cargando" class="text-center text-slate-500 py-12">Cargando historial…</div>
-      <p v-else-if="error" class="text-red-600">{{ error }}</p>
+    <div v-if="cargando" class="text-center text-ink-500 py-16">Cargando historial…</div>
+    <p v-else-if="error" class="banner-danger">⚠️ {{ error }}</p>
 
-      <div v-else-if="data" class="space-y-6">
-        <!-- Encabezado del estudiante -->
-        <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 fade-in-up">
-          <div class="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <p class="text-sm text-slate-500">Historial emocional · HU-20</p>
-              <h1 class="text-2xl font-bold text-slate-900 mt-1">
-                {{ data.estudiante.nombre }} {{ data.estudiante.apellido }}
-              </h1>
-              <p class="text-slate-600 font-mono text-sm mt-1">{{ data.estudiante.email }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs text-slate-500 mb-1">Último riesgo</p>
-              <span v-if="data.estudiante.ultimo_riesgo"
-                :class="['inline-block px-3 py-1 rounded-full text-sm font-bold border',
-                  colorRiesgo[data.estudiante.ultimo_riesgo]]">
-                {{ data.estudiante.ultimo_riesgo }}
+    <div v-else-if="data" class="space-y-6">
+      <PageHeader
+        :title="`${data.estudiante.nombre} ${data.estudiante.apellido}`"
+        :subtitle="`${data.estudiante.email} · Historial emocional clínico`"
+        icon="📋"
+        tone="brand"
+      >
+        <template #actions>
+          <button @click="abrirModalCita" class="btn-primary btn-sm mt-3">+ Agendar cita</button>
+        </template>
+        <template #aside>
+          <div class="text-right">
+            <p class="text-xs uppercase tracking-wider text-ink-400 font-semibold">Último riesgo</p>
+            <div class="mt-1.5"><RiskBadge :nivel="data.estudiante.ultimo_riesgo" :score="data.estudiante.ultimo_score" /></div>
+            <p class="text-xs text-ink-500 mt-1.5">{{ fechaCorta(data.estudiante.ultima_evaluacion) }}</p>
+          </div>
+        </template>
+      </PageHeader>
+
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="Sesiones totales" :value="data.estudiante.total_sesiones"       icon="📋" tone="brand" />
+        <StatCard label="Completadas"      :value="data.estudiante.sesiones_completadas" icon="✅" tone="mint" />
+        <StatCard label="Score actual"     :value="data.estudiante.ultimo_score?.toFixed(2) ?? '—'" icon="🎯" tone="peach" />
+      </section>
+
+      <section v-if="tieneSerie" class="card p-6 fade-in-up">
+        <h2 class="section-title">📊 Evolución del nivel de riesgo</h2>
+        <div class="h-64 mt-3"><canvas ref="chartCanvas"></canvas></div>
+      </section>
+
+      <section class="card overflow-hidden fade-in-up">
+        <h2 class="section-title p-6 pb-4 !mb-0">📝 Sesiones</h2>
+
+        <p v-if="data.sesiones.length === 0" class="text-ink-500 text-center py-10">
+          Este estudiante aún no ha realizado evaluaciones.
+        </p>
+
+        <ul v-else class="divide-y divide-ink-100 border-t border-ink-100">
+          <li v-for="s in data.sesiones" :key="s.session_id">
+            <button @click="toggleSesion(s.session_id)" class="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-brand-50/50 transition">
+              <div class="flex items-center gap-3 flex-wrap">
+                <RiskBadge :nivel="s.nivel_riesgo" />
+                <span class="text-sm text-ink-700">{{ fechaLarga(s.fecha_inicio) }}</span>
+                <span class="chip" :class="s.estado === 'completada' ? 'chip-mint' : 'chip-peach'">{{ s.estado }}</span>
+              </div>
+              <span class="text-brand-600 text-xs font-semibold whitespace-nowrap">
+                {{ sesionAbierta === s.session_id ? '▲ Ocultar' : '▼ Ver detalle' }}
               </span>
-              <span v-else class="text-slate-400">Sin evaluaciones</span>
-              <p class="text-xs text-slate-500 mt-1">
-                {{ fechaCorta(data.estudiante.ultima_evaluacion) }}
-              </p>
-            </div>
-          </div>
+            </button>
 
-          <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
-            <div>
-              <p class="text-xs text-slate-500 uppercase">Sesiones totales</p>
-              <p class="text-2xl font-bold text-slate-900">{{ data.estudiante.total_sesiones }}</p>
-            </div>
-            <div>
-              <p class="text-xs text-slate-500 uppercase">Completadas</p>
-              <p class="text-2xl font-bold text-emerald-700">{{ data.estudiante.sesiones_completadas }}</p>
-            </div>
-            <div>
-              <p class="text-xs text-slate-500 uppercase">Score actual</p>
-              <p class="text-2xl font-bold text-slate-900">
-                {{ data.estudiante.ultimo_score?.toFixed(2) ?? '—' }}
-              </p>
-            </div>
-          </div>
-        </header>
+            <div v-if="sesionAbierta === s.session_id" class="px-6 pb-6 bg-cream-50 border-t border-ink-100 fade-in-up">
+              <div v-if="s.explicacion" class="card-pastel p-4 mt-4">
+                <p class="text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Explicación clínica</p>
+                <p class="text-sm text-ink-800 whitespace-pre-wrap">{{ s.explicacion }}</p>
+              </div>
 
-        <!-- Gráfico de evolución -->
-        <section v-if="tieneSerie" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 fade-in-up">
-          <h2 class="text-lg font-bold text-slate-900 mb-4">Evolución del nivel de riesgo</h2>
-          <div class="h-64">
-            <canvas ref="chartCanvas"></canvas>
-          </div>
-        </section>
+              <div class="mt-4">
+                <p class="text-xs font-bold text-ink-500 uppercase tracking-wider mb-3">Conversación ({{ s.conversacion.length }} preguntas)</p>
+                <ol class="space-y-3">
+                  <li v-for="c in s.conversacion" :key="c.numero" class="card p-4">
+                    <p class="text-xs text-ink-400 mb-1 font-semibold uppercase tracking-wider">Pregunta {{ c.numero }}</p>
+                    <p class="text-sm font-medium text-ink-900 mb-2">{{ c.pregunta }}</p>
+                    <p class="text-sm text-ink-700 italic border-l-4 border-brand-400 pl-3 py-1 bg-brand-50/60 rounded">{{ c.respuesta }}</p>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
 
-        <!-- Lista de sesiones -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 fade-in-up overflow-hidden">
-          <h2 class="text-lg font-bold text-slate-900 p-6 pb-4">Sesiones</h2>
-
-          <p v-if="data.sesiones.length === 0" class="text-slate-500 text-center py-8">
-            Este estudiante aún no ha realizado evaluaciones.
+    <!-- Modal cita -->
+    <Teleport to="body">
+      <div v-if="modalCita.abierto" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/40 backdrop-blur-sm fade-in-up" @click.self="cerrarModal">
+        <div class="card-hero w-full max-w-md p-6">
+          <h2 class="text-xl font-bold text-ink-900 mb-1">Agendar cita</h2>
+          <p class="text-sm text-ink-500 mb-5">
+            Con <strong>{{ data?.estudiante.nombre }} {{ data?.estudiante.apellido }}</strong>
           </p>
 
-          <ul v-else class="divide-y divide-slate-100">
-            <li v-for="s in data.sesiones" :key="s.session_id" class="px-6 py-4">
-              <button @click="toggleSesion(s.session_id)"
-                class="w-full text-left flex items-center justify-between gap-4 hover:bg-slate-50 -mx-2 px-2 py-1 rounded">
-                <div class="flex items-center gap-3 flex-wrap">
-                  <span v-if="s.nivel_riesgo"
-                    :class="['inline-block px-2 py-1 rounded-full text-xs font-bold border',
-                      colorRiesgo[s.nivel_riesgo]]">
-                    {{ s.nivel_riesgo }}
-                  </span>
-                  <span v-else class="text-xs text-slate-400 italic">Sin análisis</span>
-                  <span class="text-sm text-slate-700">{{ fechaLarga(s.fecha_inicio) }}</span>
-                  <span class="text-xs text-slate-400">·</span>
-                  <span class="text-xs"
-                    :class="s.estado === 'completada' ? 'text-emerald-600' : 'text-amber-600'">
-                    {{ s.estado }}
-                  </span>
-                </div>
-                <span class="text-slate-400 text-sm">
-                  {{ sesionAbierta === s.session_id ? '▲' : '▼' }}
-                </span>
+          <div v-if="modalCita.exito" class="text-center py-4">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-mint-100 text-mint-600 text-2xl mb-3">✓</div>
+            <p class="font-bold text-mint-600">Cita agendada</p>
+          </div>
+
+          <div v-else class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="label">Fecha</label><input v-model="modalCita.fecha" type="date" class="input" /></div>
+              <div><label class="label">Hora</label><input v-model="modalCita.hora" type="time" class="input" /></div>
+            </div>
+            <div>
+              <label class="label">Modalidad</label>
+              <select v-model="modalCita.modalidad" class="input">
+                <option value="presencial">Presencial</option>
+                <option value="virtual">Virtual</option>
+              </select>
+            </div>
+            <div>
+              <label class="label">Notas <span class="text-ink-400 font-normal">(opcional)</span></label>
+              <textarea v-model="modalCita.notas" rows="3" class="input resize-none"></textarea>
+            </div>
+
+            <p v-if="modalCita.error" class="field-error">{{ modalCita.error }}</p>
+
+            <div class="flex gap-2 pt-2">
+              <button @click="cerrarModal" :disabled="modalCita.guardando" class="btn-ghost flex-1">Cancelar</button>
+              <button @click="guardarCita" :disabled="modalCita.guardando" class="btn-primary flex-1">
+                {{ modalCita.guardando ? 'Guardando…' : 'Agendar' }}
               </button>
-
-              <div v-if="sesionAbierta === s.session_id" class="mt-4 space-y-4 pl-2">
-                <div v-if="s.explicacion"
-                  class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                  <p class="text-xs font-bold text-indigo-900 uppercase mb-1">Explicación clínica</p>
-                  <p class="text-sm text-indigo-900 whitespace-pre-wrap">{{ s.explicacion }}</p>
-                </div>
-
-                <div>
-                  <p class="text-xs font-bold text-slate-700 uppercase mb-2">
-                    Conversación ({{ s.conversacion.length }} preguntas)
-                  </p>
-                  <ol class="space-y-3">
-                    <li v-for="c in s.conversacion" :key="c.numero"
-                      class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <p class="text-xs text-slate-500 mb-1">Pregunta {{ c.numero }}</p>
-                      <p class="text-sm font-medium text-slate-900 mb-2">{{ c.pregunta }}</p>
-                      <p class="text-sm text-slate-700 italic border-l-2 border-brand-300 pl-3">
-                        {{ c.respuesta }}
-                      </p>
-                    </li>
-                  </ol>
-                </div>
-              </div>
-            </li>
-          </ul>
-        </section>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>

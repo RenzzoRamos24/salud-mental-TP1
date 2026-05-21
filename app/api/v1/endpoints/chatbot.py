@@ -66,11 +66,15 @@ async def answer_question(
     db: Session = Depends(get_db),
 ):
     try:
-        logger.info(f"POST /answer - Session: {request.session_id}")
+        logger.info(
+            f"POST /answer - Session: {request.session_id} "
+            f"(score_likert={request.score_likert})"
+        )
         resultado = ChatService.guardar_respuesta_y_avanzar(
             db=db,
             session_id=request.session_id,
             respuesta=request.respuesta,
+            score_likert=request.score_likert,
         )
         return AnswerResponse(**resultado)
     except ValueError as ve:
@@ -127,7 +131,30 @@ async def obtener_conversacion(
 
 
 # ─────────────────────────────────────────────────────────────────
-# ENDPOINT 5: Health check (público)
+# ENDPOINT 5: Historial emocional propio del estudiante (HU-12)
+# ─────────────────────────────────────────────────────────────────
+
+@router.get("/mi-historial")
+async def mi_historial(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Devuelve el historial emocional completo del estudiante autenticado.
+    Incluye serie temporal, sesiones con conversación y análisis de riesgo.
+    """
+    from app.services.psychologist_service import PsychologistService
+    try:
+        return PsychologistService.historial_estudiante(db, str(current_user.id))
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error en /mi-historial: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────
+# ENDPOINT 6: Health check (público)
 # ─────────────────────────────────────────────────────────────────
 
 @router.get("/health")
@@ -137,3 +164,48 @@ async def health_check():
         "servicio": "chatbot",
         "version": "1.0.0",
     }
+
+
+# ─────────────────────────────────────────────────────────────────
+# HU-30: el ESTUDIANTE agenda cita desde el chatbot
+# ─────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel, Field  # noqa: E402
+from typing import Optional  # noqa: E402
+from app.services.cita_service import CitaService  # noqa: E402
+
+
+class CitaEstudianteIn(BaseModel):
+    fecha: str = Field(..., description="YYYY-MM-DD")
+    hora: str = Field(..., description="HH:MM")
+    modalidad: str = Field("presencial", pattern="^(presencial|virtual)$")
+    motivo: Optional[str] = Field(None, max_length=500)
+
+
+@router.post("/cita", status_code=201)
+async def solicitar_cita_estudiante(
+    payload: CitaEstudianteIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        cita = CitaService.solicitar_desde_estudiante(db, current_user.id, payload.model_dump())
+        return {
+            "ok": True,
+            "cita_id": cita["id"],
+            "estado": cita["estado"],
+            "mensaje": (
+                "Solicitud enviada. El psicólogo/a del colegio la confirmará pronto. "
+                "Te avisaremos por correo."
+            ),
+        }
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/citas/mias")
+async def listar_mis_citas(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return CitaService.listar_estudiante(db, current_user.id)

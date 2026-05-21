@@ -251,6 +251,196 @@ class NLPService:
         }
 
     # ═══════════════════════════════════════════════════════════════════
+    # ANÁLISIS POR RESPUESTA INDIVIDUAL
+    # ═══════════════════════════════════════════════════════════════════
+
+    @classmethod
+    def analizar_respuesta_individual(cls, texto: str) -> dict:
+        """
+        Calcula un score de criticidad (0..1) para una sola respuesta.
+
+        Útil para mostrar el peso clínico de cada pregunta en el historial
+        del psicólogo. Aplica el mismo zero-shot multi-label + keyword boost
+        que `analizar_respuestas`, pero sobre una respuesta sola.
+
+        Returns:
+            dict con keys: score (float 0..1), nivel (BAJO/MEDIO/ALTO/CRÍTICO),
+            condicion (clave de la condición dominante).
+        """
+        if not texto or not texto.strip():
+            return {"score": 0.0, "nivel": "BAJO", "condicion": None}
+
+        claves = list(settings.CONDICIONES.keys())
+        hipotesis = [settings.CONDICIONES[k]["hipotesis"] for k in claves]
+        hipotesis_a_clave = dict(zip(hipotesis, claves))
+
+        classifier = cls.get_classifier()
+        resultado = classifier(
+            texto.strip(),
+            candidate_labels=hipotesis,
+            multi_label=True,
+            hypothesis_template=settings.HYPOTHESIS_TEMPLATE,
+        )
+
+        scores = {}
+        for hip, score in zip(resultado["labels"], resultado["scores"]):
+            scores[hipotesis_a_clave[hip]] = float(score)
+
+        # Keyword boost local
+        texto_lower = texto.lower()
+        for clave, keywords in settings.KEYWORDS.items():
+            matches = [kw for kw in keywords if kw in texto_lower]
+            if matches:
+                boost = min(
+                    settings.KEYWORD_BOOST_PER_MATCH * len(matches),
+                    settings.KEYWORD_BOOST_MAX,
+                )
+                scores[clave] = min(scores.get(clave, 0.0) + boost, 1.0)
+
+        # Score de criticidad: máximo entre condiciones negativas (excluye estabilidad)
+        scores_negativos = {k: v for k, v in scores.items() if k != "estabilidad"}
+        if not scores_negativos:
+            return {"score": 0.0, "nivel": "BAJO", "condicion": None}
+
+        condicion_dom = max(scores_negativos, key=scores_negativos.get)
+        score_max = scores_negativos[condicion_dom]
+
+        # Riesgo suicida sube directo a CRÍTICO si supera su umbral sensible
+        umbral_suicida = settings.CONDICIONES["riesgo_suicida"]["umbral"]
+        if scores_negativos.get("riesgo_suicida", 0.0) >= umbral_suicida:
+            return {"score": float(scores_negativos["riesgo_suicida"]),
+                    "nivel": "CRÍTICO",
+                    "condicion": "riesgo_suicida"}
+
+        if score_max >= 0.75:
+            nivel = "ALTO"
+        elif score_max >= settings.CONDICIONES[condicion_dom]["umbral"]:
+            nivel = "MEDIO"
+        else:
+            nivel = "BAJO"
+
+        return {"score": float(score_max), "nivel": nivel, "condicion": condicion_dom}
+
+    # ═══════════════════════════════════════════════════════════════════
+    # PHQ-9 / GAD-7 — Propuesta de score Likert 0-3 por ítem
+    # ═══════════════════════════════════════════════════════════════════
+
+    # Hipótesis de frecuencia que serán "rellenadas" en la plantilla Likert.
+    # Mantienen orden consistente con OPCIONES_LIKERT (valor 0..3).
+    _FRECUENCIAS_LIKERT = [
+        "nunca",
+        "algunos días",
+        "más de la mitad de los días",
+        "casi todos los días",
+    ]
+
+    @classmethod
+    def proponer_score_likert(cls, texto: str, item: dict) -> dict:
+        """
+        Propone un score Likert 0-3 para un ítem PHQ-9/GAD-7 a partir del
+        texto libre del usuario.
+
+        Estrategia:
+          1. Zero-shot BERT sobre 4 hipótesis combinadas
+             ("Este texto describe que <criterio> ocurre <frecuencia>.")
+             para las 4 frecuencias del PHQ-9/GAD-7.
+          2. Boost si aparecen keywords clínicas específicas del ítem.
+          3. Si el score 0 ("nunca") domina con alta confianza ⇒ propone 0.
+          4. Si la confianza del top score supera UMBRAL_CONFIANZA_LIKERT ⇒
+             aceptado automáticamente.
+          5. En caso contrario ⇒ requiere_seleccion=True para que el frontend
+             muestre los 4 botones.
+
+        Args:
+            texto: respuesta libre del usuario.
+            item:  dict del banco PHQ-9/GAD-7 (debe traer `hipotesis_likert`).
+
+        Returns:
+            dict {score_propuesto, confianza, requiere_seleccion,
+                  distribucion, keywords_detectadas}
+        """
+        if not texto or not texto.strip():
+            return {
+                "score_propuesto": 0,
+                "confianza": 0.0,
+                "requiere_seleccion": True,
+                "distribucion": {},
+                "keywords_detectadas": [],
+            }
+
+        criterio = item.get("hipotesis_likert", "este síntoma")
+        # Construye una hipótesis por frecuencia (4 hipótesis).
+        hipotesis = [
+            f"{criterio} {frecuencia}" for frecuencia in cls._FRECUENCIAS_LIKERT
+        ]
+
+        classifier = cls.get_classifier()
+        resultado = classifier(
+            texto.strip(),
+            candidate_labels=hipotesis,
+            multi_label=False,  # las 4 frecuencias son mutuamente excluyentes
+            hypothesis_template=settings.HYPOTHESIS_TEMPLATE_LIKERT,
+        )
+
+        # Reordena scores por índice 0..3
+        scores_por_valor = {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0}
+        for label, score in zip(resultado["labels"], resultado["scores"]):
+            try:
+                idx = hipotesis.index(label)
+                scores_por_valor[idx] = float(score)
+            except ValueError:
+                pass
+
+        # Boost por keywords clínicas específicas del ítem
+        texto_lower = texto.lower()
+        keywords_detectadas = [
+            kw for kw in item.get("keywords_signal", []) if kw in texto_lower
+        ]
+        if keywords_detectadas:
+            # Cuanta más evidencia léxica positiva, más empuja a frecuencias altas.
+            boost = min(
+                settings.KEYWORD_BOOST_PER_MATCH * len(keywords_detectadas) * 2,
+                settings.KEYWORD_BOOST_MAX * 2,
+            )
+            # Reparte el boost entre los valores 1-3 (síntoma presente)
+            scores_por_valor[1] = min(scores_por_valor[1] + boost * 0.2, 1.0)
+            scores_por_valor[2] = min(scores_por_valor[2] + boost * 0.4, 1.0)
+            scores_por_valor[3] = min(scores_por_valor[3] + boost * 0.4, 1.0)
+
+        # Selección del score con mayor confianza
+        score_propuesto = max(scores_por_valor, key=scores_por_valor.get)
+        confianza = scores_por_valor[score_propuesto]
+
+        # Aceptamos automáticamente si:
+        #  - la confianza top supera el umbral, O
+        #  - la diferencia entre top y segundo es ≥ MARGEN_MINIMO_LIKERT
+        # (con 4 etiquetas mutuamente excluyentes el umbral absoluto solo no
+        # basta; el margen captura casos en que un valor domina con claridad).
+        valores_ordenados = sorted(scores_por_valor.values(), reverse=True)
+        margen = valores_ordenados[0] - valores_ordenados[1]
+
+        umbral = settings.UMBRAL_CONFIANZA_LIKERT
+        margen_min = getattr(settings, "MARGEN_MINIMO_LIKERT", 0.10)
+        requiere_seleccion = (confianza < umbral) and (margen < margen_min)
+
+        logger.info(
+            f"   🎚️  Likert propuesto para {item.get('id')}: "
+            f"{score_propuesto} (conf {confianza*100:.1f}%, margen {margen*100:.1f}%) "
+            f"{'⚠️ pide confirmación' if requiere_seleccion else '✅ auto'}"
+            f" — keywords: {keywords_detectadas or 'ninguna'}"
+        )
+
+        return {
+            "score_propuesto": int(score_propuesto),
+            "confianza": round(float(confianza), 4),
+            "requiere_seleccion": bool(requiere_seleccion),
+            "distribucion": {
+                str(k): round(v, 4) for k, v in scores_por_valor.items()
+            },
+            "keywords_detectadas": keywords_detectadas,
+        }
+
+    # ═══════════════════════════════════════════════════════════════════
     # NIVEL DE RIESGO GLOBAL
     # ═══════════════════════════════════════════════════════════════════
 
@@ -355,31 +545,35 @@ class NLPService:
 
         recs = {
             "depresion": (
-                "  🔹 Depresión: considera consulta psicológica; activa rutinas de\n"
-                "     higiene del sueño, actividad física y contacto social."
+                "  🔹 Ánimo bajo: habla con el psicólogo/a del colegio o un\n"
+                "     adulto de confianza; mantén horarios de sueño regulares,\n"
+                "     mueve el cuerpo y conserva el contacto con tus amigos."
             ),
             "ansiedad": (
-                "  🔹 Ansiedad: practica técnicas de respiración diafragmática y\n"
-                "     mindfulness; reduce cafeína; consulta con psicólogo si persiste."
+                "  🔹 Ansiedad: practica respiración 4-4-6 (inhala 4s, sostén 4s,\n"
+                "     exhala 6s); evita energizantes; si los nervios siguen, "
+                "     conversa con el psicólogo/a del colegio."
             ),
             "tdah": (
-                "  🔹 TDAH: una evaluación neuropsicológica puede confirmar el\n"
-                "     diagnóstico. Estrategias: técnica Pomodoro, listas, entornos\n"
-                "     libres de distracciones."
+                "  🔹 Dificultad de atención: la evaluación con un profesional\n"
+                "     puede ayudar a entenderlo mejor. Mientras: estudia en\n"
+                "     bloques cortos (25 min), haz listas y silencia el celular."
             ),
             "estres_academico": (
-                "  🔹 Estrés académico: usa los servicios de bienestar estudiantil\n"
-                "     UPC; planifica con bloques realistas; no sacrifiques el sueño."
+                "  🔹 Estrés del colegio: habla con tus profes o tutor/a si\n"
+                "     sientes que la carga es demasiado; organiza tu agenda\n"
+                "     con tiempo y no te quites horas de sueño por estudiar."
             ),
             "soledad": (
-                "  🔹 Soledad: construye vínculos en grupos de la UPC (clubs,\n"
-                "     voluntariados); mantén contacto regular con tu familia en provincia."
+                "  🔹 Soledad: acércate a actividades extracurriculares del\n"
+                "     colegio, busca compañeros con intereses parecidos;\n"
+                "     conversa también con tu familia en casa."
             ),
             "riesgo_suicida": (
-                "  🆘 RIESGO SUICIDA — ACCIÓN INMEDIATA:\n"
+                "  🆘 ATENCIÓN INMEDIATA:\n"
                 "     • Línea 113 (MINSA Perú), opción 5 — salud mental 24/7.\n"
-                "     • Bienestar Estudiantil UPC — atención psicológica gratuita.\n"
-                "     • No te quedes solo/a: contacta a alguien de confianza AHORA.\n"
+                "     • Habla AHORA con el psicólogo/a o tutor/a del colegio.\n"
+                "     • Cuéntale a un adulto de confianza (papá, mamá, tío/a).\n"
                 "     • Si hay peligro inmediato: emergencias 106 o acude al hospital."
             ),
         }

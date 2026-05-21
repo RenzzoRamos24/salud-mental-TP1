@@ -4,13 +4,237 @@
 
 html, body, #app { height: 100%; }
 
-/* Scrollbar suave */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+body {
+  background: #FBF1E6;
+  color: #1F1B24;
+}
 
-/* Animación de puntos para "typing..." */
+/* Scrollbar pastel */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #DDD3FD; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #C5B3FB; }
+
+/* ------------------------------------------------------------------ */
+/* Layout helpers                                                     */
+/* ------------------------------------------------------------------ */
+@layer components {
+  .page-shell {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 py-8;
+  }
+  .page-shell-wide {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 py-8;
+  }
+
+  /* Card pastel — superficie blanca sobre cream, esquinas suaves */
+  .card {
+    @apply bg-white rounded-2xl border border-ink-100 shadow-soft;
+  }
+  .card-hero {
+    @apply bg-white rounded-2xl2 border border-brand-100 shadow-pastel;
+  }
+  .card-pastel {
+    @apply rounded-2xl bg-brand-50 border border-brand-100;
+  }
+  .card-peach {
+    @apply rounded-2xl bg-peach-50 border border-peach-100;
+  }
+  .card-mint {
+    @apply rounded-2xl bg-mint-50 border border-mint-100;
+  }
+
+  /* Sección con título */
+  .section-title {
+    @apply text-lg font-semibold text-ink-900 mb-3 flex items-center gap-2;
+  }
+  .section-subtitle {
+    @apply text-sm text-ink-500;
+  }
+
+  /* Botones */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand-500 text-white shadow-soft hover:bg-brand-600 active:bg-brand-700 focus-visible:ring-brand-300;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-brand-700 border border-brand-200 hover:bg-brand-50 focus-visible:ring-brand-200;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-700 hover:bg-ink-100 focus-visible:ring-ink-200;
+  }
+  .btn-peach {
+    @apply btn bg-peach-400 text-white hover:bg-peach-500 focus-visible:ring-peach-200;
+  }
+  .btn-mint {
+    @apply btn bg-mint-400 text-white hover:bg-mint-500 focus-visible:ring-mint-200;
+  }
+  .btn-danger {
+    @apply btn bg-risk-critico text-white hover:opacity-90 focus-visible:ring-red-200;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl border border-ink-200 bg-white text-ink-900 placeholder:text-ink-400 transition focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100;
+  }
+  .input-lg {
+    @apply input px-4 py-3 text-base;
+  }
+  .label {
+    @apply block text-sm font-medium text-ink-700 mb-1.5;
+  }
+  .field-hint {
+    @apply mt-1 text-xs text-ink-500;
+  }
+  .field-error {
+    @apply mt-1 text-xs text-risk-critico;
+  }
+
+  /* Etiquetas / chips */
+  .chip {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+  .chip-brand   { @apply chip bg-brand-100 text-brand-700; }
+  .chip-peach   { @apply chip bg-peach-100 text-peach-600; }
+  .chip-mint    { @apply chip bg-mint-100 text-mint-600; }
+  .chip-ink     { @apply chip bg-ink-100 text-ink-700; }
+
+  /* DSM-5 tag (criterio clínico) — borde lavanda con punto */
+  .dsm5-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide
+           bg-white border border-brand-200 text-brand-700;
+  }
+  .dsm5-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 9999px;
+    background: #8B6CF0;
+  }
+
+  /* Badges de riesgo */
+  .risk-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+  .risk-bajo     { @apply risk-badge bg-mint-100 text-mint-600; }
+  .risk-medio    { @apply risk-badge bg-amber-100 text-amber-700; }
+  .risk-alto     { @apply risk-badge bg-peach-100 text-peach-600; }
+  .risk-critico  { @apply risk-badge bg-red-100 text-risk-critico; }
+  .risk-sin      { @apply risk-badge bg-ink-100 text-ink-500; }
+
+  /* Avatar circular */
+  .avatar {
+    @apply inline-flex items-center justify-center rounded-full bg-brand-100 text-brand-700 font-semibold;
+  }
+  .avatar-sm { @apply avatar w-8 h-8 text-xs; }
+  .avatar-md { @apply avatar w-10 h-10 text-sm; }
+  .avatar-lg { @apply avatar w-14 h-14 text-base; }
+
+  /* Topbar Pastel Empático */
+  .topbar-pastel {
+    @apply bg-white/85 backdrop-blur-md border-b border-brand-100 shadow-soft sticky top-0 z-30 no-print;
+  }
+
+  /* Sidebar item */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-700 hover:bg-brand-50 hover:text-brand-700 transition;
+  }
+  .nav-item-active {
+    @apply nav-item bg-brand-100 text-brand-800;
+  }
+
+  /* Burbujas de chat */
+  .bubble-bot {
+    @apply max-w-[80%] px-5 py-4 rounded-3xl rounded-tl-md bg-cream-50 border border-cream-200 text-ink-800 shadow-soft;
+  }
+  .bubble-user {
+    @apply max-w-[80%] px-5 py-4 rounded-3xl rounded-tr-md bg-mint-400 text-white shadow-soft;
+  }
+  .bubble-info {
+    @apply max-w-[80%] px-5 py-4 rounded-3xl rounded-tl-md bg-peach-50 border border-peach-200 text-peach-600 shadow-soft;
+  }
+
+  /* Chips clínicos tipo DASS / OPINION-BERT */
+  .dass-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+           bg-mint-100 text-mint-600;
+  }
+  .dass-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 9999px;
+    background: #1FA862;
+  }
+  .opinion-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+           bg-peach-100 text-peach-600;
+  }
+  .opinion-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 9999px;
+    background: #F2754F;
+  }
+
+  /* SOS pill flotante — peach/coral, esquina derecha */
+  .sos-fab {
+    @apply fixed bottom-8 right-6 z-40 inline-flex items-center gap-2 text-white font-bold
+           px-5 py-3 rounded-full shadow-lift transition no-print pulse-soft;
+    background: linear-gradient(135deg, #F88474, #E0413A);
+  }
+  .sos-fab:hover { transform: translateY(-2px); }
+
+  /* Hero serif (titulares grandes tipo "Bienvenido a tu espacio…") */
+  .hero-serif {
+    @apply font-serif font-semibold text-ink-900 tracking-tight leading-tight;
+    font-feature-settings: 'ss01';
+  }
+  .hero-mint { @apply text-mint-500; }
+
+  /* Card del menú con flecha en esquina */
+  .menu-card {
+    @apply relative bg-white rounded-3xl border border-cream-200 shadow-soft p-6 transition
+           hover:-translate-y-0.5 hover:shadow-pastel cursor-pointer;
+  }
+  .menu-card-arrow {
+    @apply absolute top-5 right-5 w-7 h-7 inline-flex items-center justify-center
+           rounded-full text-ink-400 transition group-hover:text-brand-600 group-hover:bg-brand-50;
+  }
+  .icon-box {
+    @apply w-14 h-14 rounded-2xl flex items-center justify-center text-2xl;
+  }
+  .icon-box-mint   { @apply icon-box bg-mint-200 text-mint-600; }
+  .icon-box-sky    { @apply icon-box bg-sky2-100 text-sky2-500; }
+  .icon-box-brand  { @apply icon-box bg-brand-100 text-brand-700; }
+  .icon-box-peach  { @apply icon-box bg-peach-100 text-peach-600; }
+  .icon-box-amber  { @apply icon-box bg-amber-100 text-amber-600; }
+
+  /* Topbar minimal estilo Sami */
+  .sami-wordmark {
+    @apply font-serif text-xl font-semibold text-ink-900 tracking-tight;
+  }
+  .sami-wordmark .accent { @apply text-mint-500 font-normal; }
+  .user-pill {
+    @apply inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white border border-cream-200 text-sm;
+  }
+
+  /* Banners */
+  .banner {
+    @apply rounded-2xl px-5 py-4 flex items-start gap-3 border;
+  }
+  .banner-info    { @apply banner bg-sky2-50 border-sky2-200 text-sky2-500; }
+  .banner-warn    { @apply banner bg-amber-50 border-amber-200 text-amber-700; }
+  .banner-danger  { @apply banner bg-red-50 border-red-200 text-risk-critico; }
+  .banner-success { @apply banner bg-mint-50 border-mint-200 text-mint-600; }
+  .banner-brand   { @apply banner bg-brand-50 border-brand-200 text-brand-700; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Animaciones                                                        */
+/* ------------------------------------------------------------------ */
 @keyframes dot-pulse {
   0%, 80%, 100% { opacity: 0.2; }
   40% { opacity: 1; }
@@ -19,12 +243,17 @@ html, body, #app { height: 100%; }
 .dot-2 { animation: dot-pulse 1.4s infinite; animation-delay: 0.2s; }
 .dot-3 { animation: dot-pulse 1.4s infinite; animation-delay: 0.4s; }
 
-/* Fade in suave para mensajes */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .fade-in-up { animation: fade-in-up 0.35s ease-out; }
+
+@keyframes pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 117, 79, 0.5); }
+  50%      { box-shadow: 0 0 0 12px rgba(242, 117, 79, 0); }
+}
+.pulse-soft { animation: pulse-soft 2s infinite; }
 
 @media print {
   .no-print { display: none !important; }

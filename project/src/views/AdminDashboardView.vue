@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
+import PageHeader from '../components/PageHeader.vue'
+import StatCard from '../components/StatCard.vue'
 
 const usuarios = ref([])
 const stats = ref(null)
@@ -10,22 +12,13 @@ const filtroRol = ref('todos')
 const filtroTexto = ref('')
 
 async function cargar() {
-  cargando.value = true
-  error.value = ''
+  cargando.value = true; error.value = ''
   try {
-    const [u, s] = await Promise.all([
-      api.listarUsuarios(),
-      api.statsUsuarios(),
-    ])
-    usuarios.value = u
-    stats.value = s
-  } catch (e) {
-    error.value = e.response?.data?.detail || e.message
-  } finally {
-    cargando.value = false
-  }
+    const [u, s] = await Promise.all([api.listarUsuarios(), api.statsUsuarios()])
+    usuarios.value = u; stats.value = s
+  } catch (e) { error.value = e.response?.data?.detail || e.message }
+  finally { cargando.value = false }
 }
-
 onMounted(cargar)
 
 const filtrados = computed(() => {
@@ -37,105 +30,91 @@ const filtrados = computed(() => {
   })
 })
 
-const colorRol = {
-  estudiante: 'bg-blue-100 text-blue-800 border-blue-300',
-  psicologo:  'bg-emerald-100 text-emerald-800 border-emerald-300',
-  admin:      'bg-purple-100 text-purple-800 border-purple-300',
+const rolChip = {
+  estudiante: 'chip-brand',
+  psicologo:  'chip-mint',
+  admin:      'chip-peach',
 }
 
 function fechaCorta(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-PE', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  })
+  return new Date(iso).toLocaleDateString('es-PE', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3rem)] bg-slate-50 py-8 px-4">
-    <div class="max-w-6xl mx-auto">
-      <header class="mb-6 fade-in-up">
-        <p class="text-sm text-slate-500">Panel de administración</p>
-        <h1 class="text-3xl font-bold text-slate-900">Usuarios del sistema</h1>
-        <p class="text-slate-600 mt-1">
-          Visibilidad de todas las cuentas registradas (estudiantes, psicólogos y admins).
-        </p>
-      </header>
+  <div class="page-shell-wide">
+    <PageHeader
+      title="Usuarios del sistema"
+      subtitle="Visibilidad de todas las cuentas registradas (estudiantes, psicólogos y admins)."
+      icon="👥"
+      tone="brand"
+    />
 
-      <!-- Stats -->
-      <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6 fade-in-up">
-        <div class="bg-white border border-slate-200 rounded-xl p-4">
-          <p class="text-xs text-slate-500 uppercase">Total</p>
-          <p class="text-2xl font-bold text-slate-900">{{ stats.total }}</p>
-        </div>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p class="text-xs text-blue-700 uppercase">Estudiantes</p>
-          <p class="text-2xl font-bold text-blue-900">{{ stats.estudiantes }}</p>
-        </div>
-        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <p class="text-xs text-emerald-700 uppercase">Psicólogos</p>
-          <p class="text-2xl font-bold text-emerald-900">{{ stats.psicologos }}</p>
-        </div>
-        <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
-          <p class="text-xs text-purple-700 uppercase">Admins</p>
-          <p class="text-2xl font-bold text-purple-900">{{ stats.admins }}</p>
-        </div>
-        <div class="bg-slate-100 border border-slate-200 rounded-xl p-4">
-          <p class="text-xs text-slate-600 uppercase">Inactivos</p>
-          <p class="text-2xl font-bold text-slate-700">{{ stats.inactivos }}</p>
-        </div>
+    <!-- Stats -->
+    <section v-if="stats" class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+      <StatCard label="Total"       :value="stats.total"        icon="👥"  tone="brand" />
+      <StatCard label="Estudiantes" :value="stats.estudiantes"  icon="🎓"  tone="sky2" />
+      <StatCard label="Psicólogos"  :value="stats.psicologos"   icon="🧑‍⚕️" tone="mint" />
+      <StatCard label="Admins"      :value="stats.admins"       icon="🛠️" tone="peach" />
+      <StatCard label="Inactivos"   :value="stats.inactivos"    icon="🌙"  tone="brand" />
+    </section>
+
+    <!-- Filtros -->
+    <div class="flex flex-wrap items-center gap-3 mb-4 fade-in-up">
+      <div class="flex gap-1 bg-white rounded-2xl p-1 border border-ink-100 shadow-soft">
+        <button
+          v-for="op in ['todos','estudiante','psicologo','admin']"
+          :key="op"
+          @click="filtroRol = op"
+          :class="[
+            'px-3 py-1.5 text-sm rounded-xl transition capitalize',
+            filtroRol === op ? 'bg-brand-500 text-white shadow-soft' : 'text-ink-600 hover:bg-brand-50',
+          ]"
+        >{{ op === 'todos' ? 'Todos' : op + 's' }}</button>
       </div>
+      <input v-model="filtroTexto" type="text" placeholder="🔍 Buscar nombre o correo…" class="input flex-1 min-w-[220px]" />
+    </div>
 
-      <!-- Filtros -->
-      <div class="flex flex-wrap items-center gap-3 mb-4 fade-in-up">
-        <div class="flex gap-1 bg-white rounded-lg p-1 border border-slate-200">
-          <button v-for="op in ['todos','estudiante','psicologo','admin']" :key="op"
-            @click="filtroRol = op"
-            :class="['px-3 py-1 text-sm rounded-md transition capitalize',
-              filtroRol === op
-                ? 'bg-brand-600 text-white'
-                : 'text-slate-600 hover:bg-slate-100']">
-            {{ op === 'todos' ? 'Todos' : op + 's' }}
-          </button>
-        </div>
-        <input v-model="filtroTexto" type="text" placeholder="Buscar nombre o correo…"
-          class="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none" />
-      </div>
+    <p v-if="cargando" class="text-center text-ink-500 py-12">Cargando usuarios…</p>
+    <p v-else-if="error" class="banner-danger">⚠️ {{ error }}</p>
+    <p v-else-if="filtrados.length === 0" class="text-center text-ink-500 py-12">
+      No hay usuarios que coincidan con los filtros.
+    </p>
 
-      <p v-if="cargando" class="text-center text-slate-500 py-12">Cargando usuarios…</p>
-      <p v-else-if="error" class="text-red-600">{{ error }}</p>
-      <p v-else-if="filtrados.length === 0" class="text-center text-slate-500 py-12">
-        No hay usuarios que coincidan con los filtros.
-      </p>
-
-      <div v-else class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden fade-in-up">
+    <div v-else class="card overflow-hidden fade-in-up">
+      <div class="overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="bg-slate-50 text-slate-600 text-left text-xs uppercase tracking-wide">
+          <thead class="bg-cream-50 text-ink-500 text-left text-xs uppercase tracking-wider">
             <tr>
-              <th class="px-4 py-3">Usuario</th>
-              <th class="px-4 py-3">Correo</th>
-              <th class="px-4 py-3">Rol</th>
-              <th class="px-4 py-3">Estado</th>
-              <th class="px-4 py-3">Registrado</th>
+              <th class="px-5 py-3">Usuario</th>
+              <th class="px-5 py-3">Correo</th>
+              <th class="px-5 py-3">Rol</th>
+              <th class="px-5 py-3">Estado</th>
+              <th class="px-5 py-3">Registrado</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr v-for="u in filtrados" :key="u.id" class="hover:bg-slate-50 transition">
-              <td class="px-4 py-3">
-                <p class="font-semibold text-slate-900">{{ u.nombre }} {{ u.apellido }}</p>
+          <tbody class="divide-y divide-ink-100">
+            <tr v-for="u in filtrados" :key="u.id" class="hover:bg-brand-50/50 transition">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="avatar-sm">{{ (u.nombre[0] + (u.apellido[0]||'')).toUpperCase() }}</div>
+                  <p class="font-semibold text-ink-900">{{ u.nombre }} {{ u.apellido }}</p>
+                </div>
               </td>
-              <td class="px-4 py-3 text-slate-600 font-mono text-xs">{{ u.email }}</td>
-              <td class="px-4 py-3">
-                <span :class="['inline-block px-2 py-1 rounded-full text-xs font-bold border capitalize',
-                  colorRol[u.role] || 'bg-slate-100 text-slate-700 border-slate-300']">
-                  {{ u.role }}
+              <td class="px-5 py-3 text-ink-600 font-mono text-xs">{{ u.email }}</td>
+              <td class="px-5 py-3">
+                <span :class="rolChip[u.role] || 'chip-ink'" class="capitalize">{{ u.role }}</span>
+              </td>
+              <td class="px-5 py-3">
+                <span v-if="u.activo" class="text-mint-600 text-xs font-semibold inline-flex items-center gap-1">
+                  <span class="w-2 h-2 bg-mint-500 rounded-full"></span> Activo
+                </span>
+                <span v-else class="text-ink-400 text-xs font-semibold inline-flex items-center gap-1">
+                  <span class="w-2 h-2 bg-ink-300 rounded-full"></span> Inactivo
                 </span>
               </td>
-              <td class="px-4 py-3">
-                <span v-if="u.activo" class="text-emerald-700 text-xs font-semibold">● Activo</span>
-                <span v-else class="text-slate-400 text-xs font-semibold">● Inactivo</span>
-              </td>
-              <td class="px-4 py-3 text-slate-600">{{ fechaCorta(u.created_at) }}</td>
+              <td class="px-5 py-3 text-ink-600">{{ fechaCorta(u.created_at) }}</td>
             </tr>
           </tbody>
         </table>

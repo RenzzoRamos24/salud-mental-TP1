@@ -71,7 +71,7 @@ export const api = {
     return data
   },
 
-  // ─── ADMIN ───
+  // ─── ADMIN: usuarios ───
   async listarUsuarios(role = null) {
     const { data } = await client.get('/admin/users', { params: role ? { role } : {} })
     return data
@@ -81,7 +81,57 @@ export const api = {
     return data
   },
 
-  // ─── PSICÓLOGO (HU-20) ───
+  // ─── ADMIN: Sprint 6 ───
+  async adminGetEncuesta() {
+    const { data } = await client.get('/admin/config/encuesta')
+    return data
+  },
+  async adminUpdateEncuesta(preguntas, frecuencia_dias) {
+    const { data } = await client.put('/admin/config/encuesta', { preguntas, frecuencia_dias })
+    return data
+  },
+  async adminGetAuditLogs({ limit = 100, offset = 0, role, endpoint } = {}) {
+    const { data } = await client.get('/admin/audit-logs', {
+      params: { limit, offset, ...(role && { role }), ...(endpoint && { endpoint }) },
+    })
+    return data
+  },
+  async adminCrearBackup() {
+    const { data } = await client.post('/admin/backup')
+    return data
+  },
+  async adminListarBackups() {
+    const { data } = await client.get('/admin/backups')
+    return data
+  },
+  async adminGetUmbrales() {
+    const { data } = await client.get('/admin/bert/umbrales')
+    return data
+  },
+  async adminUpdateUmbrales(payload) {
+    const { data } = await client.put('/admin/bert/umbrales', payload)
+    return data
+  },
+  async adminGetModeloInfo() {
+    const { data } = await client.get('/admin/bert/modelo')
+    return data
+  },
+  async adminRecargarModelo() {
+    const { data } = await client.post('/admin/bert/recargar')
+    return data
+  },
+
+  // ─── ESTUDIANTE: historial propio (HU-12) ───
+  async miHistorial() {
+    const { data } = await client.get('/chatbot/mi-historial')
+    return data
+  },
+
+  // ─── PSICÓLOGO (Sprint 5: HU-15, HU-16, HU-17, HU-19) ───
+  async dashboardStats() {
+    const { data } = await client.get('/psychologist/dashboard-stats')
+    return data
+  },
   async listarEstudiantes() {
     const { data } = await client.get('/psychologist/students')
     return data
@@ -89,6 +139,22 @@ export const api = {
   async historialEstudiante(student_id) {
     const { data } = await client.get(`/psychologist/students/${student_id}/history`)
     return data
+  },
+  async crearCita(payload) {
+    const { data } = await client.post('/psychologist/citas', payload)
+    return data
+  },
+  async listarCitas(estudiante_id = null) {
+    const params = estudiante_id ? { estudiante_id } : {}
+    const { data } = await client.get('/psychologist/citas', { params })
+    return data
+  },
+  async actualizarCita(cita_id, payload) {
+    const { data } = await client.put(`/psychologist/citas/${cita_id}`, payload)
+    return data
+  },
+  async cancelarCita(cita_id) {
+    await client.delete(`/psychologist/citas/${cita_id}`)
   },
 
   // ─── CONSENTIMIENTO ───
@@ -106,8 +172,12 @@ export const api = {
     const { data } = await client.post('/chatbot/start')
     return data
   },
-  async responder(session_id, respuesta) {
-    const { data } = await client.post('/chatbot/answer', { session_id, respuesta })
+  async responder(session_id, respuesta, score_likert = null) {
+    const payload = { session_id, respuesta }
+    if (score_likert !== null && score_likert !== undefined) {
+      payload.score_likert = score_likert
+    }
+    const { data } = await client.post('/chatbot/answer', payload)
     return data
   },
   async analizar(session_id) {
@@ -120,6 +190,114 @@ export const api = {
   },
   async health() {
     const { data } = await client.get('/chatbot/health')
+    return data
+  },
+
+  // ─── HU-30: Cita iniciada por el estudiante ───
+  async solicitarCita({ fecha, hora, modalidad = 'presencial', motivo = null }) {
+    const { data } = await client.post('/chatbot/cita', { fecha, hora, modalidad, motivo })
+    return data
+  },
+  async misCitas() {
+    const { data } = await client.get('/chatbot/citas/mias')
+    return data
+  },
+
+  // ─── HU-31: SOS ───
+  async activarSOS({ origen = null, mensaje = null } = {}) {
+    const { data } = await client.post('/sos/', { origen, mensaje })
+    return data
+  },
+  async listarSOSAbiertos() {
+    const { data } = await client.get('/sos/abiertos')
+    return data
+  },
+  async marcarSOSAtendido(event_id) {
+    const { data } = await client.patch(`/sos/${event_id}/atender`)
+    return data
+  },
+
+  // ─── HU-25: Encuesta de satisfacción ───
+  async miSatisfaccion() {
+    const { data } = await client.get('/survey/satisfaction/me')
+    return data
+  },
+  async enviarSatisfaccion(payload) {
+    const { data } = await client.post('/survey/satisfaction', payload)
+    return data
+  },
+  async adminResumenSatisfaccion() {
+    const { data } = await client.get('/survey/admin/satisfaction/summary')
+    return data
+  },
+
+  // ─── HU-29 + HU-40: Contenido psicoeducativo ───
+  async listarContenidos(categoria = null) {
+    const { data } = await client.get('/content/', { params: categoria ? { categoria } : {} })
+    return data
+  },
+  async obtenerContenido(id) {
+    const { data } = await client.get(`/content/${id}`)
+    return data
+  },
+  async adminListarTodosContenidos() {
+    const { data } = await client.get('/content/admin/all')
+    return data
+  },
+  async adminCrearContenido(payload) {
+    const { data } = await client.post('/content/admin', payload)
+    return data
+  },
+  async adminActualizarContenido(id, payload) {
+    const { data } = await client.put(`/content/admin/${id}`, payload)
+    return data
+  },
+  async adminEliminarContenido(id) {
+    await client.delete(`/content/admin/${id}`)
+  },
+
+  // ─── HU-33: Notas clínicas privadas ───
+  async listarNotas(student_id) {
+    const { data } = await client.get(`/psychologist/students/${student_id}/notes`)
+    return data
+  },
+  async crearNota(student_id, { texto, etiqueta = null }) {
+    const { data } = await client.post(`/psychologist/students/${student_id}/notes`, { texto, etiqueta })
+    return data
+  },
+  async borrarNota(student_id, nota_id) {
+    await client.delete(`/psychologist/students/${student_id}/notes/${nota_id}`)
+  },
+
+  // ─── HU-35: Estado del caso ───
+  async cambiarEstadoCaso(student_id, estado) {
+    const { data } = await client.patch(`/psychologist/students/${student_id}/case-status`, { estado })
+    return data
+  },
+
+  // ─── HU-18: Reportes mensuales ───
+  async reporteMensual(year, month) {
+    const { data } = await client.get('/psychologist/reports/monthly', { params: { year, month } })
+    return data
+  },
+  async reporteMensualAdmin(year, month) {
+    const { data } = await client.get('/admin/reports/monthly', { params: { year, month } })
+    return data
+  },
+
+  // ─── HU-38: Asignar psicólogo ───
+  async asignarPsicologo(student_id, psicologo_id) {
+    const { data } = await client.post(`/admin/students/${student_id}/assign-psychologist`, { psicologo_id })
+    return data
+  },
+
+  // ─── HU-39: Mensajes del chatbot ───
+  async getChatbotMessages() {
+    const { data } = await client.get('/admin/chatbot-messages')
+    return data
+  },
+  async updateChatbotMessages(mensajes) {
+    const { data } = await client.put('/admin/chatbot-messages', { mensajes })
     return data
   },
 }
