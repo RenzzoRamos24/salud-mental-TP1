@@ -9,6 +9,9 @@ class CitaCreate(BaseModel):
     hora: str         # HH:MM
     modalidad: str = "presencial"
     notas: Optional[str] = None
+    # True si la psicóloga agenda esta cita como atención de crisis. Al
+    # completarse adelanta el cierre del ciclo en curso.
+    es_crisis: bool = False
 
 
 class CitaUpdate(BaseModel):
@@ -17,6 +20,8 @@ class CitaUpdate(BaseModel):
     fecha: Optional[str] = None
     hora: Optional[str] = None
     modalidad: Optional[str] = None
+    resumen_para_estudiante: Optional[str] = None
+    es_crisis: Optional[bool] = None
 
 
 class CitaOut(BaseModel):
@@ -28,7 +33,10 @@ class CitaOut(BaseModel):
     modalidad: str
     estado: str
     notas: Optional[str] = None
+    resumen_para_estudiante: Optional[str] = None
+    completada_at: Optional[datetime] = None
     created_at: datetime
+    es_crisis: bool = False
     # Datos del estudiante (se añaden en el servicio)
     estudiante_nombre: Optional[str] = None
     estudiante_apellido: Optional[str] = None

@@ -1,5 +1,6 @@
 """Servicio CRUD para citas psicólogo–estudiante (HU-19)."""
 import logging
+from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.models.cita import Cita
@@ -20,7 +21,10 @@ def _enriquecer(cita: Cita, db: Session) -> dict:
         "modalidad": cita.modalidad,
         "estado": cita.estado,
         "notas": cita.notas,
+        "resumen_para_estudiante": getattr(cita, "resumen_para_estudiante", None),
+        "completada_at": getattr(cita, "completada_at", None),
         "created_at": cita.created_at,
+        "es_crisis": bool(getattr(cita, "es_crisis", False)),
         "estudiante_nombre": est.nombre if est else None,
         "estudiante_apellido": est.apellido if est else None,
         "estudiante_email": est.email if est else None,
@@ -38,11 +42,15 @@ class CitaService:
             hora=datos["hora"],
             modalidad=datos.get("modalidad", "presencial"),
             notas=datos.get("notas"),
+            es_crisis=bool(datos.get("es_crisis", False)),
         )
         db.add(cita)
         db.commit()
         db.refresh(cita)
-        logger.info(f"Cita {cita.id} creada para estudiante {cita.estudiante_id}")
+        logger.info(
+            f"Cita {cita.id} creada para estudiante {cita.estudiante_id} "
+            f"(crisis={cita.es_crisis})"
+        )
         return _enriquecer(cita, db)
 
     @staticmethod
@@ -61,6 +69,12 @@ class CitaService:
         ).first()
         if not cita:
             raise ValueError("Cita no encontrada")
+
+        # Si la cita pasa a "completada" y aún no tiene completada_at, lo seteamos.
+        nuevo_estado = cambios.get("estado")
+        if nuevo_estado == "completada" and not cita.completada_at:
+            cita.completada_at = datetime.utcnow()
+
         for campo, valor in cambios.items():
             if valor is not None:
                 setattr(cita, campo, valor)

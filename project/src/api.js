@@ -164,6 +164,20 @@ export const api = {
     );
     return data;
   },
+  async resumenDiarioEstudiante(student_id) {
+    const { data } = await client.get(
+      `/psychologist/students/${student_id}/diario-resumen`,
+    );
+    return data;
+  },
+  async reporteCicloEstudiante(student_id, ciclo = null) {
+    const params = ciclo != null ? { ciclo } : {};
+    const { data } = await client.get(
+      `/psychologist/students/${student_id}/reporte-ciclo`,
+      { params },
+    );
+    return data;
+  },
   async crearCita(payload) {
     const { data } = await client.post("/psychologist/citas", payload);
     return data;
@@ -356,6 +370,77 @@ export const api = {
   },
   async updateChatbotMessages(mensajes) {
     const { data } = await client.put("/admin/chatbot-messages", { mensajes });
+    return data;
+  },
+
+  // ─── DIARIO digital del estudiante ───
+  async crearEntradaDiario({
+    texto,
+    estado_animo = null,
+    prompt_del_dia = null,
+  }) {
+    const { data } = await client.post("/diario/entrada", {
+      texto,
+      estado_animo,
+      prompt_del_dia,
+    });
+    return data;
+  },
+  async listarMisEntradasDiario() {
+    const { data } = await client.get("/diario/mis-entradas");
+    return data;
+  },
+  async obtenerEntradaDiario(id) {
+    const { data } = await client.get(`/diario/entrada/${id}`);
+    return data;
+  },
+
+  // ─── Panel de apoyo del estudiante ───
+  async misRecomendaciones() {
+    const { data } = await client.get("/diario/recomendaciones");
+    return data;
+  },
+  async misMensajesPsicologo() {
+    const { data } = await client.get("/diario/mensajes-psicologo");
+    return data;
+  },
+  async marcarMensajePsicologoLeido(id) {
+    const { data } = await client.post(
+      `/diario/mensajes-psicologo/${id}/leido`,
+    );
+    return data;
+  },
+  async misCitas() {
+    const { data } = await client.get("/diario/mis-citas");
+    return data;
+  },
+  async miCiclo() {
+    const { data } = await client.get("/diario/mi-ciclo");
+    return data;
+  },
+  async consejoDelDia() {
+    const { data } = await client.get("/diario/consejo-del-dia");
+    return data;
+  },
+
+  // ─── Mensajes del psicólogo al estudiante (lado psicólogo) ───
+  async listarMensajesEstudiante(student_id) {
+    const { data } = await client.get(
+      `/psychologist/students/${student_id}/mensajes`,
+    );
+    return data;
+  },
+  async crearMensajeEstudiante(student_id, mensaje) {
+    const { data } = await client.post(
+      `/psychologist/students/${student_id}/mensajes`,
+      { mensaje },
+    );
+    return data;
+  },
+  async borrarMensajeEstudiante(student_id, mensaje_id) {
+    const { data } = await client.delete(
+      `/psychologist/students/${student_id}/mensajes/${mensaje_id}`,
+    );
     return data;
   },
 };

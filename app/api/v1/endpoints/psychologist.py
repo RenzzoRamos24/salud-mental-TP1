@@ -9,13 +9,17 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.psychologist import EstudianteResumen, HistorialEstudiante
 from app.schemas.cita import CitaCreate, CitaUpdate, CitaOut
-from app.services.psychologist_service import PsychologistService
+from app.services.psychologist_service import (
+    PsychologistService,
+    resumen_diario_estudiante,
+)
 from app.services.cita_service import CitaService
 from app.services.notes_service import NotesService
 from app.core.deps import require_role
 from app.models.user import User
 from app.models.cita import Cita   # necesario para que Base cree la tabla
 from app.models.clinical_note import ClinicalNote  # noqa: F401  (Base.metadata)
+from app.models.psicologo_mensaje import PsicologoMensaje
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -56,6 +60,95 @@ async def historial_estudiante(
         return PsychologistService.historial_estudiante(db, student_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Resumen bisemanal del diario (panel psicólogo) ──────────────────────────
+
+@router.get("/students/{student_id}/diario-resumen")
+async def diario_resumen(
+    student_id: str,
+    _: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Resumen agregado del diario en una ventana de 14 días.
+
+    Devuelve estado de evaluación (en_proceso/completo/sin_datos),
+    porcentaje completado, alerta crítica si aplica y resumen de
+    PHQ-9 / GAD-7 / condiciones BERT más recurrentes.
+    """
+    try:
+        return resumen_diario_estudiante(db, student_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Reporte clínico por ciclo (días-con-síntoma → tabla Johnson 2002) ─────
+
+@router.get("/students/{student_id}/reporte-ciclo")
+async def reporte_ciclo_estudiante(
+    student_id: str,
+    ciclo: Optional[int] = None,
+    _: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Reporte clínico de un ciclo de 14 días, calculado contando los DÍAS
+    distintos en que apareció cada síntoma y mapeando con la tabla literal
+    del PHQ-A (Johnson 2002):
+
+        0 días     → 0 puntos ("Nunca")
+        1–7 días   → 1 punto  ("Algunos días")
+        8–11 días  → 2 puntos ("Más de la mitad de los días")
+        12–14 días → 3 puntos ("Casi todos los días")
+
+    Si `ciclo` no se pasa, devuelve el reporte del ciclo ACTUAL del alumno
+    (basado en `info_ciclo_estudiante`). Si se pasa, devuelve el reporte
+    del ciclo cerrado con ese número.
+    """
+    from app.services.ciclo_service import info_ciclo_estudiante
+    from app.services.diario_analisis_service import DiarioAnalisisService
+    from datetime import date
+
+    try:
+        info = info_ciclo_estudiante(db, student_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    # Determinar el rango de fechas del ciclo solicitado
+    if ciclo is not None:
+        cerrados = info.get("sesiones_cerradas", [])
+        match = next((c for c in cerrados if c["numero"] == ciclo), None)
+        if not match:
+            actual = info.get("ciclo_actual") or {}
+            if actual and actual.get("numero") == ciclo:
+                ciclo_inicio = date.fromisoformat(actual["inicio"])
+                ciclo_fin = date.fromisoformat(actual["fecha_limite"])
+                cerrado = False
+            else:
+                raise HTTPException(
+                    status_code=404, detail=f"Ciclo {ciclo} no encontrado"
+                )
+        else:
+            ciclo_inicio = date.fromisoformat(match["inicio"])
+            ciclo_fin = date.fromisoformat(match["cierre"])
+            cerrado = True
+    else:
+        actual = info.get("ciclo_actual")
+        if not actual:
+            return {
+                "estado": "sin_datos",
+                "mensaje": "El estudiante aún no tiene ciclo en curso.",
+            }
+        ciclo_inicio = date.fromisoformat(actual["inicio"])
+        ciclo_fin = date.fromisoformat(actual["fecha_limite"])
+        cerrado = False
+
+    reporte = DiarioAnalisisService.reporte_ciclo(
+        db, student_id, ciclo_inicio, ciclo_fin
+    )
+    reporte["ciclo_cerrado"] = cerrado
+    return reporte
 
 
 # ── HU-19: Agendar cita ───────────────────────────────────────────────────────
@@ -151,6 +244,86 @@ async def borrar_nota(
 ):
     if not NotesService.eliminar(db, nota_id, current_user.id):
         raise HTTPException(404, "Nota no encontrada (o no es tuya).")
+
+
+# ── Mensajes del psicólogo al estudiante ────────────────────────────
+
+class MensajeIn(BaseModel):
+    mensaje: str = Field(..., min_length=1, max_length=1000)
+
+
+@router.get("/students/{student_id}/mensajes")
+async def listar_mensajes_estudiante(
+    student_id: str,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    rows = (
+        db.query(PsicologoMensaje)
+        .filter(PsicologoMensaje.estudiante_id == student_id)
+        .order_by(PsicologoMensaje.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "id": m.id,
+            "psicologo_id": m.psicologo_id,
+            "mensaje": m.mensaje,
+            "leido": m.leido,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+            "leido_at": m.leido_at.isoformat() if m.leido_at else None,
+        }
+        for m in rows
+    ]
+
+
+@router.post("/students/{student_id}/mensajes", status_code=201)
+async def crear_mensaje_estudiante(
+    student_id: str,
+    payload: MensajeIn,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    estudiante = (
+        db.query(User)
+        .filter(User.id == student_id, User.role == "estudiante")
+        .first()
+    )
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado.")
+
+    m = PsicologoMensaje(
+        psicologo_id=current_user.id,
+        estudiante_id=student_id,
+        mensaje=payload.mensaje.strip(),
+    )
+    db.add(m)
+    db.commit()
+    db.refresh(m)
+    return {"id": m.id, "ok": True}
+
+
+@router.delete("/students/{student_id}/mensajes/{mensaje_id}", status_code=204)
+async def borrar_mensaje_estudiante(
+    student_id: str,
+    mensaje_id: int,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    m = (
+        db.query(PsicologoMensaje)
+        .filter(
+            PsicologoMensaje.id == mensaje_id,
+            PsicologoMensaje.estudiante_id == student_id,
+            PsicologoMensaje.psicologo_id == current_user.id,
+        )
+        .first()
+    )
+    if not m:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado.")
+    db.delete(m)
+    db.commit()
 
 
 # ── HU-35: Estado del caso ──────────────────────────────────────────

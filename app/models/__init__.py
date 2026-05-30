@@ -5,6 +5,7 @@ from app.models.password_reset import PasswordResetToken
 from app.models.session import UserSession
 from app.models.response import UserResponse
 from app.models.risk import RiskResult
+from app.models.psicologo_mensaje import PsicologoMensaje
 
 __all__ = [
     "Base",
@@ -14,4 +15,5 @@ __all__ = [
     "UserSession",
     "UserResponse",
     "RiskResult",
+    "PsicologoMensaje",
 ]

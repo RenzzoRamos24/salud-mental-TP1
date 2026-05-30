@@ -23,9 +23,47 @@ const modalCita = reactive({
   hora: "",
   modalidad: "presencial",
   notas: "",
+  es_crisis: false,
   guardando: false,
   error: "",
 });
+
+// Modal "completar sesión" — pide resumen para el estudiante
+const modalCompletar = reactive({
+  abierto: false,
+  cita: null,
+  resumen: "",
+  guardando: false,
+  error: "",
+});
+
+function abrirModalCompletar(cita) {
+  modalCompletar.abierto = true;
+  modalCompletar.cita = cita;
+  modalCompletar.resumen = cita.resumen_para_estudiante || "";
+  modalCompletar.error = "";
+}
+function cerrarModalCompletar() {
+  modalCompletar.abierto = false;
+  modalCompletar.cita = null;
+}
+
+async function confirmarCompletar() {
+  modalCompletar.error = "";
+  modalCompletar.guardando = true;
+  try {
+    await api.actualizarCita(modalCompletar.cita.id, {
+      estado: "completada",
+      resumen_para_estudiante: modalCompletar.resumen.trim() || null,
+    });
+    cerrarModalCompletar();
+    await cargarTodo();
+  } catch (e) {
+    modalCompletar.error = e.response?.data?.detail || e.message;
+  } finally {
+    modalCompletar.guardando = false;
+  }
+}
 
 async function cargarTodo() {
   try {
@@ -84,6 +122,7 @@ function abrirModalCita(est) {
   modalCita.hora = "";
   modalCita.modalidad = "presencial";
   modalCita.notas = "";
+  modalCita.es_crisis = false;
   modalCita.error = "";
 }
 function cerrarModal() {
@@ -104,6 +143,7 @@ async function guardarCita() {
       hora: modalCita.hora,
       modalidad: modalCita.modalidad,
       notas: modalCita.notas || null,
+      es_crisis: modalCita.es_crisis,
     });
     cerrarModal();
     await cargarTodo();
@@ -232,8 +272,14 @@ async function cancelarCita(c) {
             <div class="flex items-center gap-3 min-w-0">
               <div class="avatar-md bg-green-50"></div>
               <div class="min-w-0">
-                <p class="font-semibold text-ink-900 truncate">
+                <p class="font-semibold text-ink-900 truncate flex items-center gap-2">
                   {{ c.estudiante_nombre }} {{ c.estudiante_apellido }}
+                  <span
+                    v-if="c.es_crisis"
+                    class="text-[10px] uppercase tracking-wider bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-semibold"
+                  >
+                    Crisis
+                  </span>
                 </p>
                 <p class="text-xs text-ink-500">
                   {{ c.fecha }} · {{ c.hora }} ·
@@ -261,7 +307,7 @@ async function cancelarCita(c) {
               </button>
               <button
                 v-if="c.estado === 'confirmada'"
-                @click="actualizarEstadoCita(c, 'completada')"
+                @click="abrirModalCompletar(c)"
                 class="btn-secondary btn-sm"
               >
                 Completada
@@ -307,9 +353,9 @@ async function cancelarCita(c) {
               <tr>
                 <th class="px-5 py-3">Estudiante</th>
                 <th class="px-5 py-3">Correo</th>
-                <th class="px-5 py-3 text-center">Sesiones</th>
+                <th class="px-5 py-3 text-center">Entradas diario</th>
                 <th class="px-5 py-3">Último riesgo</th>
-                <th class="px-5 py-3">Última eval.</th>
+                <th class="px-5 py-3">Última entrada</th>
                 <th class="px-5 py-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -334,11 +380,8 @@ async function cancelarCita(c) {
                 </td>
                 <td class="px-5 py-3 text-center">
                   <span class="text-ink-900 font-semibold">{{
-                    e.sesiones_completadas
+                    e.total_entradas_diario || 0
                   }}</span>
-                  <span class="text-ink-400 text-xs">
-                    / {{ e.total_sesiones }}</span
-                  >
                 </td>
                 <td class="px-5 py-3">
                   <RiskBadge :nivel="e.ultimo_riesgo" />
@@ -415,6 +458,25 @@ async function cancelarCita(c) {
               ></textarea>
             </div>
 
+            <label
+              class="flex items-start gap-3 rounded-md border border-ink-100 p-3 cursor-pointer hover:border-red-400"
+              :class="modalCita.es_crisis ? 'border-red-500 bg-red-50' : ''"
+            >
+              <input
+                type="checkbox"
+                v-model="modalCita.es_crisis"
+                class="mt-0.5"
+              />
+              <span class="text-sm leading-snug">
+                <strong class="text-red-800">Atención de crisis</strong>
+                <span class="block text-ink-600 mt-0.5">
+                  Marca solo si esta cita responde a una situación de
+                  riesgo. Al completarla, adelanta el cierre del ciclo en
+                  curso.
+                </span>
+              </span>
+            </label>
+
             <p v-if="modalCita.error" class="field-error">
               {{ modalCita.error }}
             </p>
@@ -435,6 +497,66 @@ async function cancelarCita(c) {
                 {{ modalCita.guardando ? "Guardando…" : "Agendar" }}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal: completar sesión y dejar resumen para el estudiante -->
+    <Teleport to="body">
+      <div
+        v-if="modalCompletar.abierto"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/40 backdrop-blur-sm fade-in-up"
+        @click.self="cerrarModalCompletar"
+      >
+        <div class="card-hero w-full max-w-lg p-6">
+          <h2 class="text-xl font-bold text-ink-900 mb-1">Cerrar sesión</h2>
+          <p class="text-sm text-ink-500 mb-4">
+            Con
+            <strong>
+              {{ modalCompletar.cita?.estudiante_nombre }}
+              {{ modalCompletar.cita?.estudiante_apellido }}
+            </strong>
+            · {{ modalCompletar.cita?.fecha }} ·
+            {{ modalCompletar.cita?.hora?.slice(0, 5) }}
+          </p>
+
+          <label class="label">Resumen para el estudiante</label>
+          <p class="text-xs text-ink-500 mb-2 leading-relaxed">
+            Lo que escribas acá lo verá el estudiante en su panel "Mi proceso".
+            Frases cortas, claras, acuerdos concretos. NO incluyas
+            diagnósticos ni notas clínicas privadas.
+          </p>
+          <textarea
+            v-model="modalCompletar.resumen"
+            rows="5"
+            maxlength="2000"
+            class="input resize-none"
+            placeholder="Ej: Conversamos sobre el agotamiento por exámenes. Acordamos: dormir antes de las 12, ejercicio dos veces por semana, volver a vernos en 14 días."
+          ></textarea>
+          <p class="text-xs text-ink-500 mt-1 text-right">
+            {{ modalCompletar.resumen.length }}/2000
+          </p>
+
+          <p v-if="modalCompletar.error" class="field-error mt-2">
+            {{ modalCompletar.error }}
+          </p>
+
+          <div class="flex gap-2 pt-4">
+            <button
+              @click="cerrarModalCompletar"
+              :disabled="modalCompletar.guardando"
+              class="btn-ghost flex-1"
+            >
+              Cancelar
+            </button>
+            <button
+              @click="confirmarCompletar"
+              :disabled="modalCompletar.guardando"
+              class="btn-primary flex-1"
+            >
+              {{ modalCompletar.guardando ? "Guardando…" : "Marcar como completada" }}
+            </button>
           </div>
         </div>
       </div>

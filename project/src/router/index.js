@@ -8,8 +8,7 @@ import ResetPasswordView from "../views/ResetPasswordView.vue";
 import ConsentView from "../views/ConsentView.vue";
 import MainMenuView from "../views/MainMenuView.vue";
 import ProfileView from "../views/ProfileView.vue";
-import ChatView from "../views/ChatView.vue";
-import ResultsView from "../views/ResultsView.vue";
+import DiarioView from "../views/DiarioView.vue";
 import PsychologistDashboardView from "../views/PsychologistDashboardView.vue";
 import StudentHistoryView from "../views/StudentHistoryView.vue";
 import AdminDashboardView from "../views/AdminDashboardView.vue";
@@ -18,7 +17,6 @@ import RecursosView from "../views/RecursosView.vue";
 import AdminSystemView from "../views/AdminSystemView.vue";
 import SatisfactionSurveyView from "../views/SatisfactionSurveyView.vue";
 import AdminContentView from "../views/AdminContentView.vue";
-import AdminChatbotMessagesView from "../views/AdminChatbotMessagesView.vue";
 import AdminReportsView from "../views/AdminReportsView.vue";
 import AdminLogsView from "../views/AdminLogsView.vue";
 
@@ -67,15 +65,9 @@ const routes = [
     meta: { requiereAuth: true, requiereConsent: true },
   },
   {
-    path: "/chat",
-    name: "chat",
-    component: ChatView,
-    meta: { requiereAuth: true, requiereConsent: true, roles: ["estudiante"] },
-  },
-  {
-    path: "/resultados",
-    name: "resultados",
-    component: ResultsView,
+    path: "/diario",
+    name: "diario",
+    component: DiarioView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["estudiante"] },
   },
   {
@@ -134,12 +126,6 @@ const routes = [
     path: "/admin/contenidos",
     name: "admin-contenidos",
     component: AdminContentView,
-    meta: { requiereAuth: true, requiereConsent: true, roles: ["admin"] },
-  },
-  {
-    path: "/admin/mensajes-chatbot",
-    name: "admin-mensajes-chatbot",
-    component: AdminChatbotMessagesView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["admin"] },
   },
   {

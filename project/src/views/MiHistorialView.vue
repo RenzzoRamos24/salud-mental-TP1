@@ -211,8 +211,8 @@ onMounted(async () => {
           <p class="text-sm text-ink-500">
             Todavía no tienes evaluaciones completadas.
           </p>
-          <button @click="router.push('/chat')" class="btn-mint mt-4">
-            Iniciar evaluación
+          <button @click="router.push('/diario')" class="btn-mint mt-4">
+            Ir a mi diario
           </button>
         </div>
       </section>

@@ -101,21 +101,6 @@ const escalas = [
     descripcion: "Generalized Anxiety Disorder — síntomas ansiosos.",
     rango: "0–21",
   },
-  {
-    nombre: "ASRS-v1.1",
-    descripcion: "Adult Self-Report Scale — TDAH.",
-    rango: "Parte A · 6 ítems",
-  },
-  {
-    nombre: "UCLA-3",
-    descripcion: "UCLA Loneliness Scale (versión breve) — soledad.",
-    rango: "3–9",
-  },
-  {
-    nombre: "C-SSRS",
-    descripcion: "Columbia Suicide Severity Rating — ideación y conducta suicida.",
-    rango: "Cribado breve",
-  },
 ];
 
 const protocolos = [
@@ -123,7 +108,7 @@ const protocolos = [
     titulo: "Riesgo crítico detectado",
     pasos: [
       "Contactar al estudiante en las primeras 24 horas.",
-      "Aplicar C-SSRS completo y elaborar plan de seguridad.",
+      "Elaborar plan de seguridad junto al estudiante.",
       "Comunicar a Bienestar Estudiantil y, si corresponde, a la familia.",
       "Registrar la intervención y dar seguimiento en 48–72 horas.",
     ],
@@ -210,7 +195,9 @@ const lineasDerivacion = [
             class="card p-5 hover:border-green-500 transition"
           >
             <h3 class="font-semibold text-ink-900 text-sm">{{ r.titulo }}</h3>
-            <p class="text-ink-600 text-xs mt-1 leading-relaxed">{{ r.desc }}</p>
+            <p class="text-ink-600 text-xs mt-1 leading-relaxed">
+              {{ r.desc }}
+            </p>
             <p class="mt-4 text-2xl font-semibold text-ink-900 tracking-tight">
               {{ r.numero }}
             </p>
@@ -242,10 +229,7 @@ const lineasDerivacion = [
         </div>
       </section>
 
-      <section
-        v-if="contenidos.length > 0 || cargandoContenidos"
-        class="mb-10"
-      >
+      <section v-if="contenidos.length > 0 || cargandoContenidos" class="mb-10">
         <div class="flex justify-between items-end mb-4 flex-wrap gap-2">
           <div>
             <h2 class="section-title !mb-1">Para leer</h2>
@@ -312,7 +296,9 @@ const lineasDerivacion = [
             Una conversación corta con Sami. Diez preguntas.
           </p>
         </div>
-        <router-link to="/chat" class="btn-mint btn-sm">Empezar</router-link>
+        <router-link to="/diario" class="btn-mint btn-sm"
+          >Ir a mi diario</router-link
+        >
       </div>
     </template>
 
@@ -355,11 +341,7 @@ const lineasDerivacion = [
           <div v-for="p in protocolos" :key="p.titulo" class="card p-5">
             <p class="font-semibold text-ink-900 mb-3">{{ p.titulo }}</p>
             <ol class="space-y-2 text-sm text-ink-700">
-              <li
-                v-for="(paso, i) in p.pasos"
-                :key="i"
-                class="flex gap-3"
-              >
+              <li v-for="(paso, i) in p.pasos" :key="i" class="flex gap-3">
                 <span
                   class="shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-700 text-[11px] font-semibold flex items-center justify-center"
                   >{{ i + 1 }}</span
@@ -391,13 +373,13 @@ const lineasDerivacion = [
             class="card p-5 hover:border-green-500 transition"
           >
             <h3 class="font-semibold text-ink-900 text-sm">{{ r.titulo }}</h3>
-            <p class="text-ink-600 text-xs mt-1 leading-relaxed">{{ r.desc }}</p>
+            <p class="text-ink-600 text-xs mt-1 leading-relaxed">
+              {{ r.desc }}
+            </p>
             <p class="mt-4 text-2xl font-semibold text-ink-900 tracking-tight">
               {{ r.numero }}
             </p>
-            <p class="text-xs text-ink-500 mt-0.5">
-              Atención {{ r.horario }}
-            </p>
+            <p class="text-xs text-ink-500 mt-0.5">Atención {{ r.horario }}</p>
           </a>
         </div>
       </section>

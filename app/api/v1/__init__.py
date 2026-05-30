@@ -8,6 +8,7 @@ from app.api.v1.endpoints.admin import router as admin_router
 from app.api.v1.endpoints.content import router as content_router
 from app.api.v1.endpoints.survey import router as survey_router
 from app.api.v1.endpoints.sos import router as sos_router
+from app.api.v1.endpoints.diario import router as diario_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
@@ -19,5 +20,6 @@ api_router.include_router(chatbot_router, prefix="/chatbot", tags=["chatbot"])
 api_router.include_router(content_router, prefix="/content", tags=["content"])
 api_router.include_router(survey_router, prefix="/survey", tags=["survey"])
 api_router.include_router(sos_router, prefix="/sos", tags=["sos"])
+api_router.include_router(diario_router, prefix="/diario", tags=["diario"])
 
 __all__ = ["api_router"]

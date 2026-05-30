@@ -11,9 +11,11 @@ class EstudianteResumen(BaseModel):
     email: str
     total_sesiones: int
     sesiones_completadas: int
+    total_entradas_diario: int = 0
     ultimo_riesgo: Optional[str] = None  # CRÍTICO/ALTO/MEDIO/BAJO o None
     ultimo_score: Optional[float] = None
     ultima_evaluacion: Optional[datetime] = None
+    fuente_ultima: Optional[str] = None  # "chatbot" | "diario" | None
 
 
 class IntercambioConversacion(BaseModel):
@@ -38,4 +40,5 @@ class HistorialEstudiante(BaseModel):
     """Historial completo de un estudiante (HU-20)."""
     estudiante: EstudianteResumen
     sesiones: List[SesionHistorial]
-    serie_temporal: List[Dict] = []  # [{fecha, nivel, score}, ...] para gráfico
+    entradas_diario: List[Dict] = []  # [{id, fecha, texto, analisis}, ...]
+    serie_temporal: List[Dict] = []  # [{fecha, nivel, score, fuente}, ...]

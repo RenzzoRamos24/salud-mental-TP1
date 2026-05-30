@@ -98,6 +98,19 @@ const detectadas = computed(() => r.value.condiciones_detectadas || {});
 const numDetectadas = computed(() => Object.keys(detectadas.value).length);
 const nivelRiesgo = computed(() => r.value.nivel_riesgo);
 
+const phq9 = computed(() => props.resultado.phq9 || null);
+const gad7 = computed(() => props.resultado.gad7 || null);
+const crisisProtocolo = computed(() => !!props.resultado.crisis_protocolo);
+
+function severidadTone(sev) {
+  const s = (sev || "").toLowerCase();
+  if (s.includes("severa") || s.includes("severo")) return "text-risk-critico";
+  if (s.includes("moderada-severa")) return "text-risk-critico";
+  if (s.includes("moderada")) return "text-orange-600";
+  if (s.includes("leve")) return "text-amber-600";
+  return "text-green-700";
+}
+
 const fechaFormateada = computed(() => {
   try {
     return new Date(props.resultado.fecha_analisis).toLocaleString("es-PE", {
@@ -318,6 +331,76 @@ function imprimir() {
         </div>
       </section>
 
+      <!-- ═══ ESCALAS CLÍNICAS (PHQ-9 + GAD-7) ═══ -->
+      <section v-if="phq9 || gad7" class="grid md:grid-cols-2 gap-5 fade-in-up">
+        <!-- PHQ-9 -->
+        <div v-if="phq9" class="card p-6">
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <p class="text-xs uppercase tracking-widest text-ink-500 font-bold">
+                PHQ-9 — Depresión
+              </p>
+              <p class="text-3xl font-bold text-ink-900 mt-1">
+                {{ phq9.total }}<span class="text-lg text-ink-400">/{{ phq9.max }}</span>
+              </p>
+            </div>
+            <span
+              class="dsm5-tag"
+              :class="severidadTone(phq9.severidad)"
+            >{{ phq9.severidad }}</span>
+          </div>
+          <div class="h-2 bg-ink-100 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-green-600 transition-all duration-700"
+              :style="{ width: (phq9.total / phq9.max) * 100 + '%' }"
+            ></div>
+          </div>
+          <p class="text-xs text-ink-600 mt-3 leading-relaxed">
+            <strong>Acción sugerida:</strong> {{ phq9.accion }}
+          </p>
+        </div>
+
+        <!-- GAD-7 -->
+        <div v-if="gad7" class="card p-6">
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <p class="text-xs uppercase tracking-widest text-ink-500 font-bold">
+                GAD-7 — Ansiedad
+              </p>
+              <p class="text-3xl font-bold text-ink-900 mt-1">
+                {{ gad7.total }}<span class="text-lg text-ink-400">/{{ gad7.max }}</span>
+              </p>
+            </div>
+            <span
+              class="dsm5-tag"
+              :class="severidadTone(gad7.severidad)"
+            >{{ gad7.severidad }}</span>
+          </div>
+          <div class="h-2 bg-ink-100 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-green-600 transition-all duration-700"
+              :style="{ width: (gad7.total / gad7.max) * 100 + '%' }"
+            ></div>
+          </div>
+          <p class="text-xs text-ink-600 mt-3 leading-relaxed">
+            <strong>Acción sugerida:</strong> {{ gad7.accion }}
+          </p>
+        </div>
+      </section>
+
+      <!-- ═══ ALERTA DE CRISIS (PHQ-9 ítem 9) ═══ -->
+      <section v-if="crisisProtocolo" class="banner-danger">
+        <div>
+          <p class="font-semibold">Protocolo de atención prioritaria</p>
+          <p class="text-sm mt-1 leading-relaxed">
+            En el ítem 9 del PHQ-9 (ideación de daño hacia ti mismo) hubo una
+            respuesta que activa el protocolo. Llama a la
+            <strong>Línea 113, opción 5</strong> ahora, o ve a la emergencia
+            más cercana. Tu psicóloga/o del colegio también verá esta alerta.
+          </p>
+        </div>
+      </section>
+
       <!-- ═══ GRÁFICO ═══ -->
       <section class="card p-6 fade-in-up">
         <h2 class="section-title">Perfil de condiciones</h2>
@@ -466,9 +549,6 @@ function imprimir() {
               <div class="flex flex-wrap gap-1.5 mt-1.5">
                 <span class="dsm5-tag">PHQ-9</span>
                 <span class="dsm5-tag">GAD-7</span>
-                <span class="dsm5-tag">ASRS-v1.1</span>
-                <span class="dsm5-tag">UCLA-3</span>
-                <span class="dsm5-tag">C-SSRS</span>
               </div>
             </div>
             <div>
