@@ -274,8 +274,17 @@ class DiarioAnalisisService:
         )
 
         # Para cada ítem, conjunto de fechas distintas con presencia
+        # También acumulamos scores BETO y emojis por entrada
         dias_por_item: dict = defaultdict(set)
+        CONDICIONES = ["depresion", "ansiedad", "estres_academico", "soledad", "tdah", "riesgo_suicida"]
+        scores_acum: dict = defaultdict(list)
+        emojis_count: dict = defaultdict(int)
+
         for e in entradas:
+            # Emoji de estado de ánimo (siempre disponible)
+            if e.estado_animo:
+                emojis_count[e.estado_animo] += 1
+
             if not e.analisis_id:
                 continue
             a = (
@@ -283,7 +292,20 @@ class DiarioAnalisisService:
                 .filter(DiarioAnalisis.id == e.analisis_id)
                 .first()
             )
-            if not a or not a.items_detectados_json:
+            if not a:
+                continue
+
+            # Condiciones BETO: acumular scores para promedio
+            if a.scores_completos_json:
+                try:
+                    scores = json.loads(a.scores_completos_json)
+                    for cond in CONDICIONES:
+                        if cond in scores:
+                            scores_acum[cond].append(scores[cond])
+                except (ValueError, TypeError):
+                    pass
+
+            if not a.items_detectados_json:
                 continue
             try:
                 items = json.loads(a.items_detectados_json)
@@ -292,6 +314,12 @@ class DiarioAnalisisService:
             for item in items:
                 if item.get("score", 0) >= 1:
                     dias_por_item[item["item"]].add(e.fecha)
+
+        # Promedio de scores BETO por condición en el ciclo (0–100)
+        condiciones_ciclo = {
+            cond: round(sum(vals) / len(vals)) if vals else 0
+            for cond, vals in scores_acum.items()
+        }
 
         # Mapeo días → puntos (tabla Johnson 2002 sobre 14 días)
         def _dias_a_puntos(n: int) -> int:
@@ -348,6 +376,10 @@ class DiarioAnalisisService:
         else:
             confiabilidad = "alta"
 
+        items_detalle_ordenado = sorted(
+            items_detalle, key=lambda x: (-x["puntos"], x["item"])
+        )
+
         return {
             "ciclo_inicio": ciclo_inicio.isoformat(),
             "ciclo_fin": ciclo_fin.isoformat(),
@@ -363,10 +395,11 @@ class DiarioAnalisisService:
             "gad7_severidad": DiarioAnalisisService._severidad(
                 gad7_total, settings.GAD7_SEVERIDAD
             ),
-            "items_detalle": sorted(
-                items_detalle, key=lambda x: (-x["puntos"], x["item"])
-            ),
+            "items_detalle": items_detalle_ordenado,
+            "criterios_dsm5": _evaluar_criterios_dsm5(items_detalle_ordenado),
             "total_entradas": len(entradas),
+            "condiciones_beto": condiciones_ciclo,
+            "emojis": dict(emojis_count),
         }
 
     # ─────────────────────────────────────────────────────────────────
@@ -390,6 +423,104 @@ def _frase_likert(puntos: int) -> str:
         2: "Más de la mitad de los días",
         3: "Casi todos los días",
     }.get(puntos, "")
+
+
+def _evaluar_criterios_dsm5(items_detalle: list) -> dict:
+    """
+    Evalúa si los ítems del ciclo cumplen los criterios mínimos del DSM-5
+    para Episodio Depresivo Mayor (EDM) y Trastorno de Ansiedad
+    Generalizada (TAG). NO emite diagnóstico — solo marca
+    "posible_riesgo=True" cuando el patrón observado coincide con el
+    umbral del manual. El diagnóstico es competencia exclusiva del
+    profesional.
+
+    Regla operativa: un ítem se considera "cumplido" cuando obtuvo
+    ≥ 2 puntos en el ciclo (equivale a "más de la mitad de los días"
+    según la traducción Johnson 2002 sobre 14 días). Esto refleja el
+    criterio clínico estándar: el síntoma debe estar presente la
+    mayor parte del tiempo durante la ventana.
+
+    DSM-5 — Episodio Depresivo Mayor:
+        ≥ 5 síntomas durante 2 semanas + al menos uno debe ser
+        ánimo deprimido (PHQ-9 ítem 2) o anhedonia (PHQ-9 ítem 1).
+
+    DSM-5 — Trastorno de Ansiedad Generalizada:
+        Ansiedad excesiva (GAD-7 ítem 1) + dificultad para
+        controlar la preocupación (GAD-7 ítem 2) + ≥ 3 síntomas
+        asociados en total.
+    """
+    cumplidos_ids = {it["item"] for it in items_detalle if it.get("puntos", 0) >= 2}
+
+    def _info(items):
+        return [
+            {
+                "item": it["item"],
+                "criterio_dsm5": it.get("criterio_dsm5"),
+                "puntos": it["puntos"],
+                "frase_likert": it.get("frase_likert"),
+            }
+            for it in items
+            if it.get("puntos", 0) >= 2
+        ]
+
+    # ── Episodio Depresivo Mayor ─────────────────────────────────────
+    phq9_cumplidos = _info(
+        [it for it in items_detalle if it.get("modulo") == "PHQ-9"]
+    )
+    incluye_animo_o_anhedonia = ("phq9_1" in cumplidos_ids) or (
+        "phq9_2" in cumplidos_ids
+    )
+    posible_edm = len(phq9_cumplidos) >= 5 and incluye_animo_o_anhedonia
+
+    # ── Trastorno de Ansiedad Generalizada ───────────────────────────
+    gad7_cumplidos = _info(
+        [it for it in items_detalle if it.get("modulo") == "GAD-7"]
+    )
+    nucleo_ansiedad = ("gad7_1" in cumplidos_ids) and (
+        "gad7_2" in cumplidos_ids
+    )
+    posible_tag = nucleo_ansiedad and len(gad7_cumplidos) >= 3
+
+    posibles_riesgos = []
+    if posible_edm:
+        posibles_riesgos.append("Episodio Depresivo Mayor (DSM-5)")
+    if posible_tag:
+        posibles_riesgos.append("Trastorno de Ansiedad Generalizada (DSM-5)")
+
+    return {
+        "edm": {
+            "nombre": "Episodio Depresivo Mayor",
+            "items_cumplidos": phq9_cumplidos,
+            "n_cumplidos": len(phq9_cumplidos),
+            "n_minimo_dsm5": 5,
+            "incluye_animo_o_anhedonia": incluye_animo_o_anhedonia,
+            "posible_riesgo": posible_edm,
+            "nota": (
+                "Requiere ≥5 ítems con puntaje ≥2 y al menos uno debe ser "
+                "ánimo deprimido (PHQ-9 ítem 2) o anhedonia (PHQ-9 ítem 1)."
+            ),
+        },
+        "tag": {
+            "nombre": "Trastorno de Ansiedad Generalizada",
+            "items_cumplidos": gad7_cumplidos,
+            "n_cumplidos": len(gad7_cumplidos),
+            "n_minimo_dsm5": 3,
+            "incluye_nucleo_ansiedad": nucleo_ansiedad,
+            "posible_riesgo": posible_tag,
+            "nota": (
+                "Requiere ansiedad (GAD-7 ítem 1) + dificultad para "
+                "controlar la preocupación (GAD-7 ítem 2) + ≥3 ítems con "
+                "puntaje ≥2."
+            ),
+        },
+        "posibles_riesgos": posibles_riesgos,
+        "disclaimer": (
+            "Esta sección NO es un diagnóstico. Es un indicador de que el "
+            "patrón observado en el diario coincide con los criterios "
+            "mínimos del DSM-5 para esta entidad clínica. El diagnóstico "
+            "es competencia exclusiva del profesional de salud mental."
+        ),
+    }
 
 
 # ═════════════════════════════════════════════════════════════════════

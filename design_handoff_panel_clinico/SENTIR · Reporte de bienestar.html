@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SENTIR · Reporte de bienestar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --green:#0D9488; --green-deep:#0E3B38; --mint:#5FC7BC; --bright:#34E0C9;
+    --ink:#143230; --muted:#6E8C88; --faint:#9DB2AE; --line:#E4EBE9; --line-soft:#EEF3F2;
+    --bg:#EAF0EE; --surface:#FFFFFF;
+    --good:#2BB673; --mid:#E8B04B; --warn:#E8913C; --bad:#E25555; --violet:#6D5BD0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .num{font-variant-numeric:tabular-nums;}
+  .app{max-width:1010px;margin:0 auto;padding:26px 20px 60px;}
+
+  /* ============ HERO (dark) ============ */
+  .hero{position:relative;border-radius:26px;overflow:hidden;color:#fff;
+    background:
+      radial-gradient(120% 90% at 78% 8%, rgba(52,224,201,.16), transparent 55%),
+      radial-gradient(90% 80% at 12% 100%, rgba(13,148,136,.30), transparent 60%),
+      linear-gradient(155deg,#15564F 0%,#0E3B38 46%,#0A2826 100%);
+    box-shadow:0 24px 60px -28px rgba(14,59,56,.55);padding:22px 26px 26px;}
+  .hero::before{content:"";position:absolute;inset:0;border-radius:26px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);pointer-events:none;}
+
+  .htop{display:flex;align-items:center;gap:18px;position:relative;z-index:2;}
+  .hbrand{display:flex;align-items:center;gap:11px;}
+  .hbrand .wm{font-family:'Gabarito';font-weight:800;font-size:21px;letter-spacing:.04em;}
+  /* age-band analog */
+  .band{display:flex;align-items:stretch;background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.10);border-radius:14px;overflow:hidden;}
+  .band .seg{padding:9px 18px;display:flex;flex-direction:column;justify-content:center;gap:1px;
+    border-right:1px solid rgba(255,255,255,.10);}
+  .band .seg:last-child{border-right:0;max-width:230px;}
+  .band .k{font-size:10.5px;color:rgba(255,255,255,.55);font-weight:600;letter-spacing:.02em;white-space:nowrap;}
+  .band .v{font-family:'Gabarito';font-weight:700;font-size:17px;}
+  .band .v small{font-size:11px;font-weight:600;color:rgba(255,255,255,.6);margin-left:3px;}
+  .band .good{color:var(--bright);font-size:11.5px;font-weight:700;line-height:1.3;}
+  .hicons{margin-left:auto;display:flex;align-items:center;gap:14px;color:rgba(255,255,255,.8);}
+  .hicons .toggle{width:42px;height:24px;border-radius:999px;background:rgba(52,224,201,.30);position:relative;}
+  .hicons .toggle::after{content:"";position:absolute;top:3px;left:21px;width:18px;height:18px;border-radius:50%;background:var(--bright);}
+  .hicons .av{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;font-weight:700;font-size:13px;font-family:'Gabarito';}
+
+  .hsub{display:flex;align-items:center;gap:10px;margin:18px 0 2px;position:relative;z-index:2;}
+  .hsub .back{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;}
+  .hsub h2{font-family:'Gabarito';font-weight:700;font-size:19px;margin:0;}
+  .hsub .stat{font-size:12px;font-weight:700;color:var(--warn);background:rgba(232,145,60,.16);padding:3px 10px;border-radius:999px;white-space:nowrap;}
+
+  .hgrid{position:relative;z-index:2;display:grid;grid-template-columns:178px 1fr 226px;gap:8px;align-items:center;margin-top:22px;}
+
+  /* radar */
+  .radar-wrap{text-align:center;}
+  .radar-wrap .cap{font-size:12px;color:rgba(255,255,255,.7);font-weight:600;margin-bottom:2px;}
+
+  /* gauge center */
+  .gauge-wrap{position:relative;display:flex;align-items:center;justify-content:center;min-height:386px;padding-top:34px;}
+  .callout{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px;width:78px;text-align:center;}
+  .callout .ico{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.10);display:grid;place-items:center;color:var(--mint);}
+  .callout .pc{font-family:'Gabarito';font-weight:700;font-size:15px;}
+  .callout .pc small{font-size:9px;font-weight:600;vertical-align:1px;color:rgba(255,255,255,.6);}
+  .callout .nm{font-size:10px;color:rgba(255,255,255,.62);line-height:1.15;}
+
+  /* right column */
+  .rcol{display:flex;flex-direction:column;gap:10px;}
+  .telocard{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:13px 15px;}
+  .telocard .row{display:flex;align-items:center;justify-content:space-between;}
+  .telocard .big{font-family:'Gabarito';font-weight:700;font-size:23px;}
+  .telocard .big small{font-size:12px;color:rgba(255,255,255,.6);font-weight:600;margin-left:3px;}
+  .badge-md{font-size:10.5px;font-weight:700;color:#F4C95B;background:rgba(244,201,91,.16);padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;}
+  .badge-md::before{content:"";width:7px;height:7px;border-radius:50%;background:#F4C95B;}
+  .telocard .lbl{font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;line-height:1.35;}
+  .reportbtn{align-self:flex-end;font-family:'Gabarito';font-weight:600;font-size:12.5px;color:var(--green-deep);
+    background:#fff;border:0;border-radius:999px;padding:9px 16px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;}
+
+  /* ============ bottom cards ============ */
+  .bgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px;}
+  .card{background:var(--surface);border-radius:18px;box-shadow:0 1px 2px rgba(20,50,48,.04),0 10px 30px -20px rgba(20,50,48,.3);padding:20px 21px;}
+  .card + .card.stack{margin-top:16px;}
+  .ch{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;}
+  .ch h3{font-family:'Gabarito';font-weight:700;font-size:15.5px;color:var(--green-deep);margin:0;}
+  .ch .link{font-size:12px;font-weight:700;color:var(--green);cursor:pointer;display:inline-flex;gap:4px;align-items:center;white-space:nowrap;}
+  .desc{font-size:12px;color:var(--muted);line-height:1.45;margin:0 0 16px;}
+
+  .bigscore{font-family:'Gabarito';font-weight:800;font-size:30px;color:var(--green-deep);}
+  .bigscore small{font-size:13px;font-weight:600;color:var(--muted);}
+  .row-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px;}
+  .chip-state{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;}
+  .chip-state.mod{color:#B26A1E;background:#FBEBD7;} .chip-state.mod::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--warn);}
+
+  .scale{position:relative;height:9px;border-radius:999px;margin:8px 0 6px;
+    background:linear-gradient(90deg,#2BB673 0%,#9BCB4E 32%,#E8B04B 58%,#E8913C 78%,#E25555 100%);}
+  .scale .mk{position:absolute;top:-4px;width:3px;height:17px;border-radius:2px;background:#143230;box-shadow:0 0 0 3px #fff;}
+  .scale-lbl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);font-weight:600;}
+
+  .markers h4{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:18px 0 11px;}
+  .mk-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;}
+  .mk-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink);}
+  .mk-item .dotn{width:16px;height:16px;border-radius:50%;background:var(--green-tint,#E6F3F1);color:var(--green);display:grid;place-items:center;font-size:9px;font-weight:800;flex-shrink:0;}
+  .mk-item .chev{margin-left:auto;color:var(--faint);}
+
+  /* immunity analog */
+  .imm-top{display:flex;gap:16px;align-items:center;margin-bottom:6px;}
+  .imm-top .pct{font-family:'Gabarito';font-weight:800;font-size:26px;color:var(--green-deep);line-height:1;}
+  .imm-top .pl{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .rngrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line-soft);font-size:12.5px;}
+  .rngrow .lab{flex:1;color:var(--ink);}
+  .rngrow .rng{font-weight:700;color:var(--green-deep);white-space:nowrap;}
+  .rngrow .rng small{color:var(--faint);font-weight:600;}
+  .rngrow .q{width:15px;height:15px;border-radius:50%;border:1.2px solid var(--line);color:var(--faint);display:grid;place-items:center;font-size:9px;font-weight:700;}
+  .ratio{display:flex;align-items:center;gap:9px;padding:11px 0 0;font-size:12.5px;}
+  .ratio .d{width:8px;height:8px;border-radius:50%;}
+  .ratio .lab{flex:1;}
+  .ratio .tag{font-weight:700;} .ratio .tag.sub{color:var(--warn);} .ratio .tag.ok{color:var(--good);}
+  .ratio .vl{font-weight:700;color:var(--green-deep);}
+
+  /* inflammation analog */
+  .scale2{position:relative;height:10px;border-radius:999px;margin:14px 0 6px;
+    background:linear-gradient(90deg,#2BB673,#9BCB4E,#E8B04B,#E8913C,#E25555);}
+  .scale2 .mk{position:absolute;top:-4px;width:3px;height:18px;border-radius:2px;background:#143230;box-shadow:0 0 0 3px #fff;}
+  .ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-weight:600;margin-bottom:14px;}
+  .insight{background:var(--bg);border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--ink);margin-bottom:14px;}
+  .insight b{color:var(--warn);}
+  .change{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .change .k{font-size:12.5px;color:var(--muted);font-weight:600;}
+  .change .v{font-family:'Gabarito';font-weight:700;font-size:16px;color:var(--green-deep);}
+  .change .up{font-size:12px;font-weight:700;color:var(--bad);margin-left:7px;}
+  .imps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;}
+  .imps li{display:flex;gap:9px;font-size:12px;color:var(--ink);line-height:1.4;}
+  .imps li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--warn);margin-top:6px;flex-shrink:0;}
+
+  @media(max-width:720px){ .hgrid{grid-template-columns:1fr;}.bgrid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <!-- top bar -->
+    <div class="htop">
+      <div class="hbrand">
+        <svg width="32" height="23" viewBox="0 0 160 100" fill="none" aria-hidden="true">
+          <path d="M90 97 C 82 82 72 74 72 58 C 72 36 86 22 104 24 C 114 25 120 35 119 48 C 122 52 126 57 127 61 C 127 64 123 64 120 64 C 123 67 122 70 117 71 C 120 75 116 82 108 83 C 101 84 99 89 100 97" stroke="#EAF6F4" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M60 33 C 69 23 85 20 98 25" stroke="#EAF6F4" stroke-width="3.2" stroke-linecap="round"/>
+          <path d="M40 56 H60 L66 40 L74 68 L82 32 L90 70 L96 56 H112" stroke="#34E0C9" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="22" y1="51" x2="22" y2="61" stroke="#34E0C9" stroke-width="4.4" stroke-linecap="round"/>
+          <line x1="31" y1="46" x2="31" y2="66" stroke="#34E0C9" stroke-width="4.4" stroke-linecap="round"/>
+        </svg>
+        <span class="wm">SENTIR</span>
+      </div>
+      <div class="band">
+        <div class="seg"><span class="k">PHQ-A actual</span><span class="v num">3<small>/27 · leve</small></span></div>
+        <div class="seg"><span class="k">GAD-7 actual</span><span class="v num">2<small>/21 · leve</small></span></div>
+        <div class="seg"><span class="good">▼ Bajó 14 puntos · mejora<br/>clínica sostenida</span></div>
+      </div>
+      <div class="hicons">
+        <div class="toggle"></div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="av">MT</div>
+      </div>
+    </div>
+
+    <!-- subtitle -->
+    <div class="hsub">
+      <div class="back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2>Reporte de bienestar</h2>
+      <span class="stat">Moderada-severa</span>
+    </div>
+    <div style="font-size:12.5px;color:rgba(255,255,255,.6);margin:2px 0 18px 36px;">Síntesis del seguimiento · mide cómo evoluciona el estado emocional de María a lo largo de los ciclos</div>
+
+    <!-- grid: radar | gauge+callouts | right -->
+    <div class="hgrid">
+      <div class="radar-wrap">
+        <div class="cap">Dimensiones de bienestar</div>
+        <div id="radar"></div>
+      </div>
+
+      <div class="gauge-wrap" id="gaugeWrap">
+        <div id="gauge"></div>
+        <!-- callouts (positioned in JS) -->
+      </div>
+
+      <div class="rcol">
+        <div class="telocard">
+          <div class="row"><span class="big num">64<small>%</small></span><span class="badge-md">Media</span></div>
+          <div class="lbl">Constancia del diario · días escritos sobre el total del ciclo</div>
+        </div>
+        <div class="telocard" style="padding:12px 14px 8px;">
+          <div class="lbl" style="margin:0 0 4px;">Tendencia del puntaje · baja = mejora</div>
+          <div id="teloline"></div>
+        </div>
+        <button class="reportbtn" onclick="location.href='SENTIR · Reporte completo.html'">Ver reporte completo
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BOTTOM CARDS ================= -->
+  <div class="bgrid">
+
+    <!-- col 1 -->
+    <div>
+      <div class="card">
+        <div class="ch"><h3>Índice de riesgo clínico</h3><span class="link" onclick="location.href='SENTIR · Reporte completo.html'">Ver reporte <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+        <p class="desc">Un índice de 0.42 corresponde a una sintomatología leve actual, por debajo del pico del ciclo 1.</p>
+        <div class="row-line">
+          <span class="bigscore num">0.42 <small>· leve</small></span>
+          <span class="chip-state mod">Moderado</span>
+        </div>
+        <div class="scale"><span class="mk" style="left:40%"></span></div>
+        <div class="scale-lbl"><span>Bajo</span><span>Medio</span><span>Alto</span></div>
+
+        <div class="markers">
+          <h4>Señales detectadas en el diario</h4>
+          <div class="mk-grid">
+            <div class="mk-item"><span class="dotn">i</span>Anhedonia <span class="chev">›</span></div>
+            <div class="mk-item"><span class="dotn">i</span>Ánimo deprimido <span class="chev">›</span></div>
+            <div class="mk-item"><span class="dotn">i</span>Fatiga / energía <span class="chev">›</span></div>
+            <div class="mk-item"><span class="dotn">i</span>Preocupación <span class="chev">›</span></div>
+            <div class="mk-item"><span class="dotn">i</span>Aislamiento <span class="chev">›</span></div>
+            <div class="mk-item"><span class="dotn">i</span>Estrés académico <span class="chev">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- col 2 -->
+    <div class="card">
+      <div class="ch"><h3>Señales del diario</h3></div>
+      <p class="desc">Proporción del lenguaje detectado por RoBERTa en los textos del último ciclo.</p>
+      <div class="imm-top">
+        <div><div class="pct num">60-80<small style="font-size:14px">%</small></div><div class="pl">Tono emocional<br/>positivo</div></div>
+        <div style="flex:1">
+          <div class="rngrow" style="border-top:0;"><span class="lab">Menciones de estrés</span><span class="rng num">20-40 <small>%</small></span><span class="q">?</span></div>
+          <div class="rngrow"><span class="lab">Lenguaje de aislamiento</span><span class="rng num">5-15 <small>%</small></span><span class="q">?</span></div>
+          <div class="rngrow"><span class="lab">Auto-referencia negativa</span><span class="rng num">2-10 <small>%</small></span><span class="q">?</span></div>
+          <div class="rngrow"><span class="lab">Lenguaje de riesgo</span><span class="rng num">0-3 <small>%</small></span><span class="q">?</span></div>
+        </div>
+      </div>
+      <div class="ratio" style="border-top:1px solid var(--line);"><span class="d" style="background:var(--warn)"></span><span class="lab">Ratio positivo / negativo</span><span class="tag sub">Subóptimo</span><span class="vl num">1.4</span></div>
+      <div class="ratio"><span class="d" style="background:var(--good)"></span><span class="lab">Coherencia narrativa</span><span class="tag ok">Normal</span><span class="vl num">3.7</span></div>
+    </div>
+
+    <!-- col 3 -->
+    <div class="card">
+      <div class="ch"><h3>Estrés académico</h3></div>
+      <p class="desc">Carga de estrés académico detectada en el diario (RoBERTa · orientativo).</p>
+      <div class="row-line" style="margin-bottom:4px;">
+        <span class="bigscore num" style="font-size:24px;">64 <small>· percentil 75</small></span>
+      </div>
+      <div class="scale2"><span class="mk" style="left:75%"></span></div>
+      <div class="ticks"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
+      <div class="insight">El puntaje supera al <b>75%</b> de la población de referencia, indicando estrés académico <b>por encima del promedio</b> en este ciclo.</div>
+      <div class="change"><span class="k">Cambio en el tiempo</span><span><span class="v num">+2.5</span><span class="up num">▲ 14.2%</span></span></div>
+      <ul class="imps">
+        <li>Asociado a menor concentración reportada en clase.</li>
+        <li>Coincide con el periodo de parciales del ciclo.</li>
+        <li>Sugerir técnicas de manejo de carga y sueño.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const RAD = Math.PI/180;
+function pol(cx,cy,r,a){ return [cx + r*Math.cos(a*RAD), cy + r*Math.sin(a*RAD)]; }
+
+/* ---------- RADAR ---------- */
+(function(){
+  const size=180, c=size/2, R=64;
+  const axes=['Ánimo','Sueño','Energía','Concentración','Social','Apetito'];
+  const vals=[58,46,52,44,63,55]; // 0-100, higher = better
+  const N=axes.length, start=-90;
+  let g='';
+  // rings
+  [0.25,0.5,0.75,1].forEach(t=>{
+    let pts=[];
+    for(let i=0;i<N;i++){ const a=start+i*360/N; pts.push(pol(c,c,R*t,a).join(',')); }
+    g+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1"/>`;
+  });
+  // spokes + labels
+  for(let i=0;i<N;i++){
+    const a=start+i*360/N, [x,y]=pol(c,c,R,a);
+    g+=`<line x1="${c}" y1="${c}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,.10)" stroke-width="1"/>`;
+    const [lx,ly]=pol(c,c,R+15,a);
+    g+=`<text x="${lx}" y="${ly+3}" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,.62)" font-family="Hanken Grotesk">${axes[i]}</text>`;
+  }
+  // value polygon
+  let vp=[];
+  for(let i=0;i<N;i++){ const a=start+i*360/N; vp.push(pol(c,c,R*vals[i]/100,a).join(',')); }
+  g+=`<polygon points="${vp.join(' ')}" fill="rgba(52,224,201,.22)" stroke="#34E0C9" stroke-width="2"/>`;
+  for(let i=0;i<N;i++){ const a=start+i*360/N, [x,y]=pol(c,c,R*vals[i]/100,a); g+=`<circle cx="${x}" cy="${y}" r="2.6" fill="#34E0C9"/>`; }
+  document.getElementById('radar').innerHTML=`<svg viewBox="0 0 ${size} ${size}" width="190" height="190">${g}</svg>`;
+})();
+
+/* ---------- GAUGE ---------- */
+(function(){
+  const size=230, c=size/2, R=92, val=62; // percentile / relative load
+  const A0=135, A1=405; // 270° sweep, gap at bottom
+  function arc(r,a0,a1){
+    const [x0,y0]=pol(c,c,r,a0), [x1,y1]=pol(c,c,r,a1);
+    const large = (a1-a0)>180?1:0;
+    return `M${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
+  }
+  const aVal=A0+(A1-A0)*val/100;
+  let g=`<defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#34E0C9"/><stop offset="1" stop-color="#0D9488"/></linearGradient></defs>`;
+  g+=`<path d="${arc(R,A0,A1)}" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="14" stroke-linecap="round"/>`;
+  g+=`<path d="${arc(R,A0,aVal)}" fill="none" stroke="url(#gg)" stroke-width="14" stroke-linecap="round"/>`;
+  // needle
+  const [nx,ny]=pol(c,c,R-4,aVal);
+  g+=`<line x1="${c}" y1="${c}" x2="${nx}" y2="${ny}" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`;
+  g+=`<circle cx="${c}" cy="${c}" r="6" fill="#fff"/>`;
+  // center text
+  g+=`<text x="${c}" y="${c-6}" text-anchor="middle" font-size="40" font-weight="800" fill="#fff" font-family="Gabarito">62<tspan font-size="16" dy="-16">º</tspan></text>`;
+  g+=`<text x="${c}" y="${c+16}" text-anchor="middle" font-size="11.5" fill="rgba(255,255,255,.7)" font-family="Hanken Grotesk">Percentil de carga</text>`;
+  g+=`<text x="${c}" y="${c+34}" text-anchor="middle" font-size="12.5" font-weight="700" fill="#34E0C9" font-family="Hanken Grotesk">Riesgo relativo</text>`;
+  document.getElementById('gauge').innerHTML=`<svg viewBox="0 0 ${size} ${size}" width="250" height="250">${g}</svg>`;
+
+  // callouts around the top arc
+  const ICO = {
+    brain:'<path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5 3 3 0 0 0 2 4 3 3 0 0 0 6 0V4a3 3 0 0 0-4 0M15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5 3 3 0 0 1-2 4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+    book:'<path d="M4 5a2 2 0 0 1 2-2h11v16H6a2 2 0 0 0-2 2V5Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>',
+    wave:'<path d="M3 12h3l2-5 3 10 3-7 2 4h5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    person:'<circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M5 20c1.5-3.5 12.5-3.5 14 0" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+    bolt:'<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>',
+    alert:'<path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+  };
+  const cos=[
+    {nm:'Depresión', pc:65, ico:'brain', a:146},
+    {nm:'Estrés académico', pc:64, ico:'book', a:123},
+    {nm:'Ansiedad', pc:56, ico:'wave', a:100},
+    {nm:'Soledad', pc:43, ico:'person', a:80},
+    {nm:'TDAH', pc:21, ico:'bolt', a:57},
+    {nm:'Riesgo suicida', pc:5, ico:'alert', a:34},
+  ];
+  const wrap=document.getElementById('gaugeWrap');
+  const gsvg=document.getElementById('gauge');
+  function placeCallouts(){
+    wrap.querySelectorAll('.callout').forEach(e=>e.remove());
+    const svg=gsvg.querySelector('svg'); if(!svg) return;
+    const wr=wrap.getBoundingClientRect(), sr=svg.getBoundingClientRect();
+    const cx=sr.left-wr.left+sr.width/2, cy=sr.top-wr.top+sr.height/2;
+    const Rc=Math.min(156, wr.width/2 - 44);
+    cos.forEach(o=>{
+      const [x,y]=pol(cx,cy,Rc,-o.a);
+      const el=document.createElement('div');
+      el.className='callout';
+      el.style.left=(x-39)+'px'; el.style.top=(y-32)+'px';
+      el.innerHTML=`<div class="ico"><svg width="17" height="17" viewBox="0 0 24 24">${ICO[o.ico]}</svg></div>
+        <div class="pc num">${o.pc}<small>%</small></div><div class="nm">${o.nm}</div>`;
+      wrap.appendChild(el);
+    });
+  }
+  placeCallouts();
+  window.addEventListener('resize', placeCallouts);
+})();
+
+/* ---------- TELOMERE-style line ---------- */
+(function(){
+  const W=240,H=78,P=14;
+  const v=[17,11,4,4,3,2], max=18;
+  const iw=W-P*2, ih=H-P*2, n=v.length;
+  const X=i=>P+iw*i/(n-1), Y=k=>P+ih-ih*k/max;
+  let pts=v.map((k,i)=>`${X(i)},${Y(k)}`).join(' ');
+  let g=`<polygon points="${P},${P+ih} ${pts} ${X(n-1)},${P+ih}" fill="rgba(52,224,201,.14)"/>`;
+  g+=`<polyline points="${pts}" fill="none" stroke="#34E0C9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  v.forEach((k,i)=> g+=`<circle cx="${X(i)}" cy="${Y(k)}" r="2.4" fill="#0E3B38" stroke="#34E0C9" stroke-width="1.6"/>`);
+  document.getElementById('teloline').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">${g}</svg>`;
+})();
+</script>
+
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0E3B38"/><g transform="translate(20,30) scale(.42)"><path d="M90 97 C 82 82 72 74 72 58 C 72 36 86 22 104 24 C 114 25 120 35 119 48 C 122 52 126 57 127 61 C 127 64 123 64 120 64 C 123 67 122 70 117 71 C 120 75 116 82 108 83 C 101 84 99 89 100 97" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M40 56 H60 L66 40 L74 68 L82 32 L90 70 L96 56 H112" stroke="#5FC7BC" stroke-width="3.5" fill="none" stroke-linecap="round"/></g></svg>
+</template>
+</body>
+</html>

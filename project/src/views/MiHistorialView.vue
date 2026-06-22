@@ -1,334 +1,367 @@
 <script setup>
-import { ref, onMounted, nextTick, computed } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { Chart, registerables } from "chart.js";
 import { api } from "../api";
-import PageHeader from "../components/PageHeader.vue";
-import RiskBadge from "../components/RiskBadge.vue";
-import StatCard from "../components/StatCard.vue";
-
-Chart.register(...registerables);
+import {
+  MESES,
+  DIAS_AB,
+  parseIso,
+  isoDeFecha,
+  fmtLong,
+  dowAb,
+  dayNum,
+  fromBackend,
+  todayIso,
+} from "../composables/samiHelpers";
 
 const router = useRouter();
+
+const ciclo = ref(null);
+const encuesta = ref(null);
+const entradas = ref([]);
 const cargando = ref(true);
-const error = ref("");
-const data = ref(null);
-const sesionAbierta = ref(null);
-const chartCanvas = ref(null);
-let chartInstance = null;
 
-const nivelANumero = { BAJO: 1, MEDIO: 2, ALTO: 3, CRÍTICO: 4 };
-const numeroANivel = { 1: "BAJO", 2: "MEDIO", 3: "ALTO", 4: "CRÍTICO" };
-
-function normalizarNivel(n) {
-  return n ? n.toUpperCase().trim() : null;
-}
-function fechaCorta(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("es-PE", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-function fechaLarga(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-PE", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-function toggleSesion(id) {
-  sesionAbierta.value = sesionAbierta.value === id ? null : id;
-}
-
-const sesionesCompletadas = computed(() =>
-  (data.value?.sesiones || []).filter((s) => s.estado === "completada"),
-);
-const tieneSerie = computed(
-  () => (data.value?.serie_temporal?.length || 0) > 0,
-);
-const ultimoNivel = computed(() =>
-  normalizarNivel(data.value?.estudiante?.ultimo_riesgo),
-);
-
-function dibujarGrafico() {
-  if (!chartCanvas.value || !tieneSerie.value) return;
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-  const serie = data.value.serie_temporal;
-  const labels = serie.map((p) => fechaCorta(p.fecha));
-  const valores = serie.map((p) => nivelANumero[normalizarNivel(p.nivel)] || 0);
-  const colores = serie.map((p) => {
-    const n = normalizarNivel(p.nivel);
-    if (n === "CRÍTICO") return "#E0413A";
-    if (n === "ALTO") return "#F2754F";
-    if (n === "MEDIO") return "#F2A93B";
-    return "#3DC57E";
-  });
-
-  chartInstance = new Chart(chartCanvas.value.getContext("2d"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Nivel de riesgo",
-          data: valores,
-          borderColor: "#8B6CF0",
-          backgroundColor: "rgba(139, 108, 240, 0.10)",
-          borderWidth: 2.5,
-          fill: true,
-          tension: 0.35,
-          pointBackgroundColor: colores,
-          pointBorderColor: "#fff",
-          pointBorderWidth: 2,
-          pointRadius: 7,
-          pointHoverRadius: 9,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const p = serie[ctx.dataIndex];
-              return `${normalizarNivel(p.nivel)} (score: ${p.score?.toFixed(2) ?? "—"})`;
-            },
-          },
-        },
-      },
-      scales: {
-        y: {
-          min: 0,
-          max: 4,
-          ticks: { stepSize: 1, callback: (v) => numeroANivel[v] || "" },
-          grid: { color: "#EDEAF0" },
-        },
-        x: { grid: { display: false } },
-      },
-    },
-  });
-}
+const hoy = todayIso();
 
 onMounted(async () => {
   try {
-    data.value = await api.miHistorial();
-    const primeraCompleta = (data.value?.sesiones || []).find(
-      (s) => s.estado === "completada",
-    );
-    if (primeraCompleta) sesionAbierta.value = primeraCompleta.session_id;
-  } catch (e) {
-    error.value = e.response?.data?.detail || e.message;
+    const [c, e, enc] = await Promise.all([
+      api.miCiclo().catch(() => null),
+      api.listarMisEntradasDiario().catch(() => []),
+      api.encuestaPendiente().catch(() => null),
+    ]);
+    ciclo.value = c;
+    entradas.value = (e || []).map(fromBackend);
+    encuesta.value = enc?.pendiente ? enc.encuesta : null;
   } finally {
     cargando.value = false;
   }
-  await nextTick();
-  dibujarGrafico();
 });
+
+function fmtRango(startIso, endIso) {
+  const a = parseIso(startIso);
+  const b = parseIso(endIso);
+  if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) {
+    return `${a.getDate()} – ${b.getDate()} de ${MESES[b.getMonth()]} de ${b.getFullYear()}`;
+  }
+  if (a.getFullYear() === b.getFullYear()) {
+    return `${a.getDate()} de ${MESES[a.getMonth()]} – ${b.getDate()} de ${MESES[b.getMonth()]} de ${b.getFullYear()}`;
+  }
+  return `${a.getDate()} de ${MESES[a.getMonth()]} de ${a.getFullYear()} – ${b.getDate()} de ${MESES[b.getMonth()]} de ${b.getFullYear()}`;
+}
+
+// Lista de ciclos: actual + sesiones cerradas (ordenadas desc).
+const ciclos = computed(() => {
+  if (!ciclo.value) return [];
+  const out = [];
+  const actual = ciclo.value.ciclo_actual;
+  if (actual) {
+    out.push({
+      id: actual.numero,
+      nombre: `Ciclo ${actual.numero}`,
+      start: actual.inicio,
+      end: actual.fecha_limite,
+      rango: fmtRango(actual.inicio, actual.fecha_limite),
+      cierre: hoy >= actual.fecha_limite,
+      actual: true,
+    });
+  }
+  for (const s of [...(ciclo.value.sesiones_cerradas || [])].reverse()) {
+    out.push({
+      id: s.numero,
+      nombre: `Ciclo ${s.numero}`,
+      start: s.inicio_ciclo,
+      end: s.fecha_cierre,
+      rango: fmtRango(s.inicio_ciclo, s.fecha_cierre),
+      cierre: true,
+      actual: false,
+    });
+  }
+  return out;
+});
+
+const cicloSelId = ref(null);
+const cicloSel = computed(
+  () => ciclos.value.find((c) => c.id === cicloSelId.value) || ciclos.value[0],
+);
+
+// Auto-select el primero cuando cargan los ciclos
+watch(
+  ciclos,
+  (lista) => {
+    if (lista.length && !lista.find((c) => c.id === cicloSelId.value)) {
+      cicloSelId.value = lista[0].id;
+    }
+  },
+  { immediate: true },
+);
+
+function setCicloSel(id) {
+  cicloSelId.value = Number(id);
+}
+
+const porFecha = computed(() => {
+  const out = {};
+  for (const e of entradas.value) if (!out[e.date]) out[e.date] = e;
+  return out;
+});
+
+function enCiclo(iso, c) {
+  return c && iso >= c.start && iso <= c.end;
+}
+
+const celdas = computed(() => {
+  const c = cicloSel.value;
+  if (!c) return [];
+  const ini = parseIso(c.start);
+  const fin = parseIso(c.end);
+  const desde = new Date(ini);
+  desde.setDate(desde.getDate() - desde.getDay()); // domingo previo
+  const hasta = new Date(fin);
+  hasta.setDate(hasta.getDate() + (6 - hasta.getDay())); // sábado posterior
+
+  const out = [];
+  for (let d = new Date(desde); d <= hasta; d.setDate(d.getDate() + 1)) {
+    out.push({ iso: isoDeFecha(d), dia: d.getDate() });
+  }
+  return out;
+});
+
+const tituloMes = computed(() => {
+  const c = cicloSel.value;
+  if (!c) return "";
+  const a = parseIso(c.start);
+  const b = parseIso(c.end);
+  if (a.getMonth() === b.getMonth()) {
+    return `${MESES[a.getMonth()][0].toUpperCase()}${MESES[a.getMonth()].slice(1)} ${a.getFullYear()}`;
+  }
+  return `${MESES[a.getMonth()][0].toUpperCase()}${MESES[a.getMonth()].slice(1)} – ${MESES[b.getMonth()]} ${b.getFullYear()}`;
+});
+
+const delCiclo = computed(() => {
+  const c = cicloSel.value;
+  if (!c) return [];
+  return entradas.value
+    .filter((e) => enCiclo(e.date, c))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+});
+
+function abrirEntrada(id) {
+  router.push({ path: "/diario", query: { entry: id } });
+}
+function irEncuesta() {
+  router.push({ path: "/diario", query: { encuesta: "1" } });
+}
+
+const encuestaResp = computed(() => !encuesta.value);
 </script>
 
 <template>
-  <div class="page-shell-wide">
-    <button @click="router.push('/menu')" class="btn-ghost btn-sm mb-3">
-      Volver al menú
-    </button>
-
-    <div v-if="cargando" class="text-center text-ink-500 py-16">
-      Cargando tu historial…
-    </div>
-    <p v-else-if="error" class="banner-danger">{{ error }}</p>
-
-    <div v-else-if="data" class="space-y-6">
-      <PageHeader
-        title="Cómo te ha"
-        accent="ido"
-        :subtitle="`${data.estudiante.nombre} ${data.estudiante.apellido}`"
-        tone="sky"
-      >
-        <template #aside>
-          <div class="text-right">
-            <p
-              class="text-xs text-ink-400 uppercase tracking-wider font-semibold"
-            >
-              Último nivel
-            </p>
-            <div class="mt-1.5">
-              <RiskBadge
-                :nivel="ultimoNivel"
-                :score="data.estudiante.ultimo_score"
-              />
-            </div>
-            <p class="text-xs text-ink-500 mt-1.5">
-              {{ fechaCorta(data.estudiante.ultima_evaluacion) }}
-            </p>
-          </div>
-        </template>
-      </PageHeader>
-
-      <!-- Stats -->
-      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard
-          label="Conversaciones que has empezado"
-          :value="data.estudiante.total_sesiones"
-          tone="brand"
-        />
-        <StatCard
-          label="Las que terminaste"
-          :value="data.estudiante.sesiones_completadas"
-          tone="mint"
-        />
-        <StatCard
-          label="Tu último puntaje"
-          :value="data.estudiante.ultimo_score?.toFixed(2) ?? '—'"
-          tone="peach"
-        />
-      </section>
-
-      <!-- Gráfico evolución -->
-      <section class="card p-6 fade-in-up">
-        <h2 class="section-title">Mi evolución emocional</h2>
-        <p class="section-subtitle mb-4">
-          Nivel de riesgo registrado en cada evaluación completada.
-        </p>
-        <div v-if="tieneSerie" class="h-72">
-          <canvas ref="chartCanvas"></canvas>
-        </div>
-        <div
-          v-else
-          class="text-center py-12 bg-white rounded-xl border border-dashed border-ink-200"
-        >
-          <p class="text-4xl mb-2"></p>
-          <p class="text-sm text-ink-500">
-            Todavía no tienes evaluaciones completadas.
-          </p>
-          <button @click="router.push('/diario')" class="btn-mint mt-4">
-            Ir a mi diario
-          </button>
-        </div>
-      </section>
-
-      <!-- Sesiones -->
-      <section class="card overflow-hidden fade-in-up">
-        <div class="px-6 pt-6 pb-4 flex items-baseline justify-between">
-          <h2 class="section-title !mb-0">Mis sesiones</h2>
-          <p class="text-xs text-ink-400">
-            {{ sesionesCompletadas.length }} completada(s) de
-            {{ data.sesiones.length }} total
-          </p>
-        </div>
-
-        <p
-          v-if="data.sesiones.length === 0"
-          class="text-ink-500 text-center py-10 mx-6 mb-6 bg-white rounded-xl border border-dashed border-ink-200"
-        >
-          Aún no has iniciado ninguna evaluación.
-        </p>
-
-        <ul v-else class="divide-y divide-ink-100 border-t border-ink-100">
-          <li v-for="s in data.sesiones" :key="s.session_id">
-            <button
-              @click="toggleSesion(s.session_id)"
-              class="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-green-50 transition"
-            >
-              <div class="flex items-center gap-3 flex-wrap min-w-0">
-                <RiskBadge :nivel="normalizarNivel(s.nivel_riesgo)" />
-                <span class="text-sm text-ink-700">{{
-                  fechaLarga(s.fecha_inicio)
-                }}</span>
-                <span
-                  class="chip"
-                  :class="
-                    s.estado === 'completada' ? 'chip-mint' : 'chip-peach'
-                  "
-                >
-                  {{ s.estado }}
-                </span>
-              </div>
-              <span
-                class="text-green-600 text-xs font-semibold whitespace-nowrap"
-              >
-                {{
-                  sesionAbierta === s.session_id ? "▲ Ocultar" : "▼ Ver detalle"
-                }}
-              </span>
-            </button>
-
-            <div
-              v-if="sesionAbierta === s.session_id"
-              class="px-6 pb-6 bg-white border-t border-ink-100 fade-in-up"
-            >
-              <div
-                v-if="s.nivel_riesgo"
-                class="mt-4 flex items-center gap-3 flex-wrap"
-              >
-                <RiskBadge
-                  :nivel="normalizarNivel(s.nivel_riesgo)"
-                  :score="s.score"
-                />
-              </div>
-
-              <div v-if="s.conversacion.length > 0" class="mt-4">
-                <p
-                  class="text-xs font-bold text-ink-500 uppercase tracking-wider mb-3"
-                >
-                  Conversación ({{ s.conversacion.length }} preguntas)
-                </p>
-                <ol class="space-y-3">
-                  <li
-                    v-for="c in s.conversacion"
-                    :key="c.numero"
-                    class="card p-4"
-                  >
-                    <p
-                      class="text-xs text-ink-400 mb-1 font-semibold uppercase tracking-wider"
-                    >
-                      Pregunta {{ c.numero + 1 }}
-                    </p>
-                    <p class="text-sm font-medium text-ink-900 mb-2">
-                      {{ c.pregunta }}
-                    </p>
-                    <p
-                      class="text-xs text-ink-400 mb-1 font-semibold uppercase tracking-wider"
-                    >
-                      Tu respuesta
-                    </p>
-                    <p
-                      class="text-sm text-ink-700 italic border-l-4 border-green-400 pl-3 py-1 bg-green-50/60 rounded"
-                    >
-                      {{ c.respuesta }}
-                    </p>
-                  </li>
-                </ol>
-              </div>
-            </div>
-          </li>
-        </ul>
-      </section>
+  <div class="page" data-screen-label="Mi historial">
+    <div class="page-inner" style="max-width: 880px">
+      <h1>Mi historial</h1>
+      <p class="sub">
+        Elegí un período y mirá qué días escribiste. Esto solo lo ves vos.
+      </p>
 
       <div
-        class="banner-brand flex items-center justify-between gap-4 flex-wrap"
+        v-if="cargando"
+        style="padding: 60px 0; text-align: center; color: var(--ink-3)"
       >
-        <div class="flex items-center gap-3">
-          <div>
-            <p class="font-semibold">¿Necesitas apoyo profesional?</p>
-            <p class="text-sm text-ink-600">
-              Consulta los recursos disponibles en la UPC y líneas de crisis.
+        Cargando…
+      </div>
+
+      <div
+        v-else-if="!ciclos.length"
+        class="card"
+        style="padding: 24px; text-align: center"
+      >
+        <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700">
+          Todavía no empezaste un ciclo.
+        </h3>
+        <p style="font-size: 13px; color: var(--ink-3); margin: 0 0 14px">
+          Cuando escribas tu primera entrada, ese día se convierte en el día 1.
+        </p>
+        <button
+          class="btn primary"
+          type="button"
+          @click="router.push('/diario')"
+        >
+          Abrir el diario
+        </button>
+      </div>
+
+      <div
+        v-else
+        style="
+          display: grid;
+          grid-template-columns: 1.2fr 1fr;
+          gap: 28px;
+          align-items: start;
+        "
+      >
+        <div class="card" style="padding: 20px 24px 22px">
+          <div class="field" style="margin-bottom: 18px">
+            <label for="periodo">Período</label>
+            <select
+              id="periodo"
+              :value="cicloSel?.id"
+              @change="setCicloSel($event.target.value)"
+            >
+              <option v-for="c in ciclos" :key="c.id" :value="c.id">
+                {{ c.nombre }} · {{ c.rango }}
+              </option>
+            </select>
+          </div>
+
+          <div class="cal-title" style="margin-top: 4px">{{ tituloMes }}</div>
+          <div class="cal-grid">
+            <div v-for="d in DIAS_AB" :key="d" class="cal-dow">{{ d }}</div>
+            <template v-for="c in celdas" :key="c.iso">
+              <button
+                v-if="enCiclo(c.iso, cicloSel) && porFecha[c.iso]"
+                class="cal-cell entry"
+                type="button"
+                :class="c.iso === hoy ? 'today' : ''"
+                @click="abrirEntrada(porFecha[c.iso].id)"
+              >
+                {{ c.dia }}
+              </button>
+              <div
+                v-else
+                :class="[
+                  'cal-cell',
+                  !enCiclo(c.iso, cicloSel) ? 'future' : 'range',
+                  c.iso === hoy ? 'today' : '',
+                ]"
+              >
+                {{ c.dia }}
+              </div>
+            </template>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              gap: 18px;
+              margin-top: 16px;
+              font-size: 12px;
+              color: var(--ink-3);
+              align-items: center;
+              flex-wrap: wrap;
+            "
+          >
+            <span style="display: inline-flex; align-items: center; gap: 6px">
+              <i
+                style="
+                  width: 12px;
+                  height: 12px;
+                  border-radius: 4px;
+                  background: var(--accent);
+                  display: inline-block;
+                "
+              ></i>
+              Escribiste — clic para releer
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 6px">
+              <i
+                style="
+                  width: 12px;
+                  height: 12px;
+                  border-radius: 4px;
+                  background: color-mix(in srgb, var(--accent) 11%, #fff);
+                  display: inline-block;
+                "
+              ></i>
+              Días del ciclo
+            </span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div
+            style="
+              padding: 16px 20px 14px;
+              border-bottom: 1px solid var(--line-soft);
+            "
+          >
+            <div style="font-size: 14.5px; font-weight: 700">
+              {{ cicloSel?.nombre }}
+            </div>
+            <div
+              style="font-size: 12.5px; color: var(--ink-3); margin-top: 2px"
+            >
+              {{ cicloSel?.rango }}
+            </div>
+            <div
+              style="
+                font-size: 13px;
+                color: var(--ink-2);
+                margin-top: 8px;
+                line-height: 1.55;
+              "
+            >
+              <template v-if="cicloSel?.actual && !cicloSel?.cierre">
+                Estás en este ciclo.
+              </template>
+              <template v-else-if="cicloSel?.cierre">
+                Cerraste este ciclo.
+              </template>
+              Escribiste {{ delCiclo.length }} de 14 días.
+            </div>
+            <button
+              v-if="cicloSel?.cierre"
+              class="linkbtn"
+              type="button"
+              style="margin-top: 10px"
+              @click="irEncuesta"
+            >
+              {{
+                encuestaResp
+                  ? "Encuesta de cierre respondida"
+                  : "Contale a Sami cómo te fue →"
+              }}
+            </button>
+          </div>
+          <div
+            style="
+              padding: 10px 20px 6px;
+              font-size: 11.5px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: var(--ink-3);
+            "
+          >
+            Entradas de este período
+          </div>
+          <div class="rowlist">
+            <button
+              v-for="e in delCiclo"
+              :key="e.id"
+              class="entry-row"
+              type="button"
+              @click="abrirEntrada(e.id)"
+            >
+              <span class="datebox">
+                <span class="dow">{{ dowAb(e.date) }}</span>
+                <span class="num">{{ dayNum(e.date) }}</span>
+              </span>
+              <span class="meta">
+                <span class="t">{{ e.title || "Sin título" }}</span>
+                <span class="x">{{
+                  (e.body || e.title || "").split("\n")[0]
+                }}</span>
+              </span>
+            </button>
+            <p
+              v-if="!delCiclo.length"
+              style="padding: 18px 20px; font-size: 13px; color: var(--ink-3)"
+            >
+              No escribiste en este período.
             </p>
           </div>
         </div>
-        <button @click="router.push('/recursos')" class="btn-mint btn-sm">
-          Ver recursos
-        </button>
       </div>
     </div>
   </div>

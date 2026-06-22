@@ -43,7 +43,7 @@ onMounted(() => {
 onBeforeUnmount(() => clearInterval(timer));
 
 function statusChip(code) {
-  if (code >= 500) return "chip bg-red-100 text-risk-critico";
+  if (code >= 500) return "chip bg-coral-100 text-risk-critico";
   if (code >= 400) return "chip-peach";
   if (code >= 300) return "chip-brand";
   return "chip-mint";

@@ -337,8 +337,7 @@ const escalaActiva = computed(() => {
         >
           <p class="font-semibold text-ink-900">Analizando tu conversación</p>
           <p class="text-sm text-ink-600 mt-1.5 leading-relaxed">
-            Calculando PHQ-9 y GAD-7 y revisando con BERT. Puede tardar
-            1–3 minutos la primera vez (~400 MB de modelo).
+            Calculando PHQ-9 y GAD-7. Puede tardar uno o dos minutos.
           </p>
           <div class="inline-flex gap-1.5 mt-3">
             <span class="w-2 h-2 bg-green-600 rounded-full dot-1"></span>

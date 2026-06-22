@@ -23,15 +23,14 @@ const ETIQUETAS = {
   estabilidad: "Estabilidad",
 };
 
-// Paleta pastel coherente con el design system
 const COLORES = {
-  depresion: "#8B6CF0", // brand
-  ansiedad: "#F2A93B", // amber
-  tdah: "#3DC57E", // mint
-  estres_academico: "#FB9573", // peach
-  soledad: "#A78BFA", // lavanda
-  riesgo_suicida: "#E0413A", // critico
-  estabilidad: "#1FA862", // mint dark
+  depresion: "#243A2C",
+  ansiedad: "#E08763",
+  tdah: "#4C6B53",
+  estres_academico: "#CC6347",
+  soledad: "#7E8B79",
+  riesgo_suicida: "#B85537",
+  estabilidad: "#3F5D4B",
 };
 
 // Recomendaciones por condición (Sprint 4)
@@ -106,8 +105,8 @@ function severidadTone(sev) {
   const s = (sev || "").toLowerCase();
   if (s.includes("severa") || s.includes("severo")) return "text-risk-critico";
   if (s.includes("moderada-severa")) return "text-risk-critico";
-  if (s.includes("moderada")) return "text-orange-600";
-  if (s.includes("leve")) return "text-amber-600";
+  if (s.includes("moderada")) return "text-coral-600";
+  if (s.includes("leve")) return "text-coral-600";
   return "text-green-700";
 }
 
@@ -126,7 +125,7 @@ const nivelTone = computed(() => {
   const map = {
     CRÍTICO: {
       bg: " ",
-      border: "border-red-200",
+      border: "border-coral-200",
       text: "text-risk-critico",
       emoji: "",
     },
@@ -297,9 +296,8 @@ function imprimir() {
             }}</span>
           </div>
           <p class="text-ink-700 mt-3 text-sm leading-relaxed">
-            Análisis basado en
-            <strong>{{ resultado.respuestas_analizadas }}</strong> respuestas
-            procesadas con el modelo <strong>BERT</strong> en español.
+            Cribado preliminar a partir de
+            <strong>{{ resultado.respuestas_analizadas }}</strong> respuestas.
           </p>
         </div>
 
@@ -405,8 +403,7 @@ function imprimir() {
       <section class="card p-6 fade-in-up">
         <h2 class="section-title">Perfil de condiciones</h2>
         <p class="section-subtitle mb-4">
-          Probabilidad detectada por el modelo BERT para cada condición clínica
-          evaluada.
+          Probabilidad estimada para cada condición clínica evaluada.
         </p>
         <div class="h-80"><canvas ref="canvas"></canvas></div>
       </section>
@@ -451,7 +448,7 @@ function imprimir() {
             class="rounded-xl border p-5"
             :class="
               clave === 'riesgo_suicida'
-                ? 'bg-red-50 border-red-200'
+                ? 'bg-coral-50 border-coral-200'
                 : 'bg-green-50 border-green-100'
             "
           >
@@ -496,7 +493,7 @@ function imprimir() {
         </div>
       </section>
 
-      <!-- ═══ INDICACIONES (explicación BERT) ═══ -->
+      <!-- ═══ Indicaciones e interpretación ═══ -->
       <section class="card p-6 fade-in-up">
         <h2 class="section-title">Indicaciones e interpretación</h2>
         <pre
@@ -511,32 +508,17 @@ function imprimir() {
         <div class="grid md:grid-cols-2 gap-5 text-sm mt-4">
           <div class="space-y-3">
             <div>
-              <p
-                class="text-xs uppercase tracking-wider font-semibold text-ink-400"
-              >
-                Modelo
-              </p>
-              <p class="font-mono text-xs text-ink-700 break-all">
-                {{ r.modelo }}
+              <p class="label-kicker">Procesamiento</p>
+              <p class="text-ink-700 text-[14px]">
+                Análisis automatizado de texto en español, sin traducción
+                intermedia.
               </p>
             </div>
             <div>
-              <p
-                class="text-xs uppercase tracking-wider font-semibold text-ink-400"
-              >
-                Técnica
+              <p class="label-kicker">Tipo</p>
+              <p class="text-ink-700 text-[14px]">
+                Clasificación multi-etiqueta sobre las respuestas del estudiante.
               </p>
-              <p class="text-ink-700">
-                Zero-shot multi-label classification (BERT + XNLI)
-              </p>
-            </div>
-            <div>
-              <p
-                class="text-xs uppercase tracking-wider font-semibold text-ink-400"
-              >
-                Idioma
-              </p>
-              <p class="text-ink-700">Español (sin traducción intermedia)</p>
             </div>
           </div>
           <div class="space-y-3">
@@ -581,17 +563,15 @@ function imprimir() {
         <div
           class="mt-4 p-4 bg-white rounded-xl border border-green-100 text-xs text-ink-600"
         >
-          <strong class="text-ink-800">Para el psicólogo/a evaluador/a:</strong>
-          Este informe es un <em>cribado</em> preliminar generado por IA. Se
-          sugiere contrastar los hallazgos con entrevista clínica directa y
-          aplicación de escalas validadas. La herramienta no sustituye el juicio
-          clínico profesional.
+          <strong class="text-ink-800">Para la psicóloga evaluadora:</strong>
+          Este informe es un <em>cribado</em> preliminar. Se sugiere contrastar
+          los hallazgos con entrevista clínica directa y aplicación de escalas
+          validadas. No sustituye el juicio clínico profesional.
         </div>
       </section>
 
       <footer class="text-center text-xs text-ink-400 pb-2">
-        Sistema desarrollado como prototipo de tesis · Procesamiento de Lenguaje
-        Natural para Salud Mental Juvenil
+        Sami · Cribado preliminar para acompañamiento socioemocional
       </footer>
     </div>
   </div>

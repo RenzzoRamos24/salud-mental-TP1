@@ -6,6 +6,7 @@ import StatCard from "../components/StatCard.vue";
 
 const usuarios = ref([]);
 const stats = ref(null);
+const actividad = ref(null);
 const cargando = ref(true);
 const error = ref("");
 const filtroRol = ref("todos");
@@ -15,12 +16,17 @@ async function cargar() {
   cargando.value = true;
   error.value = "";
   try {
-    const [u, s] = await Promise.all([
+    const hoy = new Date();
+    const [u, s, r] = await Promise.all([
       api.listarUsuarios(),
       api.statsUsuarios(),
+      api
+        .reporteMensualAdmin(hoy.getFullYear(), hoy.getMonth() + 1)
+        .catch(() => null),
     ]);
     usuarios.value = u;
     stats.value = s;
+    actividad.value = r;
   } catch (e) {
     error.value = e.response?.data?.detail || e.message;
   } finally {
@@ -71,6 +77,61 @@ function fechaCorta(iso) {
       <StatCard label="Psicólogos" :value="stats.psicologos" tone="mint" />
       <StatCard label="Admins" :value="stats.admins" tone="peach" />
       <StatCard label="Inactivos" :value="stats.inactivos" tone="brand" />
+    </section>
+
+    <!-- Actividad del mes en curso (modelo del diario) -->
+    <section
+      v-if="actividad"
+      class="card p-6 mb-6 fade-in-up"
+    >
+      <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
+        <h2 class="section-title !mb-0">Actividad del diario · este mes</h2>
+        <span class="text-xs text-ink-500">
+          Resumen del mes en curso
+        </span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="card p-4">
+          <p
+            class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
+          >
+            Entradas escritas
+          </p>
+          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
+            {{ actividad.entradas_diario || 0 }}
+          </p>
+        </div>
+        <div class="card p-4">
+          <p
+            class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
+          >
+            Alumnos activos
+          </p>
+          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
+            {{ actividad.alumnos_activos_diario || 0 }}
+          </p>
+        </div>
+        <div class="card p-4">
+          <p
+            class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
+          >
+            Ciclos cerrados
+          </p>
+          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
+            {{ actividad.ciclos_cerrados || 0 }}
+          </p>
+        </div>
+        <div class="card p-4 border-l-4 border-l-coral-600">
+          <p
+            class="text-[11px] uppercase tracking-wider text-coral-700 font-semibold"
+          >
+            Crisis detectadas
+          </p>
+          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
+            {{ actividad.crisis_detectadas || 0 }}
+          </p>
+        </div>
+      </div>
     </section>
 
     <!-- Filtros -->

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SENTIR · Reporte completo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --green:#0D9488; --green-deep:#0E3B38; --green-mid:#3FA89C; --green-tint:#E6F3F1; --green-line:#CFE6E2;
+    --amber:#E8913C; --amberT:#FBEBD7; --good:#2BB673; --mild:#E8B04B; --warn:#E8913C; --bad:#E25555;
+    --bg:#F1F5F4; --surface:#FFFFFF; --ink:#143230; --muted:#6E8C88; --faint:#9DB2AE;
+    --line:#E4EBE9; --line-soft:#EEF3F2;
+    --shadow:0 1px 2px rgba(20,50,48,.04), 0 8px 28px -16px rgba(20,50,48,.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .num{font-variant-numeric:tabular-nums;}
+
+  /* top bar (full width) */
+  .topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:26px;padding:0 clamp(20px,4vw,48px);height:62px;}
+  .burger{display:flex;flex-direction:column;gap:4px;cursor:pointer;padding:6px;}
+  .burger span{width:18px;height:2px;background:var(--green-deep);border-radius:2px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .wm{font-family:'Gabarito';font-weight:800;font-size:20px;color:var(--green-deep);letter-spacing:.04em;}
+  .brand .sub{font-size:13px;color:var(--muted);font-weight:600;border-left:1px solid var(--line);padding-left:11px;}
+  nav.main{display:flex;gap:4px;margin-left:8px;}
+  nav.main a{font-size:14px;font-weight:600;color:var(--muted);text-decoration:none;padding:8px 14px;border-radius:9px;}
+  nav.main a.active{color:var(--green-deep);background:var(--green-tint);}
+  nav.main a .badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;
+    background:var(--amber);color:#fff;border-radius:999px;font-size:11px;font-weight:700;}
+  .spacer{flex:1;}
+  .user{display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .user .av{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;font-family:'Gabarito';}
+  .user .nm{font-size:14px;font-weight:600;}
+  .user .chev{color:var(--faint);}
+
+  /* page (full width) */
+  .page{width:100%;max-width:1760px;margin:0 auto;padding:24px clamp(20px,4vw,48px) 80px;}
+  .crumb{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13.5px;font-weight:600;margin-bottom:16px;cursor:pointer;text-decoration:none;width:max-content;}
+  .titlerow{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:18px;flex-wrap:wrap;}
+  .who{display:flex;align-items:center;gap:16px;}
+  .who .big-av{width:58px;height:58px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-family:'Gabarito';font-weight:700;font-size:21px;flex-shrink:0;}
+  .who h1{font-family:'Gabarito';font-weight:700;font-size:25px;color:var(--green-deep);margin:0 0 4px;letter-spacing:-.2px;}
+  .who .meta{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted);flex-wrap:wrap;}
+  .sev{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:12.5px;color:#B26A1E;background:var(--amberT);padding:4px 11px;border-radius:999px;white-space:nowrap;}
+  .sev .d{width:8px;height:8px;border-radius:50%;background:var(--amber);}
+  .actions{display:flex;gap:10px;align-items:center;}
+  .btn{font-family:'Gabarito';font-weight:600;font-size:14px;border:0;border-radius:11px;padding:11px 20px;cursor:pointer;}
+  .btn.ghost{background:var(--surface);color:var(--green-deep);box-shadow:inset 0 0 0 1px var(--line);}
+  .btn.solid{background:var(--green);color:#fff;}
+
+  .yearrow{display:flex;align-items:center;gap:12px;margin:6px 0 20px;font-size:13.5px;color:var(--muted);}
+  .yearsel{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 13px;font-weight:700;color:var(--green-deep);}
+
+  /* cards + grids */
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+  .card{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:22px 24px;}
+  .chead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:4px;}
+  .chead h2{font-family:'Gabarito';font-weight:600;font-size:16.5px;color:var(--green-deep);margin:0;}
+  .chead .sm{font-size:12.5px;color:var(--muted);margin-top:3px;font-weight:500;}
+  .badge-sev{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;}
+  .badge-sev.min{color:var(--good);background:#E2F3EA;}
+  .badge-sev.mod{color:#B26A1E;background:var(--amberT);}
+  .roberta{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#6D5BD0;background:#EEEBFB;padding:4px 9px;border-radius:999px;white-space:nowrap;}
+
+  .bigstat{font-family:'Gabarito';font-weight:800;font-size:40px;color:var(--green);line-height:1;margin:12px 0 2px;}
+  .bigstat small{font-size:17px;color:var(--faint);font-weight:600;}
+  .bigstat .leg{font-size:12.5px;color:var(--muted);font-weight:500;font-family:'Hanken Grotesk';display:block;margin-top:6px;}
+
+  .chart svg{display:block;width:100%;height:auto;overflow:visible;}
+
+  /* conditions */
+  .cond{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--line-soft);}
+  .cond:last-child{border-bottom:0;}
+  .cond .nm{width:150px;font-size:13.5px;font-weight:600;flex-shrink:0;}
+  .cond .track{flex:1;height:9px;background:var(--bg);border-radius:999px;overflow:hidden;}
+  .cond .fill{height:100%;border-radius:999px;background:var(--green);}
+  .cond .pct{width:42px;text-align:right;font-size:13px;font-weight:700;color:var(--green);}
+  .cond.risk .fill{background:var(--bad);} .cond.risk .pct{color:var(--bad);}
+
+  /* adherence */
+  .adh{display:flex;align-items:center;gap:12px;padding:9px 0;}
+  .adh .cl{width:26px;font-size:12.5px;font-weight:700;color:var(--muted);}
+  .adh .track{flex:1;height:11px;background:var(--bg);border-radius:999px;overflow:hidden;}
+  .adh .fill{height:100%;border-radius:999px;}
+  .adh .val{width:48px;text-align:right;font-size:13px;font-weight:700;}
+  .subhead{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:20px 0 8px;}
+  .legend4{display:flex;gap:16px;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px;flex-wrap:wrap;}
+  .legend4 i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:0px;}
+  .mood{display:flex;align-items:center;gap:12px;padding:7px 0;}
+  .mood .cl{width:26px;font-size:12.5px;font-weight:700;color:var(--muted);}
+  .mood .bar{flex:1;height:13px;border-radius:6px;overflow:hidden;display:flex;}
+  .mood .bar span{height:100%;}
+  .mood .d{width:34px;text-align:right;font-size:12px;font-weight:600;color:var(--muted);}
+
+  /* ===== detalle por ciclo ===== */
+  .detail .chead{margin-bottom:8px;}
+  .cyc{border-top:1px solid var(--line);}
+  .cyc:first-of-type{border-top:0;}
+  .cyc-head{width:100%;background:transparent;border:0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+    gap:20px;padding:20px 2px;text-align:left;}
+  .cyc-name{font-family:'Gabarito';font-weight:700;font-size:17px;color:var(--green-deep);}
+  .cyc-name em{font-style:normal;font-weight:600;font-size:13.5px;color:var(--green);margin-left:6px;}
+  .cyc-range{font-size:13px;color:var(--muted);margin-left:14px;font-weight:500;}
+  .cyc-scores{display:flex;align-items:center;gap:22px;}
+  .cyc-scores .s{text-align:center;}
+  .cyc-scores .s b{font-family:'Gabarito';font-weight:700;font-size:19px;color:var(--green-deep);display:block;line-height:1;}
+  .cyc-scores .s small{font-size:10.5px;color:var(--faint);font-weight:700;letter-spacing:.04em;}
+  .cyc-scores .chev{color:var(--faint);transition:transform .2s;}
+  .cyc.open .cyc-scores .chev{transform:rotate(180deg);color:var(--green);}
+  .cyc-body{display:none;padding:0 2px 26px;}
+  .cyc.open .cyc-body{display:block;}
+
+  .banner{background:var(--green-tint);border:1px solid var(--green-line);border-radius:14px;padding:16px 18px;margin-bottom:24px;}
+  .banner .pills{display:flex;gap:8px;margin-bottom:10px;}
+  .mini-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--green-deep);background:#fff;padding:4px 11px;border-radius:999px;}
+  .mini-pill .d{width:7px;height:7px;border-radius:50%;background:var(--good);}
+  .banner .bt{font-family:'Gabarito';font-weight:700;font-size:14.5px;color:var(--green);margin-bottom:5px;}
+  .banner .bn{font-size:12px;color:var(--muted);font-style:italic;line-height:1.45;}
+
+  .scaleblock{margin-bottom:22px;}
+  .sb-head{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid var(--line);padding-bottom:9px;margin-bottom:6px;}
+  .sb-head .t{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);}
+  .sb-head .sc{font-family:'Gabarito';font-weight:800;font-size:18px;color:var(--green-deep);}
+  .sb-head .sc small{font-size:12px;color:var(--faint);font-weight:600;}
+  .sym{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0;border-bottom:1px dashed var(--line);}
+  .sym:last-child{border-bottom:0;}
+  .sym-name{font-size:14px;color:var(--ink);}
+  .sym-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+  .sym-right em{font-style:italic;font-size:12px;color:var(--faint);}
+  .sym-right b{font-size:14px;font-weight:800;color:#B26A1E;}
+  .sym-right b.zero{color:var(--good);}
+
+  .wrote{margin-top:24px;}
+  .wrote-head{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);border-bottom:2px solid var(--line);padding-bottom:9px;margin-bottom:16px;}
+  .entry{margin-bottom:16px;}
+  .entry .edate{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:6px;}
+  .entry blockquote{margin:0;padding:2px 0 2px 16px;border-left:3px solid var(--green-line);font-style:italic;font-size:14px;color:var(--muted);line-height:1.6;}
+
+  /* notas + diario */
+  .notes textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:'Hanken Grotesk';font-size:14px;color:var(--ink);resize:vertical;background:var(--surface);}
+  .notes textarea::placeholder{color:var(--faint);}
+  .notes .row{display:flex;justify-content:flex-end;margin-top:12px;}
+  .notes .empty{font-size:13px;color:var(--faint);margin-top:14px;}
+  .private{display:flex;align-items:center;gap:11px;background:var(--bg);border-radius:12px;padding:15px 18px;font-size:13.5px;color:var(--muted);}
+  .private svg{color:var(--green-mid);flex-shrink:0;}
+
+  @media(max-width:880px){ .row2{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<header class="topbar">
+  <div class="burger"><span></span><span></span><span></span></div>
+  <div class="brand">
+    <svg width="30" height="22" viewBox="0 0 160 100" fill="none" aria-hidden="true">
+      <path d="M90 97 C 82 82 72 74 72 58 C 72 36 86 22 104 24 C 114 25 120 35 119 48 C 122 52 126 57 127 61 C 127 64 123 64 120 64 C 123 67 122 70 117 71 C 120 75 116 82 108 83 C 101 84 99 89 100 97" stroke="#0E3B38" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M60 33 C 69 23 85 20 98 25" stroke="#0E3B38" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M40 56 H60 L66 40 L74 68 L82 32 L90 70 L96 56 H112" stroke="#0D9488" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="22" y1="51" x2="22" y2="61" stroke="#0D9488" stroke-width="4.4" stroke-linecap="round"/>
+      <line x1="31" y1="46" x2="31" y2="66" stroke="#0D9488" stroke-width="4.4" stroke-linecap="round"/>
+    </svg>
+    <span class="wm">SENTIR</span>
+    <span class="sub">Clínico</span>
+  </div>
+  <nav class="main">
+    <a href="#" class="active">Panel</a>
+    <a href="#">Estudiantes</a>
+    <a href="#">Alertas <span class="badge">1</span></a>
+  </nav>
+  <div class="spacer"></div>
+  <div class="user">
+    <div class="av">CM</div>
+    <span class="nm">Carla M.</span>
+    <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+</header>
+
+<main class="page">
+
+  <a class="crumb" href="SENTIR · Reporte de bienestar.html">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Volver al reporte de bienestar
+  </a>
+
+  <div class="titlerow">
+    <div class="who">
+      <div class="big-av">MT</div>
+      <div>
+        <h1>María Alejandra Torres Huanca</h1>
+        <div class="meta">
+          <span class="sev"><span class="d"></span>Moderada-severa</span>
+          <span>maria.torres@demo.upc.edu.pe</span>
+          <span>· Última actividad hoy</span>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost">Contactar</button>
+      <button class="btn solid">Agendar sesión</button>
+    </div>
+  </div>
+
+  <div class="yearrow">
+    <span>Año</span>
+    <span class="yearsel">2026
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span>3 ciclos con datos</span>
+  </div>
+
+  <!-- ===== row: PHQ + GAD line charts ===== -->
+  <div class="row2">
+    <section class="card">
+      <div class="chead">
+        <div><h2>Depresión · PHQ-A</h2></div>
+        <span class="badge-sev min">Leve</span>
+      </div>
+      <div class="bigstat num">3<small>/27</small><span class="leg">último ciclo con datos</span></div>
+      <div class="chart" id="phqChart"></div>
+    </section>
+
+    <section class="card">
+      <div class="chead">
+        <div><h2>Ansiedad · GAD-7</h2></div>
+        <span class="badge-sev min">Leve</span>
+      </div>
+      <div class="bigstat num">2<small>/21</small><span class="leg">último ciclo con datos</span></div>
+      <div class="chart" id="gadChart"></div>
+    </section>
+  </div>
+
+  <!-- ===== row: conditions + adherence ===== -->
+  <div class="row2">
+    <section class="card">
+      <div class="chead">
+        <div><h2>Condiciones detectadas</h2><div class="sm">Confianza promedio por condición detectada en los textos del diario</div></div>
+        <span class="roberta">RoBERTa · orientativo</span>
+      </div>
+      <div id="conds" style="margin-top:8px;"></div>
+    </section>
+
+    <section class="card">
+      <div class="chead">
+        <div><h2>Adherencia y ánimo</h2><div class="sm">Días escritos por ciclo · la ausencia prolongada es señal clínica temprana</div></div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="adh"><span class="cl">C1</span><span class="track"><span class="fill" style="width:100%;background:var(--good)"></span></span><span class="val num" style="color:var(--good)">14/14</span></div>
+        <div class="adh"><span class="cl">C2</span><span class="track"><span class="fill" style="width:36%;background:var(--mild)"></span></span><span class="val num" style="color:#B26A1E">5/14</span></div>
+        <div class="adh"><span class="cl">C3</span><span class="track"><span class="fill" style="width:21%;background:var(--bad)"></span></span><span class="val num" style="color:var(--bad)">3/14</span></div>
+      </div>
+      <div class="subhead">Estado de ánimo auto-reportado</div>
+      <div class="legend4">
+        <span><i style="background:var(--good)"></i>Bien</span>
+        <span><i style="background:var(--mild)"></i>Regular</span>
+        <span><i style="background:#9FB0AD"></i>Bajo</span>
+        <span><i style="background:var(--bad)"></i>Muy bajo</span>
+      </div>
+      <div class="mood"><span class="cl">C1</span><span class="bar"><span style="width:18%;background:var(--mild)"></span><span style="width:52%;background:#9FB0AD"></span><span style="width:30%;background:var(--bad)"></span></span><span class="d num">14 d</span></div>
+      <div class="mood"><span class="cl">C2</span><span class="bar"><span style="width:30%;background:var(--mild)"></span><span style="width:70%;background:#9FB0AD"></span></span><span class="d num">5 d</span></div>
+      <div class="mood"><span class="cl">C3</span><span class="bar"><span style="width:64%;background:var(--mild)"></span><span style="width:36%;background:#9FB0AD"></span></span><span class="d num">3 d</span></div>
+    </section>
+  </div>
+
+  <!-- ===== DETALLE POR CICLO ===== -->
+  <section class="card detail" style="margin-bottom:20px;">
+    <div class="chead"><div><h2>Detalle por ciclo</h2></div></div>
+
+    <!-- Ciclo 3 -->
+    <div class="cyc open" data-cyc>
+      <button class="cyc-head" data-toggle>
+        <span><span class="cyc-name">Ciclo 3 <em>· en curso</em></span><span class="cyc-range">18 jun – 1 jul · 3 de 14 días</span></span>
+        <span class="cyc-scores">
+          <span class="s"><b class="num">3</b><small>PHQ-A</small></span>
+          <span class="s"><b class="num">2</b><small>GAD-7</small></span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+      <div class="cyc-body">
+        <div class="banner">
+          <div class="pills"><span class="mini-pill"><span class="d"></span>Mínima</span><span class="mini-pill"><span class="d"></span>Mínima</span></div>
+          <div class="bt">Sin indicadores clínicos significativos en este ciclo</div>
+          <div class="bn">Indicadores orientativos según criterios DSM-5. El diagnóstico es competencia exclusiva del profesional de salud mental.</div>
+        </div>
+
+        <div class="scaleblock">
+          <div class="sb-head"><span class="t">PHQ-A · Depresión</span><span class="sc num">3<small>/27</small></span></div>
+          <div class="sym"><span class="sym-name">Pérdida de interés o placer (anhedonia)</span><span class="sym-right"><em>Algunos días</em><b class="num">1/3</b></span></div>
+          <div class="sym"><span class="sym-name">Estado de ánimo deprimido</span><span class="sym-right"><em>Algunos días</em><b class="num">1/3</b></span></div>
+          <div class="sym"><span class="sym-name">Fatiga o pérdida de energía</span><span class="sym-right"><em>Algunos días</em><b class="num">1/3</b></span></div>
+        </div>
+
+        <div class="scaleblock">
+          <div class="sb-head"><span class="t">GAD-7 · Ansiedad</span><span class="sc num">2<small>/21</small></span></div>
+          <div class="sym"><span class="sym-name">Ansiedad o nerviosismo excesivo</span><span class="sym-right"><em>Algunos días</em><b class="num">1/3</b></span></div>
+          <div class="sym"><span class="sym-name">Preocupación excesiva sobre múltiples temas</span><span class="sym-right"><em>Algunos días</em><b class="num">1/3</b></span></div>
+        </div>
+
+        <div class="wrote">
+          <div class="wrote-head">Lo que escribió · base de la detección</div>
+          <div class="entry"><span class="edate">18 jun</span><blockquote>"Empezando este nuevo ciclo. Sigo con cansancio pero un poco mejor que antes. Fui a clase y pude prestar atención casi toda la hora. Todavía me preocupa el futuro pero menos que hace dos semanas…."</blockquote></div>
+          <div class="entry"><span class="edate">19 jun</span><blockquote>"Dormí mejor anoche. Me desperté solo una vez. En clase pude concentrarme mejor, tomé apuntes. El ánimo sigue bajo pero ya no me paraliza tanto. Comí algo más hoy…."</blockquote></div>
+          <div class="entry"><span class="edate">20 jun</span><blockquote>"Hoy tuve un bajón otra vez, no sé si es el estrés de los parciales. Me costó concentrarme en la tarde. Pero logré estudiar una hora. Sigo preocupada pero un poco más en control…."</blockquote></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ciclo 2 -->
+    <div class="cyc" data-cyc>
+      <button class="cyc-head" data-toggle>
+        <span><span class="cyc-name">Ciclo 2</span><span class="cyc-range">4 jun – 17 jun · 5 de 14 días</span></span>
+        <span class="cyc-scores">
+          <span class="s"><b class="num">4</b><small>PHQ-A</small></span>
+          <span class="s"><b class="num">4</b><small>GAD-7</small></span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+      <div class="cyc-body">
+        <div class="banner">
+          <div class="pills"><span class="mini-pill"><span class="d"></span>Mínima</span><span class="mini-pill"><span class="d"></span>Mínima</span></div>
+          <div class="bt">Mejora marcada respecto al ciclo 1</div>
+          <div class="bn">Indicadores orientativos según criterios DSM-5. El diagnóstico es competencia exclusiva del profesional de salud mental.</div>
+        </div>
+        <div class="scaleblock">
+          <div class="sb-head"><span class="t">PHQ-A · Depresión</span><span class="sc num">4<small>/27</small></span></div>
+          <div class="sym"><span class="sym-name">Estado de ánimo deprimido</span><span class="sym-right"><em>Algunos días</em><b class="num">2/3</b></span></div>
+          <div class="sym"><span class="sym-name">Fatiga o pérdida de energía</span><span class="sym-right"><em>Algunos días</em><b class="num">2/3</b></span></div>
+        </div>
+        <div class="scaleblock">
+          <div class="sb-head"><span class="t">GAD-7 · Ansiedad</span><span class="sc num">4<small>/21</small></span></div>
+          <div class="sym"><span class="sym-name">Preocupación excesiva sobre múltiples temas</span><span class="sym-right"><em>Algunos días</em><b class="num">2/3</b></span></div>
+          <div class="sym"><span class="sym-name">Dificultad para relajarse</span><span class="sym-right"><em>Algunos días</em><b class="num">2/3</b></span></div>
+        </div>
+        <div class="wrote">
+          <div class="wrote-head">Lo que escribió · base de la detección</div>
+          <div class="entry"><span class="edate">6 jun</span><blockquote>"Esta semana fue más llevadera. Hubo días en que me costó levantarme, pero fui a clases. Hablé con una amiga y me hizo bien…."</blockquote></div>
+          <div class="entry"><span class="edate">12 jun</span><blockquote>"Me preocupan los exámenes. A veces siento que no me va a alcanzar el tiempo, pero estoy intentando organizarme mejor…."</blockquote></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ciclo 1 -->
+    <div class="cyc" data-cyc>
+      <button class="cyc-head" data-toggle>
+        <span><span class="cyc-name">Ciclo 1</span><span class="cyc-range">21 may – 3 jun · 14 de 14 días</span></span>
+        <span class="cyc-scores">
+          <span class="s"><b class="num">17</b><small>PHQ-A</small></span>
+          <span class="s"><b class="num">11</b><small>GAD-7</small></span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+      <div class="cyc-body">
+        <div class="banner" style="background:#FBEBD7;border-color:#F1D3B0;">
+          <div class="pills"><span class="mini-pill"><span class="d" style="background:var(--bad)"></span>Moderada-severa</span><span class="mini-pill"><span class="d" style="background:var(--warn)"></span>Moderada</span></div>
+          <div class="bt" style="color:#B26A1E;">Sintomatología clínicamente significativa — se recomienda evaluación</div>
+          <div class="bn">Indicadores orientativos según criterios DSM-5. El diagnóstico es competencia exclusiva del profesional de salud mental.</div>
+        </div>
+        <div class="scaleblock">
+          <div class="sb-head"><span class="t">PHQ-A · Depresión</span><span class="sc num">17<small>/27</small></span></div>
+          <div class="sym"><span class="sym-name">Pérdida de interés o placer (anhedonia)</span><span class="sym-right"><em>Más de la mitad de los días</em><b class="num">3/3</b></span></div>
+          <div class="sym"><span class="sym-name">Estado de ánimo deprimido</span><span class="sym-right"><em>Casi todos los días</em><b class="num">3/3</b></span></div>
+          <div class="sym"><span class="sym-name">Problemas de sueño</span><span class="sym-right"><em>Más de la mitad de los días</em><b class="num">3/3</b></span></div>
+          <div class="sym"><span class="sym-name">Fatiga o pérdida de energía</span><span class="sym-right"><em>Casi todos los días</em><b class="num">3/3</b></span></div>
+        </div>
+        <div class="scaleblock">
+          <div class="sb-head"><span class="t">GAD-7 · Ansiedad</span><span class="sc num">11<small>/21</small></span></div>
+          <div class="sym"><span class="sym-name">Ansiedad o nerviosismo excesivo</span><span class="sym-right"><em>Más de la mitad de los días</em><b class="num">3/3</b></span></div>
+          <div class="sym"><span class="sym-name">Preocupación excesiva sobre múltiples temas</span><span class="sym-right"><em>Casi todos los días</em><b class="num">3/3</b></span></div>
+        </div>
+        <div class="wrote">
+          <div class="wrote-head">Lo que escribió · base de la detección</div>
+          <div class="entry"><span class="edate">22 may</span><blockquote>"No tengo ganas de nada. Falté a dos clases porque no pude levantarme. Todo me cuesta el doble y siento que no avanzo…."</blockquote></div>
+          <div class="entry"><span class="edate">28 may</span><blockquote>"Otra noche sin dormir bien. Me la paso preocupada por todo, los exámenes, mi familia, el futuro. Me siento muy cansada…."</blockquote></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== notas + diario ===== -->
+  <div class="row2">
+    <section class="card notes">
+      <div class="chead"><div><h2>Notas clínicas</h2></div></div>
+      <textarea placeholder="Anotá observaciones de la sesión, acuerdos, derivaciones…"></textarea>
+      <div class="row"><button class="btn solid">Guardar nota</button></div>
+      <div class="empty">Todavía no hay notas en esta ficha.</div>
+    </section>
+
+    <section class="card">
+      <div class="chead"><div><h2>Diario del estudiante</h2></div></div>
+      <div class="private" style="margin-top:12px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="16" height="9" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="2"/></svg>
+        El contenido del diario es privado. Solo ves los resultados de las encuestas, no lo que María escribe.
+      </div>
+    </section>
+  </div>
+
+</main>
+
+<script>
+/* severity colors */
+const SEV = {min:'#2BB673', mild:'#E8B04B', mod:'#E8913C', sev:'#E25555'};
+function bandPHQ(v){ return v>=15?'sev':v>=10?'mod':v>=5?'mild':'min'; }
+function bandGAD(v){ return v>=15?'sev':v>=10?'mod':v>=5?'mild':'min'; }
+
+function sevLine(id, max, pts){
+  const W=640,H=232,PADL=42,PADR=20,PADT=30,PADB=44;
+  const iw=W-PADL-PADR, ih=H-PADT-PADB, n=pts.length;
+  const X=i=>PADL+iw*i/(n-1), Y=v=>PADT+ih-ih*v/max;
+  let g=`<defs><linearGradient id="ar${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="rgba(124,154,147,.22)"/><stop offset="1" stop-color="rgba(124,154,147,0)"/></linearGradient></defs>`;
+  // dashed max line + axis labels
+  g+=`<line x1="${PADL}" y1="${Y(max)}" x2="${W-PADR}" y2="${Y(max)}" stroke="#CFE0DC" stroke-width="1.5" stroke-dasharray="5 5"/>`;
+  g+=`<text x="${PADL}" y="${Y(max)-7}" font-size="11" fill="#9DB2AE" font-family="Hanken Grotesk">${max}</text>`;
+  g+=`<text x="${PADL}" y="${PADT+ih+15}" font-size="11" fill="#9DB2AE" font-family="Hanken Grotesk">0</text>`;
+  const linePts=pts.map((p,i)=>`${X(i)},${Y(p.v)}`).join(' ');
+  g+=`<polygon points="${PADL},${PADT+ih} ${linePts} ${X(n-1)},${PADT+ih}" fill="url(#ar${id})"/>`;
+  g+=`<polyline points="${linePts}" fill="none" stroke="#7C9A93" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  pts.forEach((p,i)=>{
+    const col=SEV[p.band];
+    g+=`<text x="${X(i)}" y="${Y(p.v)-15}" text-anchor="middle" font-size="16" font-weight="800" fill="${col}" font-family="Hanken Grotesk">${p.v}</text>`;
+    g+=`<circle cx="${X(i)}" cy="${Y(p.v)}" r="7.5" fill="#fff" stroke="${col}" stroke-width="3.5"/>`;
+    g+=`<text x="${X(i)}" y="${H-18}" text-anchor="middle" font-size="12" fill="#6E8C88" font-family="Hanken Grotesk">${p.label}</text>`;
+  });
+  g+=`<text x="${PADL}" y="${H-2}" font-size="10.5" fill="#9DB2AE" font-family="Hanken Grotesk">Verde = mínima · Amarillo = leve · Naranja = moderada · Rojo = severa</text>`;
+  document.getElementById(id).innerHTML=`<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+}
+const phq=[17,4,3], gad=[11,4,2];
+sevLine('phqChart',27, phq.map((v,i)=>({v,band:bandPHQ(v),label:'C'+(i+1)})));
+sevLine('gadChart',21, gad.map((v,i)=>({v,band:bandGAD(v),label:'C'+(i+1)})));
+
+/* conditions */
+const conds=[{nm:'Depresión',pct:65},{nm:'Estrés académico',pct:64},{nm:'Ansiedad',pct:56},{nm:'Soledad',pct:43},{nm:'TDAH',pct:21},{nm:'Riesgo suicida',pct:5,risk:true}];
+document.getElementById('conds').innerHTML=conds.map(c=>`
+  <div class="cond ${c.risk?'risk':''}"><span class="nm">${c.nm}</span><span class="track"><span class="fill" style="width:${c.pct}%"></span></span><span class="pct num">${c.pct}%</span></div>`).join('');
+
+/* cycle accordion */
+document.querySelectorAll('[data-toggle]').forEach(b=>b.addEventListener('click',()=>{
+  b.closest('[data-cyc]').classList.toggle('open');
+}));
+</script>
+
+<template id="__bundler_thumbnail">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0E3B38"/><g transform="translate(20,30) scale(.42)"><path d="M90 97 C 82 82 72 74 72 58 C 72 36 86 22 104 24 C 114 25 120 35 119 48 C 122 52 126 57 127 61 C 127 64 123 64 120 64 C 123 67 122 70 117 71 C 120 75 116 82 108 83 C 101 84 99 89 100 97" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M40 56 H60 L66 40 L74 68 L82 32 L90 70 L96 56 H112" stroke="#5FC7BC" stroke-width="3.5" fill="none" stroke-linecap="round"/></g></svg>
+</template>
+</body>
+</html>

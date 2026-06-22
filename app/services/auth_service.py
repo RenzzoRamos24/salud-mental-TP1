@@ -77,6 +77,46 @@ class AuthService:
         }
 
     # ─────────────────────────────────────────────────────────────────
+    # OAUTH — login o registro con Google / Microsoft
+    # ─────────────────────────────────────────────────────────────────
+    @staticmethod
+    def login_o_registrar_oauth(
+        db: Session,
+        email: str,
+        nombre: str,
+        apellido: str,
+        role_default: str = "estudiante",
+    ) -> User:
+        """
+        Si ya existe una cuenta con ese email, la devuelve.
+        Si no, crea una cuenta nueva con role estudiante (default) y un hash
+        de password aleatorio (queda inaccesible vía login tradicional hasta
+        que el usuario haga forgot-password).
+        """
+        email_lower = email.lower().strip()
+        user = db.query(User).filter(User.email == email_lower).first()
+        if user:
+            if not user.activo:
+                raise ValueError("La cuenta está desactivada.")
+            return user
+
+        # Cuenta nueva via OAuth.
+        random_pw = hash_password(f"oauth-{random.randint(0, 10**12):012d}")
+        user = User(
+            email=email_lower,
+            hashed_password=random_pw,
+            nombre=nombre.strip() or email_lower.split("@")[0],
+            apellido=apellido.strip() or "—",
+            role=role_default,
+            activo=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info(f"✅ Usuario OAuth creado: {email_lower} ({role_default})")
+        return user
+
+    # ─────────────────────────────────────────────────────────────────
     # RECUPERAR CONTRASEÑA
     # ─────────────────────────────────────────────────────────────────
     @staticmethod

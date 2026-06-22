@@ -1,0 +1,1568 @@
+/* Sami — estética Day One (claro, nativo, aireado).
+   Scoped a body.sami-mode para no chocar con las vistas del psicólogo / admin. */
+
+body.sami-mode {
+  --accent: #0d9488;
+  --bg: #f5f5f6;
+  --panel: #ffffff;
+  --sidebar: #f0f0f2;
+  --line: #e4e4e8;
+  --line-soft: #ececef;
+  --ink: #1d1d1f;
+  --ink-2: #56565c;
+  --ink-3: #8e8e95;
+  --radius: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    "Helvetica Neue", sans-serif;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body.sami-mode * {
+  box-sizing: border-box;
+}
+
+body.sami-mode button {
+  font-family: inherit;
+  cursor: pointer;
+}
+body.sami-mode input,
+body.sami-mode textarea,
+body.sami-mode select {
+  font-family: inherit;
+}
+
+/* ---------- App scaffolding ---------- */
+
+.sami-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ---------- Topbar ---------- */
+
+body.sami-mode .topbar {
+  height: 52px;
+  flex: none;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 20px;
+  z-index: 5;
+}
+
+body.sami-mode .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+body.sami-mode .wordmark .topbar-logo,
+body.sami-mode .topbar-logo {
+  height: 26px;
+  width: auto;
+}
+
+body.sami-mode .topnav {
+  display: flex;
+  gap: 2px;
+}
+
+body.sami-mode .topnav button {
+  border: 0;
+  background: none;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+body.sami-mode .topnav button:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+body.sami-mode .topnav button.on {
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+body.sami-mode .topbar .spacer {
+  flex: 1;
+}
+
+body.sami-mode .userchip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+body.sami-mode .userchip:hover {
+  background: var(--bg);
+}
+body.sami-mode .userchip .avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+body.sami-mode .signout {
+  border: 0;
+  background: none;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+body.sami-mode .signout:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+/* ---------- Page scaffolding ---------- */
+
+body.sami-mode .page {
+  flex: 1;
+  overflow-y: auto;
+  padding: 36px 40px 64px;
+}
+
+body.sami-mode .page-inner {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+body.sami-mode .page h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+  color: var(--ink);
+}
+
+body.sami-mode .page .sub {
+  color: var(--ink-3);
+  font-size: 14px;
+  margin: 0 0 28px;
+}
+
+body.sami-mode .card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- Botones ---------- */
+
+body.sami-mode .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 8px;
+}
+body.sami-mode .btn:hover {
+  background: var(--bg);
+}
+body.sami-mode .btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+body.sami-mode .btn.primary:hover {
+  filter: brightness(0.94);
+}
+body.sami-mode .btn.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+body.sami-mode .btn.danger {
+  color: #d12c2c;
+  border-color: #f0d2d2;
+}
+body.sami-mode .btn.danger:hover {
+  background: #fdf3f3;
+}
+body.sami-mode .linkbtn {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+body.sami-mode .linkbtn:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Diario: 3 paneles ---------- */
+
+body.sami-mode .diary {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 216px 312px 1fr;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+body.sami-mode .d-side {
+  background: var(--sidebar);
+  border-right: 1px solid var(--line);
+  padding: 14px 10px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+body.sami-mode .d-side .group {
+  margin-bottom: 18px;
+}
+body.sami-mode .d-side .group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  padding: 0 8px;
+  margin-bottom: 4px;
+}
+
+body.sami-mode .d-side .row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+}
+body.sami-mode .d-side .row:hover {
+  background: rgba(0, 0, 0, 0.045);
+}
+body.sami-mode .d-side .row.on {
+  background: rgba(0, 0, 0, 0.07);
+  font-weight: 600;
+}
+body.sami-mode .d-side .row .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+body.sami-mode .d-side .row .count {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+body.sami-mode .d-list {
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  background: var(--panel);
+}
+
+body.sami-mode .d-list-head {
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  z-index: 2;
+}
+body.sami-mode .d-list-head .month {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+body.sami-mode .newbtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+body.sami-mode .newbtn:hover {
+  filter: brightness(0.94);
+}
+
+body.sami-mode .month-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  padding: 14px 14px 6px;
+}
+
+body.sami-mode .entry-row {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: none;
+  text-align: left;
+  align-items: flex-start;
+}
+body.sami-mode .entry-row:hover {
+  background: var(--bg);
+}
+body.sami-mode .entry-row.on {
+  background: var(--accent);
+}
+body.sami-mode .entry-row.on * {
+  color: #fff !important;
+}
+
+body.sami-mode .entry-row .datebox {
+  text-align: center;
+  flex: none;
+  width: 34px;
+}
+body.sami-mode .entry-row .datebox .dow,
+body.sami-mode .entry-row .datebox .num {
+  display: block;
+}
+body.sami-mode .entry-row .datebox .dow {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  letter-spacing: 0.05em;
+}
+body.sami-mode .entry-row .datebox .num {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+body.sami-mode .entry-row .meta {
+  min-width: 0;
+  flex: 1;
+}
+body.sami-mode .entry-row .meta .t {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 1px 0 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--ink);
+}
+body.sami-mode .entry-row .meta .x {
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+body.sami-mode .entry-row .meta .tagline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+body.sami-mode .entry-row .meta .tagline .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* ---------- Editor ---------- */
+
+body.sami-mode .d-editor {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+}
+
+body.sami-mode .ed-head {
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line-soft);
+  padding: 12px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 2;
+}
+body.sami-mode .ed-head .when {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+body.sami-mode .ed-body {
+  flex: 1;
+  padding: 30px 36px 24px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+body.sami-mode .ed-title {
+  width: 100%;
+  border: 0;
+  outline: none;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  padding: 0;
+  margin: 0 0 14px;
+  background: none;
+  color: var(--ink);
+}
+body.sami-mode .ed-title::placeholder {
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+body.sami-mode .ed-text {
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: none;
+  padding: 0;
+  min-height: 220px;
+}
+body.sami-mode .ed-text::placeholder {
+  color: var(--ink-3);
+}
+
+body.sami-mode .ed-foot {
+  border-top: 1px solid var(--line-soft);
+  padding: 10px 36px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+body.sami-mode .tagpick {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+body.sami-mode .tagpick button {
+  border: 1px solid var(--line);
+  background: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+body.sami-mode .tagpick button .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+body.sami-mode .tagpick button.on {
+  border-color: var(--ink-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------- Encuesta de ciclo (dentro del editor) ---------- */
+
+body.sami-mode .cycle-card {
+  margin: 8px 36px 28px;
+  max-width: 688px;
+  align-self: center;
+  width: calc(100% - 72px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  background: var(--bg);
+}
+body.sami-mode .cycle-card h3 {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+body.sami-mode .cycle-card .hint {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 0 0 14px;
+}
+
+body.sami-mode .scale-q {
+  margin-bottom: 14px;
+}
+body.sami-mode .scale-q .q {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 7px;
+  color: var(--ink);
+}
+body.sami-mode .scale-q .opts {
+  display: flex;
+  gap: 6px;
+}
+body.sami-mode .scale-q .opts button {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 7px;
+  padding: 7px 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+body.sami-mode .scale-q .opts button.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, #fff);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+body.sami-mode .cycle-progress {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+body.sami-mode .cycle-progress i {
+  width: 14px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+}
+body.sami-mode .cycle-progress i.done {
+  background: var(--accent);
+}
+
+/* ---------- Hub / Inicio ---------- */
+
+body.sami-mode .hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+body.sami-mode .hub-card {
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+body.sami-mode .hub-card:hover {
+  border-color: var(--ink-3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+body.sami-mode .hub-card .ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 11%, #fff);
+  color: var(--accent);
+}
+body.sami-mode .hub-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+body.sami-mode .hub-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+body.sami-mode .hub-card .meta {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: auto;
+}
+
+/* ---------- Listas / filas genéricas ---------- */
+
+body.sami-mode .rowlist {
+  display: flex;
+  flex-direction: column;
+}
+body.sami-mode .rowlist > * {
+  border-bottom: 1px solid var(--line-soft);
+}
+body.sami-mode .rowlist > *:last-child {
+  border-bottom: 0;
+}
+
+/* ---------- Formularios ---------- */
+
+body.sami-mode .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+body.sami-mode .field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+body.sami-mode .field input,
+body.sami-mode .field select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  outline: none;
+  background: var(--panel);
+  color: var(--ink);
+  width: 100%;
+}
+body.sami-mode .field input:disabled {
+  background: var(--bg);
+  color: var(--ink-3);
+}
+body.sami-mode .field input:focus,
+body.sami-mode .field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+/* ---------- Toast ---------- */
+
+body.sami-mode .toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  z-index: 50;
+  animation: sami-toast-in 0.2s ease;
+}
+@keyframes sami-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ---------- Encuesta de cierre (PHQ-A + GAD-7) ---------- */
+
+body.sami-mode .survey {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--panel);
+}
+body.sami-mode .survey-col {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 44px 28px 60px;
+}
+
+body.sami-mode .survey-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  margin-bottom: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+body.sami-mode .seg-progress {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 38px;
+}
+body.sami-mode .seg-progress i {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+body.sami-mode .seg-progress i.done {
+  background: var(--accent);
+}
+body.sami-mode .seg-progress i.cur {
+  background: color-mix(in srgb, var(--accent) 45%, #fff);
+}
+
+body.sami-mode .q-mod {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+body.sami-mode .q-text {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.45;
+  margin: 0 0 8px;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+body.sami-mode .q-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 0 0 26px;
+}
+
+body.sami-mode .likert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+body.sami-mode .likert button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+body.sami-mode .likert button:hover {
+  border-color: var(--ink-3);
+}
+body.sami-mode .likert button.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, #fff);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+body.sami-mode .likert .val {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--bg);
+}
+body.sami-mode .likert button.on .val {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+body.sami-mode .likert .lab {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  color: var(--ink);
+}
+body.sami-mode .likert .des {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  display: block;
+  margin-top: 1px;
+}
+
+body.sami-mode .survey-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+body.sami-mode .survey-foot {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 36px;
+}
+
+body.sami-mode .err-card {
+  background: #fdf3f3;
+  border: 1px solid #f0d2d2;
+  color: #b42121;
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-top: 14px;
+}
+
+body.sami-mode .crisis-card {
+  background: #fdf3f3;
+  border: 1px solid #f0d2d2;
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin: 0 0 18px;
+}
+body.sami-mode .crisis-card h3 {
+  margin: 0 0 6px;
+  color: #b42121;
+  font-size: 16px;
+}
+body.sami-mode .crisis-card p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #7a2727;
+}
+
+body.sami-mode .score-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 24px 0 18px;
+}
+body.sami-mode .score-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+body.sami-mode .score-card .name {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+body.sami-mode .score-card .num {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8px 0 6px;
+  color: var(--ink);
+}
+body.sami-mode .score-card .num small {
+  font-size: 15px;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+body.sami-mode .score-card .act {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 10px;
+}
+
+body.sami-mode .lvl {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink-2);
+}
+body.sami-mode .lvl.warn {
+  background: #fbf1e6;
+  color: #b96a1f;
+}
+body.sami-mode .lvl.bad {
+  background: #fdf3f3;
+  color: #d12c2c;
+}
+
+body.sami-mode .invite {
+  margin: 24px 36px 0;
+  max-width: 688px;
+  width: calc(100% - 72px);
+  align-self: center;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 5%, #fff);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+/* ---------- Calendario del historial ---------- */
+
+body.sami-mode .cal-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 18px 0 10px;
+  color: var(--ink);
+}
+body.sami-mode .cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+body.sami-mode .cal-dow {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  text-align: center;
+  padding-bottom: 4px;
+}
+body.sami-mode .cal-cell {
+  aspect-ratio: 1.2;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  border: 0;
+  background: none;
+}
+body.sami-mode .cal-cell.range {
+  background: color-mix(in srgb, var(--accent) 11%, #fff);
+}
+body.sami-mode .cal-cell.entry {
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+body.sami-mode .cal-cell.entry:hover {
+  filter: brightness(0.92);
+}
+body.sami-mode .cal-cell.today {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+body.sami-mode .cal-cell.future {
+  color: var(--line);
+}
+
+/* ---------- Scrollbars dentro de sami ---------- */
+
+body.sami-mode ::-webkit-scrollbar {
+  width: 10px;
+}
+body.sami-mode ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 5px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+body.sami-mode ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SAMI CLÍNICO — vista del psicólogo (Panel, Estudiantes, Alertas, Ficha)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ---------- Severidad: chips y puntos ---------- */
+
+body.sami-mode .sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+body.sami-mode .sev .pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+body.sami-mode .sev.minima {
+  background: #eef4ef;
+  color: #4a7a5c;
+}
+body.sami-mode .sev.minima .pip {
+  background: #4a7a5c;
+}
+body.sami-mode .sev.leve {
+  background: #eef3fb;
+  color: #3f6fb0;
+}
+body.sami-mode .sev.leve .pip {
+  background: #3f6fb0;
+}
+body.sami-mode .sev.moderada {
+  background: #fbf3e7;
+  color: #b07a25;
+}
+body.sami-mode .sev.moderada .pip {
+  background: #cf962f;
+}
+body.sami-mode .sev.alta {
+  background: #fbeee6;
+  color: #b5601f;
+}
+body.sami-mode .sev.alta .pip {
+  background: #d3792c;
+}
+body.sami-mode .sev.severa {
+  background: #fbecec;
+  color: #c0392b;
+}
+body.sami-mode .sev.severa .pip {
+  background: #d0453a;
+}
+
+body.sami-mode .crisis-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #c0392b;
+  background: #fbecec;
+  border: 1px solid #f2cfcb;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+body.sami-mode .trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+body.sami-mode .trend.up {
+  color: #c0392b;
+}
+body.sami-mode .trend.down {
+  color: #4a7a5c;
+}
+body.sami-mode .trend.flat {
+  color: var(--ink-3);
+}
+
+/* ---------- Tiles del panel ---------- */
+
+body.sami-mode .tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 26px;
+}
+body.sami-mode .tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+body.sami-mode .tile .n {
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+body.sami-mode .tile .l {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 7px;
+}
+body.sami-mode .tile.alarm {
+  border-color: #f2cfcb;
+  background: #fdf6f5;
+}
+body.sami-mode .tile.alarm .n {
+  color: #c0392b;
+}
+
+/* ---------- Sección con título + link ---------- */
+
+body.sami-mode .section-h {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+body.sami-mode .section-h .more {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+body.sami-mode .section-h .more:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Lista clínica de estudiantes ---------- */
+
+body.sami-mode .stu-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px 1.6fr 1fr 1fr 130px 16px;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 13px 18px;
+  cursor: pointer;
+  font-size: 13px;
+  border-top: 1px solid var(--line-soft);
+}
+body.sami-mode .stu-row:first-child {
+  border-top: 0;
+}
+body.sami-mode .stu-row:hover {
+  background: var(--bg);
+}
+body.sami-mode .stu-row .avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+body.sami-mode .stu-row .name {
+  font-weight: 600;
+  font-size: 13.5px;
+  display: block;
+  color: var(--ink);
+}
+body.sami-mode .stu-row .meta-sm {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 1px;
+  display: block;
+}
+body.sami-mode .stu-row .score-cell {
+  font-variant-numeric: tabular-nums;
+}
+body.sami-mode .stu-row .score-cell .big {
+  font-size: 15px;
+  font-weight: 700;
+}
+body.sami-mode .stu-row .score-cell .cap {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+body.sami-mode .stu-row .chev {
+  color: var(--ink-3);
+}
+
+body.sami-mode .list-head {
+  display: grid;
+  grid-template-columns: 34px 1.6fr 1fr 1fr 130px 16px;
+  gap: 14px;
+  padding: 9px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* ---------- Fila de alerta (Panel y vista Alertas) ---------- */
+
+body.sami-mode .alert-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 13px 18px;
+  cursor: pointer;
+  border-top: 1px solid var(--line-soft);
+}
+body.sami-mode .alert-row:first-child {
+  border-top: 0;
+}
+body.sami-mode .alert-row:hover {
+  background: var(--bg);
+}
+body.sami-mode .alert-row .badge-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+body.sami-mode .alert-row.crit .badge-ico {
+  background: #FDEAEA;
+  color: #E25555;
+}
+body.sami-mode .alert-row.warn .badge-ico {
+  background: #FBEBD7;
+  color: #E8913C;
+}
+body.sami-mode .alert-row.idle .badge-ico {
+  background: #E6F3F1;
+  color: #0D9488;
+}
+body.sami-mode .alert-row .txt {
+  flex: 1;
+  min-width: 0;
+}
+body.sami-mode .alert-row .txt .t {
+  font-size: 13.5px;
+  font-weight: 600;
+  display: block;
+  color: var(--ink);
+}
+body.sami-mode .alert-row .txt .s {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 1px;
+  display: block;
+}
+body.sami-mode .alert-row .when {
+  font-size: 12px;
+  color: var(--ink-3);
+  flex: none;
+}
+
+/* ---------- Ficha clínica ---------- */
+
+body.sami-mode .ficha-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 22px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+body.sami-mode .ficha-head .avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+  font-weight: 600;
+  color: #fff;
+  flex: none;
+}
+body.sami-mode .ficha-head h1 {
+  font-size: 23px;
+  margin: 0;
+}
+body.sami-mode .ficha-head .meta {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+body.sami-mode .ficha-head .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+body.sami-mode .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: 0;
+  margin-bottom: 18px;
+}
+body.sami-mode .back-link:hover {
+  color: var(--ink);
+}
+
+body.sami-mode .ficha-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+body.sami-mode .panel-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+body.sami-mode .panel-card > .h {
+  padding: 15px 20px 13px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+body.sami-mode .panel-card > .b {
+  padding: 18px 20px;
+}
+
+/* ---------- Ciclos en la ficha ---------- */
+
+body.sami-mode .cyc-item {
+  border-top: 1px solid var(--line-soft);
+}
+body.sami-mode .cyc-item:first-child {
+  border-top: 0;
+}
+body.sami-mode .cyc-row {
+  width: 100%;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  text-align: left;
+}
+body.sami-mode .cyc-row:hover {
+  background: var(--bg);
+}
+body.sami-mode .cyc-row .cn {
+  font-size: 13.5px;
+  font-weight: 600;
+  min-width: 92px;
+  color: var(--ink);
+}
+body.sami-mode .cyc-row .cd {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+body.sami-mode .cyc-scores {
+  margin-left: auto;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+body.sami-mode .cyc-scores .s {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+body.sami-mode .cyc-scores .s .v {
+  font-size: 14px;
+  font-weight: 700;
+  display: block;
+  color: var(--ink);
+}
+body.sami-mode .cyc-scores .s .k {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+}
+
+body.sami-mode .cyc-detail {
+  padding: 4px 20px 18px;
+}
+body.sami-mode .item-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--line-soft);
+}
+body.sami-mode .item-line:first-child {
+  border-top: 0;
+}
+body.sami-mode .item-line .q {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  flex: 1;
+}
+body.sami-mode .item-line .bar {
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+  flex: none;
+}
+body.sami-mode .item-line .bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+body.sami-mode .item-line .sc {
+  font-size: 12px;
+  font-weight: 700;
+  width: 26px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* ---------- Notas clínicas ---------- */
+
+body.sami-mode .nota {
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+body.sami-mode .nota:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+body.sami-mode .nota .meta {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+body.sami-mode .nota .txt {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+body.sami-mode .nota-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--panel);
+}
+body.sami-mode .nota-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+/* ---------- Crisis banner en la ficha ---------- */
+
+body.sami-mode .crisis-banner {
+  background: #fbecec;
+  border: 1px solid #f2cfcb;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 22px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+body.sami-mode .crisis-banner .ic {
+  color: #c0392b;
+  flex: none;
+  margin-top: 1px;
+}
+body.sami-mode .crisis-banner h3 {
+  margin: 0 0 4px;
+  font-size: 14.5px;
+  color: #b5322a;
+}
+body.sami-mode .crisis-banner p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #7c3b35;
+}
+
+body.sami-mode .privacy-note {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.5;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 11px 13px;
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+
+/* ---------- Wordmark con subtítulo "· Clínico" ---------- */
+
+body.sami-mode .wordmark .sub {
+  font-weight: 500;
+  color: var(--ink-3);
+  margin-left: 4px;
+}
+
+/* ---------- Badge para nav (alertas) ---------- */
+
+body.sami-mode .nav-badge {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #c0392b;
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 6px;
+}

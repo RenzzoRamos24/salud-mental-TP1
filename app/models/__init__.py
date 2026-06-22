@@ -6,6 +6,7 @@ from app.models.session import UserSession
 from app.models.response import UserResponse
 from app.models.risk import RiskResult
 from app.models.psicologo_mensaje import PsicologoMensaje
+from app.models.cycle_survey import CycleSurvey
 
 __all__ = [
     "Base",
@@ -16,4 +17,5 @@ __all__ = [
     "UserResponse",
     "RiskResult",
     "PsicologoMensaje",
+    "CycleSurvey",
 ]

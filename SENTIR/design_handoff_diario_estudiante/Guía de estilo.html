@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sami · Guía de estilo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --green:#3F5D4B; --green-deep:#243A2C; --green-mid:#4C6B53; --green-hover:#36503F;
+    --coral:#E08763; --coral-deep:#CC6347;
+    --bg:#EDF1E8; --surface:#FFFFFF; --mint:#E2EADC;
+    --line:#DDE4D6; --ink:#27352B; --muted:#8A9685; --faint:#A6B19F;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Hanken Grotesk',system-ui,sans-serif;}
+  .wrap{max-width:980px;margin:0 auto;padding:56px 40px 80px;}
+
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;border-bottom:1.5px solid var(--line);padding-bottom:22px;margin-bottom:44px;}
+  .head .wm b{font-family:'Gabarito',sans-serif;font-weight:700;font-size:26px;color:var(--green-deep);}
+  .head .wm span{font-size:14px;color:var(--muted);margin-left:8px;}
+  .head h1{font-family:'Gabarito',sans-serif;font-weight:700;font-size:17px;color:var(--green);margin:10px 0 0;}
+  .head .meta{font-size:12.5px;color:var(--faint);text-align:right;line-height:1.6;}
+
+  section{margin-bottom:52px;}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:18px;display:flex;align-items:center;gap:12px;}
+  .lbl::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  /* color */
+  .prow{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+  .swatch{background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .swatch .fill{height:120px;display:flex;align-items:flex-end;padding:14px 16px;}
+  .swatch .info{padding:14px 16px;}
+  .swatch .role{font-family:'Gabarito',sans-serif;font-weight:600;font-size:15px;}
+  .swatch .use{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45;}
+  .swatch .hex{font-family:'Hanken Grotesk';font-weight:700;font-size:13px;letter-spacing:.02em;margin-top:9px;color:var(--ink);}
+  .tag{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.85);}
+
+  .scale{display:flex;gap:10px;flex-wrap:wrap;}
+  .chiprow{display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .chip{width:84px;height:64px;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(39,53,43,.06);}
+  .chip + small{font-size:11px;color:var(--muted);font-weight:600;}
+
+  .neutrals{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .ntile{background:var(--surface);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(39,53,43,.05);}
+  .ntile .nfill{height:72px;}
+  .ntile .nbody{padding:11px 13px;}
+  .ntile .nname{font-size:12.5px;font-weight:600;}
+  .ntile .nhex{font-size:11.5px;font-weight:700;color:var(--muted);margin-top:3px;}
+
+  /* type */
+  .typecard{background:var(--surface);border-radius:18px;padding:30px 32px;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .famrow{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:20px 0;border-top:1px solid var(--line);}
+  .famrow:first-child{border-top:0;padding-top:0;}
+  .famrow .spec{font-size:12.5px;color:var(--muted);text-align:right;flex-shrink:0;line-height:1.6;}
+  .famrow .spec b{color:var(--ink);font-weight:700;}
+  .t-display{font-family:'Gabarito',sans-serif;font-weight:700;font-size:38px;letter-spacing:-.6px;color:var(--green-deep);line-height:1;}
+  .t-h2{font-family:'Gabarito',sans-serif;font-weight:600;font-size:24px;color:var(--ink);}
+  .t-eyebrow{font-weight:700;font-size:15px;color:var(--coral);}
+  .t-body{font-family:'Hanken Grotesk';font-weight:400;font-size:17px;color:var(--ink);max-width:440px;line-height:1.5;}
+  .t-label{font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);}
+  .t-btn{font-family:'Gabarito',sans-serif;font-weight:600;font-size:15px;color:#fff;background:var(--green);padding:11px 22px;border-radius:12px;display:inline-block;}
+
+  /* tokens */
+  .tok3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+  .tcard{background:var(--surface);border-radius:16px;padding:22px 24px;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .tcard h3{font-family:'Gabarito',sans-serif;font-weight:600;font-size:15px;margin:0 0 16px;color:var(--green-deep);}
+  .tline{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;font-size:13px;border-top:1px solid var(--line);}
+  .tline:first-of-type{border-top:0;}
+  .tline .nm{color:var(--muted);}
+  .tline .vl{font-weight:700;font-family:'Hanken Grotesk';}
+  .rdemo{width:46px;height:30px;background:var(--mint);box-shadow:inset 0 0 0 1.5px var(--green-mid);}
+  .shA{width:46px;height:30px;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .shB{width:46px;height:30px;border-radius:8px;background:#fff;box-shadow:0 6px 20px -10px rgba(39,53,43,.16);}
+  .shC{width:46px;height:30px;border-radius:8px;background:#fff;box-shadow:0 14px 34px -16px rgba(39,53,43,.22);}
+
+  /* in-use */
+  .usecard{background:var(--surface);border-radius:18px;padding:24px;box-shadow:0 1px 3px rgba(39,53,43,.06);display:flex;gap:18px;flex-wrap:wrap;align-items:center;}
+  .btn-green{font-family:'Gabarito';font-weight:600;font-size:15px;color:#fff;background:var(--green);border:0;border-radius:12px;padding:13px 26px;}
+  .btn-coral{font-family:'Gabarito';font-weight:600;font-size:15px;color:#fff;background:var(--coral);border:0;border-radius:12px;padding:13px 26px;}
+  .pill{display:inline-flex;align-items:center;gap:9px;background:#fff;border-radius:999px;padding:6px 16px 6px 7px;box-shadow:0 1px 3px rgba(39,53,43,.08);font-size:13px;font-weight:600;}
+  .pav{width:26px;height:26px;border-radius:50%;background:var(--coral);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;}
+  .dot{width:13px;height:13px;border-radius:50%;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <div class="wm"><b>Sami</b><span>Salud Mental Juvenil</span></div>
+      <h1>Guía de estilo · Diario del estudiante</h1>
+    </div>
+    <div class="meta">Verde + coral sobre blanco<br/>Gabarito · Hanken Grotesk<br/>v1 — junio 2026</div>
+  </div>
+
+  <!-- COLORES PRINCIPALES -->
+  <section>
+    <div class="lbl">Colores · primario y secundario</div>
+    <div class="prow">
+      <div class="swatch">
+        <div class="fill" style="background:#3F5D4B"><span class="tag" style="color:#3F5D4B">Primario</span></div>
+        <div class="info">
+          <div class="role">Verde bosque</div>
+          <div class="use">Color de marca. Botones, estados activos, títulos, ánimo seleccionado.</div>
+          <div class="hex">#3F5D4B</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="fill" style="background:#E08763"><span class="tag" style="color:#C2683F">Secundario</span></div>
+        <div class="info">
+          <div class="role">Coral</div>
+          <div class="use">Acento. Avatar, saludo, día actual, confirmación de guardado.</div>
+          <div class="hex">#E08763</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- variantes -->
+    <div class="scale" style="margin-top:8px">
+      <div class="chiprow"><div class="chip" style="background:#243A2C"></div><small>#243A2C · texto</small></div>
+      <div class="chiprow"><div class="chip" style="background:#3F5D4B"></div><small>#3F5D4B · primario</small></div>
+      <div class="chiprow"><div class="chip" style="background:#4C6B53"></div><small>#4C6B53 · medio</small></div>
+      <div class="chiprow"><div class="chip" style="background:#E08763"></div><small>#E08763 · coral</small></div>
+      <div class="chiprow"><div class="chip" style="background:#CC6347"></div><small>#CC6347 · coral hover</small></div>
+    </div>
+  </section>
+
+  <!-- NEUTROS -->
+  <section>
+    <div class="lbl">Neutros · fondos y texto</div>
+    <div class="neutrals">
+      <div class="ntile"><div class="nfill" style="background:#EDF1E8"></div><div class="nbody"><div class="nname">Fondo</div><div class="nhex">#EDF1E8</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px #E2E8DD"></div><div class="nbody"><div class="nname">Superficie</div><div class="nhex">#FFFFFF</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#E2EADC"></div><div class="nbody"><div class="nname">Panel menta</div><div class="nhex">#E2EADC</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#DDE4D6"></div><div class="nbody"><div class="nname">Borde / línea</div><div class="nhex">#DDE4D6</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#27352B"></div><div class="nbody"><div class="nname">Texto principal</div><div class="nhex">#27352B</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#8A9685"></div><div class="nbody"><div class="nname">Texto secundario</div><div class="nhex">#8A9685</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#A6B19F"></div><div class="nbody"><div class="nname">Etiquetas</div><div class="nhex">#A6B19F</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#9EC09B"></div><div class="nbody"><div class="nname">Verde claro</div><div class="nhex">#9EC09B</div></div></div>
+    </div>
+  </section>
+
+  <!-- TIPOGRAFIA -->
+  <section>
+    <div class="lbl">Tipografía</div>
+    <div class="typecard">
+      <div class="famrow">
+        <div class="t-display">Gabarito</div>
+        <div class="spec"><b>Gabarito</b> — Display / Títulos<br/>Pesos 600 · 700<br/>Títulos, botones, marca</div>
+      </div>
+      <div class="famrow">
+        <div class="t-body" style="font-size:30px;line-height:1">Hanken Grotesk</div>
+        <div class="spec"><b>Hanken Grotesk</b> — Texto / UI<br/>Pesos 400 · 500 · 600 · 700<br/>Cuerpo, etiquetas, datos</div>
+      </div>
+    </div>
+
+    <div class="typecard" style="margin-top:18px">
+      <div class="famrow"><div class="t-eyebrow">Buenos días, Renzo.</div><div class="spec">Eyebrow · <b>Hanken 700</b> · 15px · coral</div></div>
+      <div class="famrow"><div class="t-display">Hoy es sábado, 30 de mayo</div><div class="spec">H1 · <b>Gabarito 700</b> · 38px · -0.6 tracking</div></div>
+      <div class="famrow"><div class="t-h2">Estás en el día 6 de 14</div><div class="spec">H2 · <b>Gabarito 600</b> · 20px</div></div>
+      <div class="famrow"><div class="t-body">Escribe lo que te pase por la cabeza. Esto es solo para ti.</div><div class="spec">Cuerpo · <b>Hanken 400</b> · 16.5px · 1.6</div></div>
+      <div class="famrow"><div class="t-label">Ciclo de seguimiento #1</div><div class="spec">Etiqueta · <b>Hanken 700</b> · 11px · +0.12em · MAYÚS</div></div>
+      <div class="famrow"><div class="t-btn">Guardar entrada</div><div class="spec">Botón · <b>Gabarito 600</b> · 15px</div></div>
+    </div>
+  </section>
+
+  <!-- TOKENS -->
+  <section>
+    <div class="lbl">Radios · sombras · espaciado</div>
+    <div class="tok3">
+      <div class="tcard">
+        <h3>Radios</h3>
+        <div class="tline"><span class="nm">Tarjetas</span><span class="vl">18 px</span></div>
+        <div class="tline"><span class="nm">Paneles / ánimo</span><span class="vl">16 px</span></div>
+        <div class="tline"><span class="nm">Botones</span><span class="vl">12 px</span></div>
+        <div class="tline"><span class="nm">Píldoras / chips</span><span class="vl">999 px</span></div>
+      </div>
+      <div class="tcard">
+        <h3>Sombras</h3>
+        <div class="tline"><span class="nm">Sutil</span><span class="shA"></span></div>
+        <div class="tline"><span class="nm">Tarjeta</span><span class="shB"></span></div>
+        <div class="tline"><span class="nm">Héroe (escribir)</span><span class="shC"></span></div>
+      </div>
+      <div class="tcard">
+        <h3>Detalles</h3>
+        <div class="tline"><span class="nm">Hairline</span><span class="rdemo"></span></div>
+        <div class="tline"><span class="nm">Columna máx.</span><span class="vl">720 px</span></div>
+        <div class="tline"><span class="nm">Números</span><span class="vl">tabulares</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EN USO -->
+  <section style="margin-bottom:0">
+    <div class="lbl">En uso</div>
+    <div class="usecard">
+      <button class="btn-green">Guardar entrada</button>
+      <button class="btn-coral">Entrada guardada</button>
+      <span class="pill"><span class="pav">R</span>Renzo · estudiante</span>
+      <span style="display:inline-flex;gap:7px;align-items:center">
+        <span class="dot" style="background:#3F5D4B"></span>
+        <span class="dot" style="background:#3F5D4B"></span>
+        <span class="dot" style="background:#3F5D4B"></span>
+        <span class="dot" style="background:#E08763"></span>
+        <span class="dot" style="background:#E2E8DD"></span>
+        <span class="dot" style="background:#E2E8DD"></span>
+      </span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

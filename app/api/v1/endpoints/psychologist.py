@@ -48,6 +48,137 @@ async def listar_estudiantes(
     return PsychologistService.listar_estudiantes(db)
 
 
+# ── Vista clínica: estudiantes con ciclos resumidos (PHQ-A + GAD-7) ──────────
+# Mismo shape que espera la UI clínica: por estudiante, lista de ciclos con
+# scores totales, flag de crisis y días escritos. El front lo usa para el
+# panel de triaje, la cola de alertas y la ficha. Se reutilizan
+# `info_ciclo_estudiante` y `reporte_ciclo`.
+
+@router.get("/students-overview")
+async def students_overview(
+    _: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    from datetime import date as _date
+    from app.models.user import User as UserModel
+    from app.models.diario_entrada import DiarioEntrada
+    from app.services.ciclo_service import info_ciclo_estudiante
+    from app.services.diario_analisis_service import DiarioAnalisisService
+
+    estudiantes = (
+        db.query(UserModel)
+        .filter(UserModel.role == "estudiante", UserModel.activo == True)
+        .order_by(UserModel.created_at.asc())
+        .all()
+    )
+
+    def _crisis(reporte: dict) -> bool:
+        # ítem 9 del PHQ-A (pensamientos de daño) con ≥ 1 punto en el ciclo.
+        for it in reporte.get("items_detalle", []):
+            if it.get("item") == "phq9_9" and it.get("puntos", 0) >= 1:
+                return True
+        return False
+
+    out = []
+    for est in estudiantes:
+        # Última actividad: fecha de la entrada más reciente del diario.
+        ultima = (
+            db.query(DiarioEntrada.fecha)
+            .filter(DiarioEntrada.user_id == est.id)
+            .order_by(DiarioEntrada.fecha.desc())
+            .first()
+        )
+        ultima_actividad = (
+            ultima[0].isoformat() if ultima and ultima[0] else None
+        )
+
+        cycles = []
+        try:
+            info = info_ciclo_estudiante(db, est.id)
+        except ValueError:
+            info = {"ciclo_actual": None, "sesiones_cerradas": []}
+
+        def _muestras_diario(uid, ini, fin, limit=3):
+            rows = (
+                db.query(DiarioEntrada.fecha, DiarioEntrada.texto)
+                .filter(
+                    DiarioEntrada.user_id == uid,
+                    DiarioEntrada.fecha >= ini,
+                    DiarioEntrada.fecha <= fin,
+                    DiarioEntrada.analisis_id.isnot(None),
+                )
+                .order_by(DiarioEntrada.fecha.asc())
+                .limit(limit)
+                .all()
+            )
+            return [{"fecha": str(r.fecha), "fragmento": (r.texto or "")[:200]} for r in rows]
+
+        for cerrado in info.get("sesiones_cerradas", []) or []:
+            try:
+                ini = _date.fromisoformat(cerrado["inicio"])
+                fin = _date.fromisoformat(cerrado["cierre"])
+                reporte = DiarioAnalisisService.reporte_ciclo(db, est.id, ini, fin)
+                cycles.append({
+                    "n": cerrado["numero"],
+                    "start": cerrado["inicio"],
+                    "end": cerrado["cierre"],
+                    "phqa": reporte["phqa_total"],
+                    "gad7": reporte["gad7_total"],
+                    "crisis": _crisis(reporte),
+                    "dias": cerrado.get("entradas_escritas", 0),
+                    "encurso": False,
+                    "condiciones_beto": reporte.get("condiciones_beto", {}),
+                    "emojis": reporte.get("emojis", {}),
+                    "items_detalle": reporte.get("items_detalle", []),
+                    "entradas_muestra": _muestras_diario(est.id, ini, fin),
+                })
+            except Exception as e:
+                logger.warning(f"reporte ciclo cerrado falló para {est.id} #{cerrado.get('numero')}: {e}")
+
+        actual = info.get("ciclo_actual")
+        if actual:
+            try:
+                ini = _date.fromisoformat(actual["inicio"])
+                fin = _date.fromisoformat(actual["fecha_limite"])
+                reporte = DiarioAnalisisService.reporte_ciclo(db, est.id, ini, fin)
+                cycles.append({
+                    "n": actual["numero"],
+                    "start": actual["inicio"],
+                    "end": actual["fecha_limite"],
+                    "phqa": reporte["phqa_total"],
+                    "gad7": reporte["gad7_total"],
+                    "crisis": _crisis(reporte),
+                    "dias": actual.get("entradas_escritas", 0),
+                    "encurso": True,
+                    "condiciones_beto": reporte.get("condiciones_beto", {}),
+                    "emojis": reporte.get("emojis", {}),
+                    "items_detalle": reporte.get("items_detalle", []),
+                    "entradas_muestra": _muestras_diario(est.id, ini, fin),
+                })
+            except Exception as e:
+                logger.warning(f"reporte ciclo actual falló para {est.id}: {e}")
+
+        nombre_completo = (f"{est.nombre or ''} {est.apellido or ''}").strip()
+        iniciales = (
+            ((est.nombre or "·")[:1] + (est.apellido or "")[:1]).upper()
+            or "··"
+        )
+
+        out.append({
+            "id": est.id,
+            "name": nombre_completo or est.email,
+            "initials": iniciales,
+            "carrera": getattr(est, "carrera", None) or "",
+            "anio": getattr(est, "anio", None) or "",
+            "email": est.email,
+            "ultimaActividad": ultima_actividad,
+            "entradasCompartidas": False,  # privacidad: opt-in (no implementado)
+            "cycles": cycles,
+        })
+
+    return out
+
+
 # ── HU-17 / HU-20: Historial de un estudiante ────────────────────────────────
 
 @router.get("/students/{student_id}/history", response_model=HistorialEstudiante)

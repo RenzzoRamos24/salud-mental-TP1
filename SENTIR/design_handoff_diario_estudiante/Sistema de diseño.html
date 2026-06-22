@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sami · Sistema de diseño</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --green:#3F5D4B; --green-deep:#243A2C; --green-mid:#4C6B53; --green-hover:#36503F;
+    --coral:#E08763; --coral-deep:#CC6347;
+    --bg:#EDF1E8; --surface:#FFFFFF; --mint:#E2EADC;
+    --line:#DDE4D6; --ink:#27352B; --muted:#8A9685; --faint:#A6B19F;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px;margin:0 auto;padding:56px 44px 90px;}
+
+  /* head */
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;border-bottom:1.5px solid var(--line);padding-bottom:24px;margin-bottom:14px;}
+  .head .wm b{font-family:'Gabarito',sans-serif;font-weight:700;font-size:28px;color:var(--green-deep);letter-spacing:-.4px;}
+  .head .wm span{font-size:14px;color:var(--muted);margin-left:9px;}
+  .head h1{font-family:'Gabarito',sans-serif;font-weight:600;font-size:18px;color:var(--green);margin:12px 0 0;}
+  .head .meta{font-size:12.5px;color:var(--faint);text-align:right;line-height:1.7;}
+
+  .toc{display:flex;flex-wrap:wrap;gap:8px 10px;margin:26px 0 56px;}
+  .toc a{font-size:12.5px;font-weight:600;color:var(--green);text-decoration:none;background:var(--surface);border-radius:999px;padding:7px 15px;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .toc a:hover{background:var(--green);color:#fff;}
+
+  section{margin-bottom:60px;scroll-margin-top:24px;}
+  .lbl{display:flex;align-items:center;gap:14px;margin-bottom:8px;}
+  .lbl .n{font-family:'Gabarito',sans-serif;font-weight:700;font-size:13px;color:var(--coral-deep);letter-spacing:.04em;}
+  .lbl h2{font-family:'Gabarito',sans-serif;font-weight:700;font-size:23px;color:var(--green-deep);margin:0;letter-spacing:-.3px;}
+  .lbl::after{content:"";flex:1;height:1px;background:var(--line);}
+  .intro{font-size:15px;color:var(--muted);line-height:1.6;max-width:680px;margin:0 0 26px;}
+
+  /* principios do/dont */
+  .dd{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .ddcard{background:var(--surface);border-radius:16px;padding:24px 26px;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .ddcard h3{font-family:'Gabarito',sans-serif;font-size:15px;margin:0 0 16px;display:flex;align-items:center;gap:9px;}
+  .ddcard.no h3{color:var(--coral-deep);}
+  .ddcard.si h3{color:var(--green);}
+  .ddcard .ic{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;}
+  .ddcard.no .ic{background:var(--coral);}
+  .ddcard.si .ic{background:var(--green);}
+  .ddcard ul{list-style:none;margin:0;padding:0;}
+  .ddcard li{font-size:13.5px;line-height:1.5;padding:9px 0 9px 22px;position:relative;border-top:1px solid var(--line);color:var(--ink);}
+  .ddcard li:first-child{border-top:0;}
+  .ddcard li::before{content:"";position:absolute;left:2px;top:15px;width:7px;height:7px;border-radius:50%;}
+  .ddcard.no li::before{background:var(--coral);}
+  .ddcard.si li::before{background:var(--green);}
+
+  /* color */
+  .prow{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px;}
+  .swatch{background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .swatch .fill{height:110px;display:flex;align-items:flex-end;padding:14px 16px;}
+  .swatch .info{padding:14px 16px;}
+  .swatch .role{font-family:'Gabarito',sans-serif;font-weight:600;font-size:15px;}
+  .swatch .use{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45;}
+  .swatch .hex{font-weight:700;font-size:13px;margin-top:9px;}
+  .tag{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.88);}
+  .neutrals{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .ntile{background:var(--surface);border-radius:13px;overflow:hidden;box-shadow:0 1px 3px rgba(39,53,43,.05);}
+  .ntile .nfill{height:64px;}
+  .ntile .nbody{padding:10px 13px;}
+  .ntile .nname{font-size:12.5px;font-weight:600;}
+  .ntile .nhex{font-size:11.5px;font-weight:700;color:var(--muted);margin-top:2px;}
+
+  /* type */
+  .typecard{background:var(--surface);border-radius:18px;padding:28px 32px;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .famrow{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:20px 0;border-top:1px solid var(--line);}
+  .famrow:first-child{border-top:0;padding-top:0;}
+  .famrow .spec{font-size:12.5px;color:var(--muted);text-align:right;flex-shrink:0;line-height:1.6;}
+  .famrow .spec b{color:var(--ink);font-weight:700;}
+  .t-display{font-family:'Gabarito',sans-serif;font-weight:700;font-size:36px;letter-spacing:-.6px;color:var(--green-deep);line-height:1;}
+  .t-h2{font-family:'Gabarito',sans-serif;font-weight:600;font-size:22px;color:var(--ink);}
+  .t-eyebrow{font-weight:700;font-size:15px;color:var(--coral);}
+  .t-body{font-weight:400;font-size:16.5px;color:var(--ink);max-width:430px;line-height:1.5;}
+  .t-label{font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);}
+  .t-btn{font-family:'Gabarito',sans-serif;font-weight:600;font-size:15px;color:#fff;background:var(--green);padding:11px 22px;border-radius:12px;display:inline-block;}
+
+  /* tokens */
+  .tok3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+  .tcard{background:var(--surface);border-radius:16px;padding:22px 24px;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .tcard h3{font-family:'Gabarito',sans-serif;font-weight:600;font-size:14px;margin:0 0 14px;color:var(--green-deep);}
+  .tline{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;font-size:13px;border-top:1px solid var(--line);}
+  .tline:first-of-type{border-top:0;}
+  .tline .nm{color:var(--muted);}
+  .tline .vl{font-weight:700;}
+  .rdemo{width:46px;height:28px;background:var(--mint);box-shadow:inset 0 0 0 1.5px var(--green-mid);}
+  .shA{width:46px;height:28px;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .shB{width:46px;height:28px;border-radius:8px;background:#fff;box-shadow:0 6px 20px -10px rgba(39,53,43,.16);}
+  .shC{width:46px;height:28px;border-radius:8px;background:#fff;box-shadow:0 14px 34px -16px rgba(39,53,43,.22);}
+
+  /* components */
+  .comp{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .compcard{background:var(--surface);border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .compcard .ct{font-family:'Gabarito',sans-serif;font-weight:600;font-size:13.5px;color:var(--green-deep);margin-bottom:16px;}
+  .demo{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .btn-green{font-family:'Gabarito';font-weight:600;font-size:15px;color:#fff;background:var(--green);border:0;border-radius:12px;padding:13px 26px;cursor:pointer;}
+  .btn-coral{font-family:'Gabarito';font-weight:600;font-size:15px;color:#fff;background:var(--coral);border:0;border-radius:12px;padding:13px 26px;cursor:pointer;}
+  .btn-ghost{font-family:'Gabarito';font-weight:600;font-size:15px;color:var(--muted);background:#EDF1E8;border:0;border-radius:12px;padding:13px 26px;cursor:pointer;}
+  .pill{display:inline-flex;align-items:center;gap:9px;background:#fff;border-radius:999px;padding:6px 16px 6px 7px;box-shadow:0 1px 3px rgba(39,53,43,.08);font-size:13px;font-weight:600;}
+  .pav{width:26px;height:26px;border-radius:50%;background:var(--coral);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;}
+  .dotrow{display:inline-flex;gap:7px;align-items:center;}
+  .dot{width:13px;height:13px;border-radius:50%;}
+  .field{background:#fff;border-radius:12px;box-shadow:inset 0 0 0 1px var(--line);padding:13px 16px;font-size:14.5px;color:var(--faint);width:100%;}
+  .mood{display:flex;flex-direction:column;align-items:center;gap:9px;padding:14px 18px;border-radius:14px;box-shadow:0 1px 3px rgba(39,53,43,.06);font-size:12.5px;font-weight:600;}
+  .mood.on{background:var(--green);color:#fff;}
+  .mood.off{background:#fff;color:var(--muted);}
+
+  /* voice */
+  .voice{background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(39,53,43,.06);}
+  .vhead,.vrow{display:grid;grid-template-columns:1fr 1fr;}
+  .vhead div{padding:13px 22px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+  .vhead .a{color:var(--coral-deep);background:#FBEFE9;}
+  .vhead .b{color:var(--green);background:var(--mint);}
+  .vrow{border-top:1px solid var(--line);}
+  .vrow div{padding:14px 22px;font-size:14px;line-height:1.45;}
+  .vrow .a{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--coral);}
+  .vrow .b{color:var(--ink);font-weight:500;border-left:1px solid var(--line);}
+  .principle{display:flex;gap:14px;align-items:flex-start;background:var(--mint);border-radius:14px;padding:18px 20px;margin-top:18px;}
+  .principle b{color:var(--green-deep);}
+  .principle p{margin:0;font-size:13.5px;color:var(--ink);line-height:1.55;}
+
+  /* screen link */
+  .screen{display:flex;align-items:center;justify-content:space-between;gap:24px;background:var(--green);border-radius:20px;padding:30px 34px;color:#EAF0E6;}
+  .screen h3{font-family:'Gabarito',sans-serif;font-weight:700;font-size:22px;margin:0 0 8px;color:#fff;}
+  .screen p{margin:0;font-size:14px;color:#C5D3C1;line-height:1.5;max-width:420px;}
+  .screen a{flex-shrink:0;background:#fff;color:var(--green);font-family:'Gabarito';font-weight:600;font-size:15px;text-decoration:none;padding:13px 26px;border-radius:12px;}
+
+  .foot{margin-top:50px;padding-top:24px;border-top:1.5px solid var(--line);font-size:12.5px;color:var(--faint);text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <div class="wm"><b>Sami</b><span>Salud Mental Juvenil</span></div>
+      <h1>Sistema de diseño · Diario del estudiante</h1>
+    </div>
+    <div class="meta">Verde + coral sobre blanco<br/>Gabarito · Hanken Grotesk<br/>v1 — junio 2026</div>
+  </div>
+
+  <div class="toc">
+    <a href="#principios">01 · Principios</a>
+    <a href="#color">02 · Color</a>
+    <a href="#tipografia">03 · Tipografía</a>
+    <a href="#tokens">04 · Espaciado y tokens</a>
+    <a href="#componentes">05 · Componentes</a>
+    <a href="#voz">06 · Voz y microcopia</a>
+    <a href="#pantalla">07 · Pantalla</a>
+  </div>
+
+  <!-- 01 PRINCIPIOS -->
+  <section id="principios">
+    <div class="lbl"><span class="n">01</span><h2>Principios</h2></div>
+    <p class="intro">La prioridad del proyecto: que <b>no parezca hecho por una IA</b>. Estas son las reglas que mantienen el diseño con sensación humana — calmado, intencional y sin trucos genéricos.</p>
+    <div class="dd">
+      <div class="ddcard no">
+        <h3><span class="ic">✕</span> Evitamos (huele a IA)</h3>
+        <ul>
+          <li>Formas “blob” o manchas de color decorativas en las esquinas</li>
+          <li>Degradados de relleno (anillos, fondos, botones)</li>
+          <li>Emojis usados como íconos o decoración</li>
+          <li>Sombras blandas idénticas en todas las tarjetas</li>
+          <li>Fuentes por defecto (Inter, Roboto, Arial)</li>
+          <li>Microcopia que sobre-explica y tranquiliza de más</li>
+          <li>Gamificación forzada (rachas, insignias, puntos)</li>
+        </ul>
+      </div>
+      <div class="ddcard si">
+        <h3><span class="ic">✓</span> Buscamos (humano)</h3>
+        <ul>
+          <li>Color usado con estructura: verde manda, coral solo acentúa</li>
+          <li>Jerarquía clara de sombras: sutil → tarjeta → héroe</li>
+          <li>Íconos de línea dibujados, consistentes</li>
+          <li>Una tipografía con carácter (Gabarito) bien pareada</li>
+          <li>Espaciado generoso y rejilla considerada</li>
+          <li>Texto mínimo, directo y en tono de persona</li>
+          <li>Números tabulares y detalles cuidados</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 COLOR -->
+  <section id="color">
+    <div class="lbl"><span class="n">02</span><h2>Color</h2></div>
+    <p class="intro">Dos colores de marca sobre blanco. El verde es el 90% de la interfaz; el coral aparece poco, para que cuando aparezca, signifique algo.</p>
+    <div class="prow">
+      <div class="swatch">
+        <div class="fill" style="background:#3F5D4B"><span class="tag" style="color:#3F5D4B">Primario</span></div>
+        <div class="info"><div class="role">Verde bosque</div><div class="use">Marca. Botones, estados activos, títulos, ánimo seleccionado.</div><div class="hex">#3F5D4B</div></div>
+      </div>
+      <div class="swatch">
+        <div class="fill" style="background:#E08763"><span class="tag" style="color:#C2683F">Secundario</span></div>
+        <div class="info"><div class="role">Coral</div><div class="use">Acento. Avatar, saludo, día actual, confirmación de guardado.</div><div class="hex">#E08763</div></div>
+      </div>
+    </div>
+    <div class="neutrals">
+      <div class="ntile"><div class="nfill" style="background:#EDF1E8"></div><div class="nbody"><div class="nname">Fondo</div><div class="nhex">#EDF1E8</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px #E2E8DD"></div><div class="nbody"><div class="nname">Superficie</div><div class="nhex">#FFFFFF</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#E2EADC"></div><div class="nbody"><div class="nname">Panel menta</div><div class="nhex">#E2EADC</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#DDE4D6"></div><div class="nbody"><div class="nname">Borde</div><div class="nhex">#DDE4D6</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#243A2C"></div><div class="nbody"><div class="nname">Texto fuerte</div><div class="nhex">#243A2C</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#27352B"></div><div class="nbody"><div class="nname">Texto base</div><div class="nhex">#27352B</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#8A9685"></div><div class="nbody"><div class="nname">Texto suave</div><div class="nhex">#8A9685</div></div></div>
+      <div class="ntile"><div class="nfill" style="background:#A6B19F"></div><div class="nbody"><div class="nname">Etiquetas</div><div class="nhex">#A6B19F</div></div></div>
+    </div>
+  </section>
+
+  <!-- 03 TIPOGRAFIA -->
+  <section id="tipografia">
+    <div class="lbl"><span class="n">03</span><h2>Tipografía</h2></div>
+    <p class="intro">Dos familias. Gabarito da el carácter (no es una fuente “de sistema”); Hanken Grotesk es neutra y legible para todo lo demás.</p>
+    <div class="typecard">
+      <div class="famrow"><div class="t-display">Gabarito</div><div class="spec"><b>Gabarito</b> — Display / Títulos<br/>Pesos 600 · 700<br/>Títulos, botones, marca</div></div>
+      <div class="famrow"><div class="t-body" style="font-size:30px;line-height:1">Hanken Grotesk</div><div class="spec"><b>Hanken Grotesk</b> — Texto / UI<br/>Pesos 400 · 500 · 600 · 700<br/>Cuerpo, etiquetas, datos</div></div>
+    </div>
+    <div class="typecard" style="margin-top:18px">
+      <div class="famrow"><div class="t-eyebrow">Hola, Renzo</div><div class="spec">Eyebrow · <b>Hanken 700</b> · 15px · coral</div></div>
+      <div class="famrow"><div class="t-display">Sábado 30 de mayo</div><div class="spec">H1 · <b>Gabarito 700</b> · 37px · -0.6</div></div>
+      <div class="famrow"><div class="t-h2">Día 6 de 14</div><div class="spec">H2 · <b>Gabarito 600</b> · 20px</div></div>
+      <div class="famrow"><div class="t-body">Empieza a escribir lo que tengas en la cabeza.</div><div class="spec">Cuerpo · <b>Hanken 400</b> · 16.5px</div></div>
+      <div class="famrow"><div class="t-label">Para empezar</div><div class="spec">Etiqueta · <b>Hanken 700</b> · 11px · +0.12em</div></div>
+      <div class="famrow"><div class="t-btn">Guardar</div><div class="spec">Botón · <b>Gabarito 600</b> · 15px</div></div>
+    </div>
+  </section>
+
+  <!-- 04 TOKENS -->
+  <section id="tokens">
+    <div class="lbl"><span class="n">04</span><h2>Espaciado y tokens</h2></div>
+    <p class="intro">Rejilla de 4 px. Radios suaves pero no exagerados. Las sombras tienen jerarquía: cuanto más importante el elemento, más presencia.</p>
+    <div class="tok3">
+      <div class="tcard">
+        <h3>Radios</h3>
+        <div class="tline"><span class="nm">Tarjetas</span><span class="vl">18 px</span></div>
+        <div class="tline"><span class="nm">Paneles / ánimo</span><span class="vl">16 px</span></div>
+        <div class="tline"><span class="nm">Botones</span><span class="vl">12 px</span></div>
+        <div class="tline"><span class="nm">Píldoras</span><span class="vl">999 px</span></div>
+      </div>
+      <div class="tcard">
+        <h3>Sombras</h3>
+        <div class="tline"><span class="nm">Sutil</span><span class="shA"></span></div>
+        <div class="tline"><span class="nm">Tarjeta</span><span class="shB"></span></div>
+        <div class="tline"><span class="nm">Héroe</span><span class="shC"></span></div>
+      </div>
+      <div class="tcard">
+        <h3>Rejilla</h3>
+        <div class="tline"><span class="nm">Base</span><span class="vl">4 px</span></div>
+        <div class="tline"><span class="nm">Columna máx.</span><span class="vl">720 px</span></div>
+        <div class="tline"><span class="nm">Hairline</span><span class="rdemo"></span></div>
+        <div class="tline"><span class="nm">Números</span><span class="vl">tabulares</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 COMPONENTES -->
+  <section id="componentes">
+    <div class="lbl"><span class="n">05</span><h2>Componentes</h2></div>
+    <p class="intro">Piezas reutilizables de la interfaz, tal como aparecen en el producto.</p>
+    <div class="comp">
+      <div class="compcard">
+        <div class="ct">Botones</div>
+        <div class="demo">
+          <button class="btn-green">Guardar</button>
+          <button class="btn-coral">Guardado</button>
+          <button class="btn-ghost">Cancelar</button>
+        </div>
+      </div>
+      <div class="compcard">
+        <div class="ct">Chip de usuario</div>
+        <div class="demo"><span class="pill"><span class="pav">R</span>Renzo · estudiante</span></div>
+      </div>
+      <div class="compcard">
+        <div class="ct">Campo de escritura</div>
+        <div class="demo"><div class="field">Empieza a escribir…</div></div>
+      </div>
+      <div class="compcard">
+        <div class="ct">Progreso del ciclo</div>
+        <div class="demo">
+          <span class="dotrow">
+            <span class="dot" style="background:#3F5D4B"></span>
+            <span class="dot" style="background:#3F5D4B"></span>
+            <span class="dot" style="background:#3F5D4B"></span>
+            <span class="dot" style="background:#E08763"></span>
+            <span class="dot" style="background:#E2E8DD"></span>
+            <span class="dot" style="background:#E2E8DD"></span>
+            <span class="dot" style="background:#E2E8DD"></span>
+          </span>
+        </div>
+      </div>
+      <div class="compcard" style="grid-column:1/-1">
+        <div class="ct">Selector de ánimo</div>
+        <div class="demo">
+          <span class="mood on">Buen día</span>
+          <span class="mood off">Mezclado</span>
+          <span class="mood off">Apagado</span>
+          <span class="mood off">Difícil</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 VOZ -->
+  <section id="voz">
+    <div class="lbl"><span class="n">06</span><h2>Voz y microcopia</h2></div>
+    <p class="intro">El texto es lo que más delata a una IA. La regla es simple: <b>escribe menos, habla como persona, no expliques de más.</b></p>
+    <div class="voice">
+      <div class="vhead"><div class="a">Antes — sonaba a IA</div><div class="b">Después — humano</div></div>
+      <div class="vrow"><div class="a">“Buenos días, Renzo.”</div><div class="b">“Hola, Renzo”</div></div>
+      <div class="vrow"><div class="a">“Estás en el día 6 de 14 — Ciclo 1.”</div><div class="b">“Día 6 de 14”</div></div>
+      <div class="vrow"><div class="a">“Si tuvieras que escribirle a tu yo de la próxima semana…”</div><div class="b">“¿Qué tienes en la cabeza hoy?”</div></div>
+      <div class="vrow"><div class="a">“Escribe lo que te pase por la cabeza. Esto es solo para ti.”</div><div class="b">“Empieza a escribir…”</div></div>
+      <div class="vrow"><div class="a">“Puedes guardar cuando quieras. No hay forma correcta.”</div><div class="b">“Guardar”</div></div>
+      <div class="vrow"><div class="a">“↻ Retoma hoy tu racha”</div><div class="b">(eliminado)</div></div>
+    </div>
+    <div class="principle"><div><p><b>Regla de oro.</b> Si una frase tranquiliza, explica o felicita sin que el usuario lo pida, probablemente sobra. Una idea por línea, sin jerga clínica visible, sin gamificación.</p></div></div>
+  </section>
+
+  <!-- 07 PANTALLA -->
+  <section id="pantalla" style="margin-bottom:0">
+    <div class="lbl"><span class="n">07</span><h2>Pantalla en vivo</h2></div>
+    <p class="intro">Todo lo anterior, aplicado. La pantalla principal del diario del estudiante — interactiva.</p>
+    <div class="screen">
+      <div>
+        <h3>Diario del estudiante</h3>
+        <p>Escribe una entrada, elige tu ánimo y guarda. Verde + coral, copy mínimo, cero elementos “de IA”.</p>
+      </div>
+      <a href="Diario del estudiante.html">Abrir pantalla →</a>
+    </div>
+  </section>
+
+  <div class="foot">Sami · Sistema de diseño v1 — Diario del estudiante · junio 2026</div>
+
+</div>
+</body>
+</html>

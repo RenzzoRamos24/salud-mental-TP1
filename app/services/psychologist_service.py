@@ -140,6 +140,10 @@ class PsychologistService:
             .all()
         )
 
+        from app.services.ciclo_service import info_ciclo_estudiante
+        from app.services.diario_analisis_service import DiarioAnalisisService
+        from datetime import date as _date
+
         resumen = []
         for est in estudiantes:
             # Sesiones del chatbot (legacy)
@@ -161,6 +165,43 @@ class PsychologistService:
             # Última señal de riesgo (combinada)
             ultimo = _ultimo_riesgo_unificado(db, est.id)
 
+            # Monitoreo del ciclo actual del diario (sin diagnóstico).
+            phqa_total = None
+            gad7_total = None
+            phqa_severidad = None
+            gad7_severidad = None
+            posibles_riesgos: list = []
+            cobertura_pct = None
+            confiabilidad = None
+            ciclo_fin_str = None
+            try:
+                info = info_ciclo_estudiante(db, est.id)
+                ciclo_actual = info.get("ciclo_actual")
+                if ciclo_actual and total_entradas_diario > 0:
+                    ini = ciclo_actual["inicio"]
+                    fin = ciclo_actual.get("fecha_limite") or _date.today()
+                    if isinstance(ini, str):
+                        ini = _date.fromisoformat(ini)
+                    if isinstance(fin, str):
+                        fin = _date.fromisoformat(fin)
+                    reporte = DiarioAnalisisService.reporte_ciclo(
+                        db, est.id, ini, fin
+                    )
+                    phqa_total = reporte["phqa_total"]
+                    gad7_total = reporte["gad7_total"]
+                    phqa_severidad = reporte["phqa_severidad"]["nivel"]
+                    gad7_severidad = reporte["gad7_severidad"]["nivel"]
+                    cobertura_pct = reporte["cobertura_pct"]
+                    confiabilidad = reporte["confiabilidad"]
+                    posibles_riesgos = reporte["criterios_dsm5"][
+                        "posibles_riesgos"
+                    ]
+                    ciclo_fin_str = reporte["ciclo_fin"]
+            except Exception as e:
+                logger.warning(
+                    f"No se pudo calcular reporte de ciclo para {est.id}: {e}"
+                )
+
             resumen.append({
                 "id": est.id,
                 "nombre": est.nombre,
@@ -172,7 +213,16 @@ class PsychologistService:
                 "ultimo_riesgo": ultimo["nivel"] if ultimo else None,
                 "ultimo_score": ultimo["score"] if ultimo else None,
                 "ultima_evaluacion": ultimo["fecha"] if ultimo else None,
-                "fuente_ultima": ultimo["fuente"] if ultimo else None,   # ← nuevo
+                "fuente_ultima": ultimo["fuente"] if ultimo else None,
+                # ── Monitoreo del ciclo actual (sin diagnóstico) ────
+                "phqa_total": phqa_total,
+                "gad7_total": gad7_total,
+                "phqa_severidad": phqa_severidad,
+                "gad7_severidad": gad7_severidad,
+                "cobertura_ciclo_pct": cobertura_pct,
+                "confiabilidad_ciclo": confiabilidad,
+                "posibles_riesgos_dsm5": posibles_riesgos,
+                "ciclo_fin": ciclo_fin_str,
                 # ── HU-35 / HU-38 ────────────────────────────────────
                 "estado_caso": getattr(est, "estado_caso", None) or "activo",
                 "psicologo_id": getattr(est, "psicologo_id", None),
@@ -207,10 +257,24 @@ class PsychologistService:
         risks = (db.query(RiskResult)
                    .filter(RiskResult.timestamp >= ini, RiskResult.timestamp <= fin)
                    .all())
-        sesiones = (db.query(UserSession)
-                      .filter(UserSession.timestamp_inicio >= ini,
-                              UserSession.timestamp_inicio <= fin)
-                      .all())
+
+        # ── Diario (modelo nuevo) ────────────────────────────────────
+        analisis = (
+            db.query(DiarioAnalisis)
+            .filter(
+                DiarioAnalisis.timestamp >= ini,
+                DiarioAnalisis.timestamp <= fin,
+            )
+            .all()
+        )
+        entradas = (
+            db.query(DiarioEntrada)
+            .filter(
+                DiarioEntrada.timestamp >= ini,
+                DiarioEntrada.timestamp <= fin,
+            )
+            .all()
+        )
 
         dist = {"CRÍTICO": 0, "ALTO": 0, "MEDIO": 0, "BAJO": 0}
         crisis = 0
@@ -225,19 +289,80 @@ class PsychologistService:
             if r.gad7_total is not None:
                 gad7_totales.append(r.gad7_total)
 
+        # Análisis del diario también suman a la distribución de riesgo
+        phqa_totales, gad7_diario_totales = [], []
+        for a in analisis:
+            if a.nivel_riesgo in dist:
+                dist[a.nivel_riesgo] += 1
+            if a.crisis_protocolo:
+                crisis += 1
+            if a.phq9_total is not None:
+                phqa_totales.append(a.phq9_total)
+            if a.gad7_total is not None:
+                gad7_diario_totales.append(a.gad7_total)
+
         def _avg(xs):
             return round(sum(xs) / len(xs), 2) if xs else 0
+
+        # ── Posibles riesgos DSM-5 acumulados (último ciclo activo
+        #    por alumno con entradas en el período) ─────────────────
+        from app.services.ciclo_service import info_ciclo_estudiante
+        from app.services.diario_analisis_service import DiarioAnalisisService
+        from datetime import date as _date
+
+        user_ids_con_entradas = {e.user_id for e in entradas}
+        posibles_edm = 0
+        posibles_tag = 0
+        ciclos_cerrados_periodo = 0
+        for uid in user_ids_con_entradas:
+            try:
+                info = info_ciclo_estudiante(db, uid)
+                cerradas = info.get("sesiones_cerradas") or []
+                for s in cerradas:
+                    cierre = s.get("cierre") or s.get("fin")
+                    if not cierre:
+                        continue
+                    if isinstance(cierre, str):
+                        cierre = _date.fromisoformat(cierre)
+                    if ini.date() <= cierre <= fin.date():
+                        ciclos_cerrados_periodo += 1
+                ciclo = info.get("ciclo_actual")
+                if ciclo:
+                    ci = ciclo["inicio"]
+                    cf = ciclo.get("fecha_limite") or _date.today()
+                    if isinstance(ci, str):
+                        ci = _date.fromisoformat(ci)
+                    if isinstance(cf, str):
+                        cf = _date.fromisoformat(cf)
+                    reporte = DiarioAnalisisService.reporte_ciclo(
+                        db, uid, ci, cf
+                    )
+                    riesgos = reporte["criterios_dsm5"]["posibles_riesgos"]
+                    for r in riesgos:
+                        if "Episodio Depresivo" in r:
+                            posibles_edm += 1
+                        elif "Ansiedad" in r:
+                            posibles_tag += 1
+            except Exception:
+                continue
 
         return {
             "periodo": f"{year}-{month:02d}",
             "rango": {"inicio": ini.isoformat(), "fin": fin.isoformat()},
-            "sesiones_iniciadas": len(sesiones),
-            "sesiones_completadas": sum(1 for s in sesiones if s.estado == "completada"),
             "evaluaciones_analizadas": len(risks),
             "distribucion_riesgo": dist,
             "crisis_detectadas": crisis,
             "promedio_phq9": _avg(phq9_totales),
             "promedio_gad7": _avg(gad7_totales),
+            # ── Diario (modelo nuevo) ───────────────────────────────
+            "entradas_diario": len(entradas),
+            "analisis_diario": len(analisis),
+            "ciclos_cerrados": ciclos_cerrados_periodo,
+            "alumnos_activos_diario": len(user_ids_con_entradas),
+            "promedio_phqa_entrada": _avg(phqa_totales),
+            "promedio_gad7_diario_entrada": _avg(gad7_diario_totales),
+            "posibles_riesgos_edm": posibles_edm,
+            "posibles_riesgos_tag": posibles_tag,
         }
 
     @staticmethod

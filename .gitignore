@@ -27,3 +27,6 @@ project/.vite/
 .idea/
 .vscode/
 *.swp
+
+# ─── WSL / Windows ───
+*:Zone.Identifier

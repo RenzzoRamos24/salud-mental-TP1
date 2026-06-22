@@ -64,6 +64,22 @@ export const api = {
     return data;
   },
 
+  // ─── OAUTH (Google / Microsoft) ───
+  async oauthConfig() {
+    const { data } = await client.get("/auth/oauth/config");
+    return data;
+  },
+  async oauthGoogle(id_token) {
+    const { data } = await client.post("/auth/oauth/google", { id_token });
+    return data;
+  },
+  async oauthMicrosoft(access_token) {
+    const { data } = await client.post("/auth/oauth/microsoft", {
+      access_token,
+    });
+    return data;
+  },
+
   // ─── PERFIL / GESTIÓN DE CUENTA ───
   async actualizarPerfil(nombre, apellido) {
     const { data } = await client.put("/users/me", { nombre, apellido });
@@ -156,6 +172,10 @@ export const api = {
   },
   async listarEstudiantes() {
     const { data } = await client.get("/psychologist/students");
+    return data;
+  },
+  async resumenEstudiantes() {
+    const { data } = await client.get("/psychologist/students-overview");
     return data;
   },
   async historialEstudiante(student_id) {
@@ -394,6 +414,14 @@ export const api = {
     const { data } = await client.get(`/diario/entrada/${id}`);
     return data;
   },
+  async actualizarEntradaDiario(id, { texto, estado_animo = null, prompt_del_dia = null }) {
+    const { data } = await client.put(`/diario/entrada/${id}`, {
+      texto,
+      estado_animo,
+      prompt_del_dia,
+    });
+    return data;
+  },
 
   // ─── Panel de apoyo del estudiante ───
   async misRecomendaciones() {
@@ -404,6 +432,23 @@ export const api = {
     const { data } = await client.get("/diario/mensajes-psicologo");
     return data;
   },
+  // ─── ENCUESTA CLÍNICA (cierre de ciclo) ───
+  async encuestaPendiente() {
+    const { data } = await client.get("/diario/encuesta-clinica/pendiente");
+    return data;
+  },
+  async encuestaResponder(item_id, valor) {
+    const { data } = await client.post("/diario/encuesta-clinica/respuesta", {
+      item_id,
+      valor,
+    });
+    return data;
+  },
+  async encuestaCerrar() {
+    const { data } = await client.post("/diario/encuesta-clinica/cerrar");
+    return data;
+  },
+
   async marcarMensajePsicologoLeido(id) {
     const { data } = await client.post(
       `/diario/mensajes-psicologo/${id}/leido`,

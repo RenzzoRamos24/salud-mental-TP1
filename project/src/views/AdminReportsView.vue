@@ -41,14 +41,18 @@ const meses = [
   "Noviembre",
   "Diciembre",
 ];
-const totalEvals = computed(() => reporte.value?.evaluaciones_analizadas || 0);
+const totalAnalisis = computed(
+  () =>
+    (reporte.value?.analisis_diario || 0) +
+    (reporte.value?.evaluaciones_analizadas || 0),
+);
 const distPct = (n) =>
-  totalEvals.value ? Math.round((100 * n) / totalEvals.value) : 0;
+  totalAnalisis.value ? Math.round((100 * n) / totalAnalisis.value) : 0;
 
 const colorSev = {
   CRÍTICO: "bg-risk-critico",
   ALTO: "bg-ink-600",
-  MEDIO: "bg-amber-500",
+  MEDIO: "bg-coral-500",
   BAJO: "bg-green-700",
 };
 </script>
@@ -102,21 +106,21 @@ const colorSev = {
         {{ meses[month - 1] }} {{ year }}
       </h2>
 
-      <!-- Stats -->
+      <!-- Stats principales del diario -->
       <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
-          label="Sesiones iniciadas"
-          :value="reporte.sesiones_iniciadas"
+          label="Entradas del diario"
+          :value="reporte.entradas_diario || 0"
           tone="brand"
         />
         <StatCard
-          label="Completadas"
-          :value="reporte.sesiones_completadas"
+          label="Alumnos activos"
+          :value="reporte.alumnos_activos_diario || 0"
           tone="mint"
         />
         <StatCard
-          label="Evaluaciones analizadas"
-          :value="reporte.evaluaciones_analizadas"
+          label="Ciclos cerrados"
+          :value="reporte.ciclos_cerrados || 0"
           tone="sky2"
         />
         <StatCard
@@ -126,11 +130,49 @@ const colorSev = {
         />
       </section>
 
+      <!-- Posibles riesgos según DSM-5 -->
+      <section class="card p-6">
+        <h2 class="section-title">Posibles riesgos según DSM-5</h2>
+        <p class="section-subtitle mb-4">
+          Alumnos cuyo patrón observado coincide con criterios mínimos del
+          manual. NO son diagnósticos confirmados.
+        </p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div
+            class="bg-coral-50 border-l-4 border-l-coral-500 rounded-md p-4"
+          >
+            <p class="text-sm font-semibold text-coral-900 mb-1">
+              Posible Episodio Depresivo Mayor
+            </p>
+            <p class="text-3xl font-semibold text-ink-900 tabular-nums">
+              {{ reporte.posibles_riesgos_edm || 0 }}
+            </p>
+            <p class="text-xs text-ink-600 mt-1">
+              ≥5 ítems PHQ-A con anhedonia o ánimo deprimido
+            </p>
+          </div>
+          <div
+            class="bg-coral-50 border-l-4 border-l-coral-500 rounded-md p-4"
+          >
+            <p class="text-sm font-semibold text-coral-900 mb-1">
+              Posible Trastorno de Ansiedad Generalizada
+            </p>
+            <p class="text-3xl font-semibold text-ink-900 tabular-nums">
+              {{ reporte.posibles_riesgos_tag || 0 }}
+            </p>
+            <p class="text-xs text-ink-600 mt-1">
+              Ansiedad + descontrol de preocupación + ≥3 ítems GAD-7
+            </p>
+          </div>
+        </div>
+      </section>
+
       <!-- Distribución -->
       <section class="card p-6">
-        <h2 class="section-title">Niveles de riesgo</h2>
+        <h2 class="section-title">Niveles de alerta</h2>
         <p class="section-subtitle mb-4">
-          Sobre {{ totalEvals }} evaluaciones del mes.
+          Sobre {{ totalAnalisis }} análisis del mes (entradas del diario y
+          sesiones legacy).
         </p>
         <div class="space-y-4">
           <div v-for="(n, sev) in reporte.distribucion_riesgo" :key="sev">
@@ -155,27 +197,31 @@ const colorSev = {
         </div>
       </section>
 
-      <!-- PHQ-9 / GAD-7 -->
+      <!-- PHQ-A / GAD-7 promedio por entrada -->
       <section class="grid sm:grid-cols-2 gap-4">
-        <div class="card-pastel p-6">
+        <div class="card p-6 border-l-4 border-l-green-600">
           <p class="text-xs uppercase tracking-wider text-green-700 font-bold">
-            PHQ-9 promedio
+            PHQ-A promedio por entrada
           </p>
           <p class="text-3xl font-bold text-ink-900 mt-2">
-            {{ reporte.promedio_phq9 }}
+            {{ reporte.promedio_phqa_entrada || 0 }}
             <span class="text-lg text-ink-400 font-medium">/ 27</span>
           </p>
-          <p class="text-xs text-ink-600 mt-1">Síntomas de depresión</p>
+          <p class="text-xs text-ink-600 mt-1">
+            Síntomas de depresión inferidos del texto libre
+          </p>
         </div>
-        <div class="card-peach p-6">
-          <p class="text-xs uppercase tracking-wider text-ink-700 font-bold">
-            GAD-7 promedio
+        <div class="card p-6 border-l-4 border-l-green-600">
+          <p class="text-xs uppercase tracking-wider text-green-700 font-bold">
+            GAD-7 promedio por entrada
           </p>
           <p class="text-3xl font-bold text-ink-900 mt-2">
-            {{ reporte.promedio_gad7 }}
+            {{ reporte.promedio_gad7_diario_entrada || 0 }}
             <span class="text-lg text-ink-400 font-medium">/ 21</span>
           </p>
-          <p class="text-xs text-ink-600 mt-1">Síntomas de ansiedad</p>
+          <p class="text-xs text-ink-600 mt-1">
+            Síntomas de ansiedad inferidos del texto libre
+          </p>
         </div>
       </section>
     </div>

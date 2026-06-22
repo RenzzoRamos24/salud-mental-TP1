@@ -1,997 +1,954 @@
 <script setup>
-import { ref, onMounted, nextTick, computed, reactive } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Chart, registerables } from "chart.js";
 import { api } from "../api";
-import PageHeader from "../components/PageHeader.vue";
-import StatCard from "../components/StatCard.vue";
-import RiskBadge from "../components/RiskBadge.vue";
-
-Chart.register(...registerables);
+import {
+  avatarColor,
+  nivelPhqa,
+  nivelGad7,
+  labelClinico,
+  riesgoEstudiante,
+  pHaceCuanto,
+  pRango,
+  pCorto,
+  ITEMS_PHQA,
+  ITEMS_GAD7,
+  desglose,
+} from "../composables/samiPsicoHelpers";
+import SevChip from "../components/SevChip.vue";
+import EvolChart from "../components/EvolChart.vue";
+import CondicionesChart from "../components/CondicionesChart.vue";
+import MoodChart from "../components/MoodChart.vue";
 
 const route = useRoute();
 const router = useRouter();
+const studentId = computed(() => route.params.id);
 
 const cargando = ref(true);
-const error = ref("");
-const data = ref(null);
-const resumen = ref(null);
-const reporteCiclo = ref(null);
-const entradaAbierta = ref(null);
-const chartCanvas = ref(null);
-let chartInstance = null;
+const student = ref(null);
+const notas = ref([]);
+const draft = ref("");
+const abierto = ref(-1); // índice del ciclo abierto
+const cicloDetalle = ref({}); // cache de detalle por número de ciclo
+const toast = ref("");
+let toastTimer = null;
 
-// ── Mensajes del psicólogo al estudiante ──────────────────────────────
-const mensajes = ref([]);
-const nuevoMensaje = ref("");
-const guardandoMensaje = ref(false);
-const errorMensaje = ref("");
+function showToast(msg) {
+  toast.value = msg;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (toast.value = ""), 2400);
+}
+onUnmounted(() => {
+  if (toastTimer) clearTimeout(toastTimer);
+});
 
-async function cargarMensajes() {
+async function cargar() {
+  cargando.value = true;
   try {
-    mensajes.value = await api.listarMensajesEstudiante(route.params.id);
-  } catch (_) {
-    mensajes.value = [];
-  }
-}
-
-async function enviarMensaje() {
-  const texto = nuevoMensaje.value.trim();
-  if (!texto || guardandoMensaje.value) return;
-  guardandoMensaje.value = true;
-  errorMensaje.value = "";
-  try {
-    await api.crearMensajeEstudiante(route.params.id, texto);
-    nuevoMensaje.value = "";
-    await cargarMensajes();
-  } catch (e) {
-    errorMensaje.value = e.response?.data?.detail || e.message;
-  } finally {
-    guardandoMensaje.value = false;
-  }
-}
-
-async function borrarMensaje(id) {
-  if (!confirm("¿Borrar este mensaje? El estudiante ya no lo verá.")) return;
-  try {
-    await api.borrarMensajeEstudiante(route.params.id, id);
-    await cargarMensajes();
-  } catch (e) {
-    alert(e.response?.data?.detail || e.message);
-  }
-}
-
-const nivelANumero = { BAJO: 1, MEDIO: 2, ALTO: 3, CRÍTICO: 4 };
-const numeroANivel = { 1: "BAJO", 2: "MEDIO", 3: "ALTO", 4: "CRÍTICO" };
-
-function fechaCorta(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("es-PE", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-function fechaLarga(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-PE", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-function toggleEntrada(id) {
-  entradaAbierta.value = entradaAbierta.value === id ? null : id;
-}
-
-const tieneSerie = computed(() => data.value?.serie_temporal?.length > 0);
-const entradasDiario = computed(() => data.value?.entradas_diario || []);
-
-// Etiquetas legibles para el chip de mood (mismas del diario del estudiante)
-const moodLabel = {
-  soleado: "Buen día",
-  mixto: "Mezclado",
-  nublado: "Apagado",
-  lluvioso: "Difícil",
-};
-
-function colorPorNivel(nivel) {
-  if (nivel === "CRÍTICO") return "#DC2626";
-  if (nivel === "ALTO") return "#F97316";
-  if (nivel === "MEDIO") return "#F59E0B";
-  return "#10B981";
-}
-
-function dibujarGrafico() {
-  if (!chartCanvas.value || !tieneSerie.value) return;
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-  const serie = data.value.serie_temporal;
-  const labels = serie.map((p) => fechaCorta(p.fecha));
-  const valores = serie.map((p) => nivelANumero[p.nivel] || 0);
-  const colores = serie.map((p) => colorPorNivel(p.nivel));
-  // Marcador distinto por fuente: círculo chatbot, triángulo diario.
-  const estilosPunto = serie.map((p) =>
-    p.fuente === "diario" ? "triangle" : "circle",
-  );
-
-  chartInstance = new Chart(chartCanvas.value.getContext("2d"), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Nivel de riesgo",
-          data: valores,
-          borderColor: "#10B981",
-          backgroundColor: "rgba(16, 185, 129, 0.10)",
-          borderWidth: 2.5,
-          fill: true,
-          tension: 0.35,
-          pointBackgroundColor: colores,
-          pointBorderColor: "#fff",
-          pointBorderWidth: 2,
-          pointRadius: 8,
-          pointHoverRadius: 10,
-          pointStyle: estilosPunto,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const p = serie[ctx.dataIndex];
-              const fuente = p.fuente === "diario" ? "Diario" : "Chatbot";
-              return `${p.nivel} · ${fuente}${
-                p.score != null ? ` (${p.score.toFixed(2)})` : ""
-              }`;
-            },
-          },
-        },
-      },
-      scales: {
-        y: {
-          min: 0,
-          max: 4,
-          ticks: { stepSize: 1, callback: (v) => numeroANivel[v] || "" },
-          grid: { color: "#EEF0F2" },
-        },
-        x: { grid: { display: false } },
-      },
-    },
-  });
-}
-
-onMounted(async () => {
-  try {
-    const [hist, res] = await Promise.all([
-      api.historialEstudiante(route.params.id),
-      api.resumenDiarioEstudiante(route.params.id),
-      cargarMensajes(),
+    const [overview, notasResp] = await Promise.all([
+      api.resumenEstudiantes().catch(() => []),
+      api.listarNotas(studentId.value).catch(() => []),
     ]);
-    data.value = hist;
-    resumen.value = res;
-    // Reporte clínico del ciclo en curso (PHQ-A por días-con-síntoma,
-    // tabla literal Johnson 2002). No bloquea si falla.
-    try {
-      reporteCiclo.value = await api.reporteCicloEstudiante(route.params.id);
-    } catch (_) {
-      reporteCiclo.value = null;
+    student.value =
+      (overview || []).find((s) => String(s.id) === String(studentId.value)) ||
+      null;
+    notas.value = (notasResp || []).map((n) => ({
+      id: n.id,
+      fecha: (n.created_at || n.fecha || "").slice(0, 10),
+      autor: n.autor_nombre || n.autor || "—",
+      texto: n.texto,
+      propia: true,
+    }));
+    // Abre el último ciclo CON datos por defecto (no el en-curso vacío)
+    if (student.value?.cycles?.length) {
+      const cycles = student.value.cycles;
+      const conDatos = cycles.map((c, i) => ({ c, i })).filter(({ c }) => !c.encurso || c.dias > 0);
+      abierto.value = conDatos.length ? conDatos[conDatos.length - 1].i : cycles.length - 1;
     }
-    await nextTick();
-    dibujarGrafico();
-  } catch (e) {
-    error.value = e.response?.data?.detail || e.message;
   } finally {
     cargando.value = false;
   }
+}
+
+onMounted(cargar);
+
+const last = computed(() => {
+  const cs = student.value?.cycles || [];
+  if (!cs.length) return null;
+  // Preferir último ciclo cerrado con datos sobre el ciclo en curso vacío
+  const conDatos = cs.filter((c) => !c.encurso || c.dias > 0);
+  return conDatos[conDatos.length - 1] || cs[cs.length - 1];
 });
 
-// Etiqueta humana de la confiabilidad
-const etiquetaConfiabilidad = computed(() => {
-  if (!reporteCiclo.value) return null;
-  const c = reporteCiclo.value.confiabilidad;
-  if (c === "alta") return { texto: "Confiabilidad alta", tono: "bg-green-100 text-green-800" };
-  if (c === "media") return { texto: "Confiabilidad media", tono: "bg-amber-100 text-amber-800" };
-  return { texto: "Confiabilidad baja", tono: "bg-red-100 text-red-800" };
+const riesgo = computed(() =>
+  student.value
+    ? riesgoEstudiante(student.value)
+    : { rank: 0, label: "—", cls: "minima" },
+);
+
+const ultimaAct = computed(() =>
+  student.value?.ultimaActividad
+    ? pHaceCuanto(student.value.ultimaActividad)
+    : "—",
+);
+
+// Helpers de severidad para big-number en cabecera de gráfico
+function phqaSev(v) {
+  if (v <= 9)  return { label: "Leve o mínima", color: "#2BB673", bg: "#E8F8EF" };
+  if (v <= 14) return { label: "Moderada",       color: "#E8B04B", bg: "#FDF4E1" };
+  return               { label: "Severa",         color: "#E25555", bg: "#FDEAEA" };
+}
+function gad7Sev(v) {
+  if (v <= 9)  return { label: "Leve o mínima", color: "#2BB673", bg: "#E8F8EF" };
+  if (v <= 14) return { label: "Moderada",       color: "#E8B04B", bg: "#FDF4E1" };
+  return               { label: "Severa",         color: "#E25555", bg: "#FDEAEA" };
+}
+
+const phqaBands = [
+  { hasta: 27, color: "#f6dfdc" },
+  { hasta: 19, color: "#f6e6d6" },
+  { hasta: 14, color: "#f7eed9" },
+  { hasta: 9, color: "#e7eef8" },
+  { hasta: 4, color: "#e9f1ea" },
+];
+const gad7Bands = [
+  { hasta: 21, color: "#f6dfdc" },
+  { hasta: 14, color: "#f7eed9" },
+  { hasta: 9, color: "#e7eef8" },
+  { hasta: 4, color: "#e9f1ea" },
+];
+
+const ciclosDesc = computed(() => {
+  if (!student.value?.cycles) return [];
+  return [...student.value.cycles].map((c, i) => ({ ...c, _i: i })).reverse();
 });
 
-// Modal cita
-const modalCita = reactive({
-  abierto: false,
-  fecha: "",
-  hora: "",
-  modalidad: "presencial",
-  notas: "",
-  es_crisis: false,
-  guardando: false,
-  error: "",
-  exito: false,
-});
-function abrirModalCita() {
-  Object.assign(modalCita, {
-    abierto: true,
-    fecha: "",
-    hora: "",
-    modalidad: "presencial",
-    notas: "",
-    es_crisis: false,
-    error: "",
-    exito: false,
-  });
-}
-function cerrarModal() {
-  modalCita.abierto = false;
-}
-async function guardarCita() {
-  modalCita.error = "";
-  if (!modalCita.fecha || !modalCita.hora) {
-    modalCita.error = "Fecha y hora son obligatorias";
-    return;
+async function toggleCiclo(idx) {
+  abierto.value = abierto.value === idx ? -1 : idx;
+  if (abierto.value === idx && !cicloDetalle.value[idx]) {
+    // Tratamos de traer el desglose real desde el backend.
+    const c = student.value.cycles[idx];
+    try {
+      const detalle = await api.reporteCicloEstudiante(studentId.value, c.n);
+      cicloDetalle.value = { ...cicloDetalle.value, [idx]: detalle };
+    } catch (_) {
+      cicloDetalle.value = { ...cicloDetalle.value, [idx]: null };
+    }
   }
-  modalCita.guardando = true;
+}
+
+function detalleCiclo(idx) {
+  const c = student.value.cycles[idx];
+  const det = cicloDetalle.value[idx];
+  let phqaVals;
+  let gad7Vals;
+  if (det && Array.isArray(det.items_detalle) && det.items_detalle.length) {
+    // El backend devuelve sólo los ítems con score ≥ 1; rellena con ceros.
+    const mapaP = {};
+    const mapaG = {};
+    for (const it of det.items_detalle) {
+      if ((it.modulo || "").toUpperCase().startsWith("PHQ")) {
+        const i = parseInt((it.item || "").split("_")[1], 10) - 1;
+        if (!Number.isNaN(i)) mapaP[i] = it.puntos;
+      } else if ((it.modulo || "").toUpperCase().startsWith("GAD")) {
+        const i = parseInt((it.item || "").split("_")[1], 10) - 1;
+        if (!Number.isNaN(i)) mapaG[i] = it.puntos;
+      }
+    }
+    phqaVals = ITEMS_PHQA.map((_, i) => mapaP[i] ?? 0);
+    gad7Vals = ITEMS_GAD7.map((_, i) => mapaG[i] ?? 0);
+  } else {
+    // Fallback: aproximación que suma el total (mismo enfoque del prototipo).
+    phqaVals = desglose(c.phqa || 0, 9, 3, c.crisis);
+    gad7Vals = desglose(c.gad7 || 0, 7, 3, false);
+  }
+  return { phqaVals, gad7Vals };
+}
+
+function back() {
+  router.push("/psicologo");
+}
+
+async function guardarNota() {
+  const texto = draft.value.trim();
+  if (!texto) return;
   try {
-    await api.crearCita({
-      estudiante_id: parseInt(route.params.id),
-      fecha: modalCita.fecha,
-      hora: modalCita.hora,
-      modalidad: modalCita.modalidad,
-      notas: modalCita.notas || null,
-      es_crisis: modalCita.es_crisis,
-    });
-    modalCita.exito = true;
-    setTimeout(cerrarModal, 1500);
+    const n = await api.crearNota(studentId.value, { texto });
+    notas.value = [
+      {
+        id: n.id,
+        fecha: (n.created_at || "").slice(0, 10),
+        autor: n.autor_nombre || "tú",
+        texto: n.texto,
+        propia: true,
+      },
+      ...notas.value,
+    ];
+    draft.value = "";
+    showToast("Nota guardada en la ficha");
   } catch (e) {
-    modalCita.error = e.response?.data?.detail || e.message;
-  } finally {
-    modalCita.guardando = false;
+    showToast(e.response?.data?.detail || "No pude guardar la nota");
   }
 }
+
+async function contactar() {
+  showToast("Abriendo conversación con el estudiante…");
+}
+
+function agendar() {
+  showToast("Agenda abierta (demo)");
+}
+
+const sinDatos = computed(
+  () => !cargando.value && (!student.value || !student.value.cycles?.length),
+);
+
+// ── Filtro por año ────────────────────────────────────────────────────
+const anioSeleccionado = ref(new Date().getFullYear());
+
+const aniosDisponibles = computed(() => {
+  const set = new Set(
+    (student.value?.cycles || [])
+      .map((c) => c.start?.slice(0, 4))
+      .filter(Boolean)
+      .map(Number),
+  );
+  return [...set].sort();
+});
+
+// Para gráficos: filtrar por año seleccionado y excluir ciclos vacíos
+const ciclosConDatos = computed(() =>
+  (student.value?.cycles || []).filter((c) => {
+    const anio = Number(c.start?.slice(0, 4));
+    return anio === anioSeleccionado.value && (!c.encurso || c.dias > 0);
+  }),
+);
+const phqaCycles = computed(() => ciclosConDatos.value);
+const gad7Cycles = computed(() => ciclosConDatos.value);
 </script>
 
 <template>
-  <div class="page-shell-wide">
-    <button @click="router.push('/psicologo')" class="btn-ghost btn-sm mb-3">
-      Volver a estudiantes
-    </button>
+  <div class="page" data-screen-label="Ficha clínica">
+    <div class="page-inner" style="max-width: 920px">
+      <button class="back-link" type="button" @click="back">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Volver
+      </button>
 
-    <div v-if="cargando" class="text-center text-ink-500 py-16">
-      Cargando historial…
-    </div>
-    <p v-else-if="error" class="banner-danger">{{ error }}</p>
-
-    <div v-else-if="data" class="space-y-6">
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <!-- BANNER DE ALERTA CRÍTICA                                    -->
-      <!-- Por privacidad solo se muestran las frases-señal, nunca el  -->
-      <!-- texto completo del diario.                                  -->
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <div
-        v-if="resumen?.alerta_critica"
-        class="card border-l-4 border-l-red-600 bg-red-50/60 p-5 fade-in-up"
-        role="alert"
-      >
-        <div class="flex items-start gap-4">
-          <div
-            class="shrink-0 w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-lg"
-          >
-            !
-          </div>
-          <div class="min-w-0 flex-1">
-            <p
-              class="text-xs font-bold text-red-700 uppercase tracking-wider mb-1"
-            >
-              Alerta crítica detectada
-            </p>
-            <p class="text-sm text-ink-900 font-medium mb-2">
-              {{ resumen.alerta_critica.motivo }}
-            </p>
-            <p class="text-xs text-ink-600 mb-3">
-              {{ fechaLarga(resumen.alerta_critica.fecha) }} · Nivel
-              <strong>{{ resumen.alerta_critica.nivel_riesgo }}</strong>
-            </p>
-
-            <div
-              v-if="resumen.alerta_critica.frases_detectadas?.length"
-              class="bg-white/70 rounded-xl p-3 border border-red-100"
-            >
-              <p
-                class="text-[11px] font-semibold text-red-700 uppercase tracking-wider mb-2"
-              >
-                Frases que dispararon la señal
-              </p>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="(f, i) in resumen.alerta_critica.frases_detectadas"
-                  :key="i"
-                  class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-800 rounded-md text-xs font-medium"
-                >
-                  "{{ f }}"
-                </span>
-              </div>
-              <p class="text-[11px] text-ink-500 mt-2 italic">
-                Por privacidad no se muestra el contenido completo del diario.
-              </p>
-            </div>
-          </div>
-        </div>
+      <div v-if="cargando" style="padding: 40px 0; color: var(--ink-3); text-align: center">
+        Cargando…
       </div>
 
-      <PageHeader
-        :title="`${data.estudiante.nombre} ${data.estudiante.apellido}`"
-        :subtitle="data.estudiante.email"
-        tone="brand"
+      <div
+        v-else-if="!student"
+        class="panel-card"
+        style="padding: 28px; text-align: center"
       >
-        <template #actions>
-          <button @click="abrirModalCita" class="btn-primary btn-sm mt-3">
-            + Agendar cita
-          </button>
-        </template>
-        <template #aside>
-          <div class="text-right">
-            <p
-              class="text-xs uppercase tracking-wider text-ink-400 font-semibold"
-            >
-              Último riesgo
-            </p>
-            <div class="mt-1.5">
-              <RiskBadge
-                :nivel="data.estudiante.ultimo_riesgo"
-                :score="data.estudiante.ultimo_score"
-              />
-            </div>
-            <p class="text-xs text-ink-500 mt-1.5">
-              {{ fechaCorta(data.estudiante.ultima_evaluacion) }}
-              <span
-                v-if="data.estudiante.fuente_ultima"
-                class="ml-1 text-ink-400"
-              >
-                ·
-                {{
-                  data.estudiante.fuente_ultima === "diario"
-                    ? "Diario"
-                    : "Chatbot"
-                }}
-              </span>
-            </p>
-          </div>
-        </template>
-      </PageHeader>
+        <p style="font-size: 13px; color: var(--ink-3)">
+          No encontramos a este estudiante.
+        </p>
+      </div>
 
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <!-- ESTADO DE EVALUACIÓN (ventana de 14 días)                   -->
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <section v-if="resumen" class="card p-6 fade-in-up">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div class="min-w-0">
-            <p
-              class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
-            >
-              Estado de evaluación
-            </p>
-            <h2 class="text-xl font-bold text-ink-900 mt-1">
-              <span v-if="resumen.estado_evaluacion === 'completo'"
-                >Análisis consolidado</span
-              >
-              <span v-else-if="resumen.estado_evaluacion === 'en_proceso'"
-                >En proceso de evaluación</span
-              >
-              <span v-else>Sin datos todavía</span>
-            </h2>
-            <p class="text-sm text-ink-600 mt-1 max-w-2xl">
-              {{ resumen.mensaje }}
-            </p>
-          </div>
-          <div class="text-right shrink-0">
-            <p class="text-3xl font-bold text-green-700">
-              {{ resumen.porcentaje_completado }}%
-            </p>
-            <p class="text-xs text-ink-500">
-              {{ resumen.dias_transcurridos }} /
-              {{ resumen.dias_objetivo }} días
-            </p>
-          </div>
-        </div>
-
-        <!-- Barra de progreso -->
-        <div class="mt-4 h-2 bg-ink-100 rounded-full overflow-hidden">
-          <div
-            class="h-full transition-all duration-500"
-            :class="{
-              'bg-green-600': resumen.estado_evaluacion === 'completo',
-              'bg-amber-500': resumen.estado_evaluacion === 'en_proceso',
-              'bg-ink-300': resumen.estado_evaluacion === 'sin_datos',
-            }"
-            :style="`width: ${resumen.porcentaje_completado}%`"
-          ></div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <!-- MÉTRICAS AGREGADAS (PHQ-9 prom, GAD-7 prom, entradas)       -->
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <section
-        v-if="resumen?.resumen?.entradas_en_ventana"
-        class="grid grid-cols-1 sm:grid-cols-4 gap-4 fade-in-up"
-      >
-        <StatCard
-          label="Entradas (14 días)"
-          :value="resumen.resumen.entradas_en_ventana"
-          tone="brand"
-        />
-        <StatCard
-          label="PHQ-9 promedio"
-          :value="
-            resumen.resumen.phq9_promedio !== null
-              ? `${resumen.resumen.phq9_promedio}/27`
-              : '—'
-          "
-          :subtitle="resumen.resumen.severidad_dominante"
-          tone="mint"
-        />
-        <StatCard
-          label="GAD-7 promedio"
-          :value="
-            resumen.resumen.gad7_promedio !== null
-              ? `${resumen.resumen.gad7_promedio}/21`
-              : '—'
-          "
-          tone="mint"
-        />
-        <StatCard
-          label="Nivel dominante"
-          :value="resumen.resumen.nivel_dominante || '—'"
-          tone="peach"
-        />
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <!-- REPORTE DEL CICLO ACTUAL (días-con-síntoma → Johnson 2002)  -->
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <section
-        v-if="reporteCiclo && reporteCiclo.dias_escritos != null"
-        class="card p-6 fade-in-up"
-      >
-        <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
-          <h2 class="section-title !mb-0">
-            Reporte del ciclo
-            <span class="text-ink-500 font-normal text-base">
-              ({{ reporteCiclo.ciclo_cerrado ? "cerrado" : "en curso" }})
-            </span>
-          </h2>
-          <span
-            v-if="etiquetaConfiabilidad"
-            class="text-xs font-semibold px-2.5 py-1 rounded-full"
-            :class="etiquetaConfiabilidad.tono"
-          >
-            {{ etiquetaConfiabilidad.texto }}
+      <template v-else>
+        <div class="ficha-head">
+          <span class="avatar" :style="{ background: avatarColor(student.id) }">
+            {{ student.initials }}
           </span>
-        </div>
-        <p class="text-sm text-ink-500 mb-5">
-          PHQ-A y GAD-7 calculados contando los <strong>días distintos</strong>
-          en que apareció cada síntoma sobre la ventana de 14 días
-          (traducción literal de las frases Johnson 2002).
-        </p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-          <StatCard
-            label="PHQ-A inferido"
-            :value="`${reporteCiclo.phqa_total}/27`"
-            :subtitle="reporteCiclo.phqa_severidad?.nivel"
-            tone="brand"
-          />
-          <StatCard
-            label="GAD-7 inferido"
-            :value="`${reporteCiclo.gad7_total}/21`"
-            :subtitle="reporteCiclo.gad7_severidad?.nivel"
-            tone="mint"
-          />
-          <StatCard
-            label="Cobertura"
-            :value="`${reporteCiclo.dias_escritos}/${reporteCiclo.dias_ciclo}`"
-            :subtitle="`${reporteCiclo.cobertura_pct}% días escritos`"
-            tone="peach"
-          />
-        </div>
-
-        <div
-          v-if="reporteCiclo.confiabilidad === 'baja'"
-          class="text-sm text-red-800 bg-red-50 border-l-4 border-l-red-600 rounded-md p-3 mb-4"
-        >
-          El alumno escribió menos de 5 días en este ciclo. Los puntajes
-          son orientativos — no usarlos como base para decisión clínica.
-        </div>
-
-        <div v-if="reporteCiclo.items_detalle?.length">
-          <h3 class="text-sm font-semibold text-ink-900 mb-2 mt-2">
-            Detalle por ítem
-          </h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="text-left text-ink-500">
-                <tr class="border-b border-ink-100">
-                  <th class="py-2 pr-3 font-medium">Ítem</th>
-                  <th class="py-2 pr-3 font-medium">Módulo</th>
-                  <th class="py-2 pr-3 font-medium">DSM-5</th>
-                  <th class="py-2 pr-3 font-medium">Días</th>
-                  <th class="py-2 pr-3 font-medium">Puntos</th>
-                  <th class="py-2 font-medium">Frase oficial</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="it in reporteCiclo.items_detalle"
-                  :key="it.item"
-                  class="border-b border-ink-50 last:border-0"
-                >
-                  <td class="py-2 pr-3 font-mono text-xs text-ink-700">
-                    {{ it.item }}
-                  </td>
-                  <td class="py-2 pr-3">
-                    <span
-                      class="text-xs px-2 py-0.5 rounded-full"
-                      :class="
-                        it.modulo === 'PHQ-9'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-sky-100 text-sky-800'
-                      "
-                    >
-                      {{ it.modulo }}
-                    </span>
-                  </td>
-                  <td class="py-2 pr-3 text-ink-600 text-xs">
-                    {{ it.criterio_dsm5 || "—" }}
-                  </td>
-                  <td class="py-2 pr-3 tabular-nums">{{ it.dias_con_sintoma }}</td>
-                  <td class="py-2 pr-3 tabular-nums font-semibold">
-                    {{ it.puntos }}
-                  </td>
-                  <td class="py-2 text-ink-700">{{ it.frase_likert }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <p
-          v-else
-          class="text-sm text-ink-500 italic"
-        >
-          Todavía no hay ítems activados en este ciclo.
-        </p>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <!-- CONDICIONES MÁS RECURRENTES (BERT)                          -->
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <section
-        v-if="resumen?.resumen?.condiciones_top?.length"
-        class="card p-6 fade-in-up"
-      >
-        <h2 class="section-title !mb-3">Señales más recurrentes</h2>
-        <p class="text-sm text-ink-500 mb-4">
-          Lo que el sistema está detectando con más frecuencia en lo que escribe
-          el alumno.
-        </p>
-        <ul class="space-y-3">
-          <li
-            v-for="c in resumen.resumen.condiciones_top"
-            :key="c.condicion"
-            class="flex items-center gap-3"
-          >
-            <span class="chip-brand min-w-[140px] text-center">{{
-              c.etiqueta
-            }}</span>
-            <div class="flex-1 min-w-0">
-              <div class="h-2 bg-ink-100 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-green-600"
-                  :style="`width: ${Math.min(c.confianza_promedio, 100)}%`"
-                ></div>
-              </div>
+          <div>
+            <h1>{{ student.name }}</h1>
+            <div class="meta">
+              {{ student.carrera || "—"
+              }}{{ student.anio ? " · " + student.anio : "" }} ·
+              {{ student.email }}
             </div>
-            <span class="text-sm text-ink-700 font-medium tabular-nums w-24 text-right">
-              {{ c.veces_detectada }}× · {{ c.confianza_promedio }}%
-            </span>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <!-- MENSAJES AL ESTUDIANTE                                       -->
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <section class="card p-6 fade-in-up">
-        <h2 class="section-title !mb-2">Mensaje al estudiante</h2>
-        <p class="text-sm text-ink-500 mb-4">
-          Lo verá en su panel de apoyo. Frases cortas, claras. No incluye
-          diagnósticos ni notas clínicas privadas.
-        </p>
-
-        <div class="space-y-3">
-          <textarea
-            v-model="nuevoMensaje"
-            rows="3"
-            maxlength="1000"
-            class="input resize-none"
-            placeholder="Ej: Buen trabajo escribiendo esta semana. Recordá lo que conversamos sobre dormir antes de las 12."
-          ></textarea>
-          <div class="flex items-center justify-between gap-3">
-            <p class="text-xs text-ink-500">
-              {{ nuevoMensaje.length }}/1000
-            </p>
-            <button
-              @click="enviarMensaje"
-              :disabled="!nuevoMensaje.trim() || guardandoMensaje"
-              class="btn-primary btn-sm"
-            >
-              {{ guardandoMensaje ? "Enviando…" : "Enviar mensaje" }}
-            </button>
-          </div>
-          <p v-if="errorMensaje" class="field-error">{{ errorMensaje }}</p>
-        </div>
-
-        <div v-if="mensajes.length" class="mt-6">
-          <p
-            class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold mb-2"
-          >
-            Mensajes enviados ({{ mensajes.length }})
-          </p>
-          <ul class="divide-y divide-ink-100">
-            <li
-              v-for="m in mensajes"
-              :key="m.id"
-              class="py-3 flex items-start justify-between gap-3"
-            >
-              <div class="min-w-0 flex-1">
-                <p
-                  class="text-sm text-ink-900 leading-relaxed whitespace-pre-wrap"
-                >
-                  {{ m.mensaje }}
-                </p>
-                <p class="text-[11px] text-ink-500 mt-1">
-                  {{ fechaLarga(m.created_at) }} ·
-                  <span :class="m.leido ? 'text-green-700' : 'text-amber-700'">
-                    {{ m.leido ? "Leído" : "Sin leer" }}
-                  </span>
-                </p>
-              </div>
-              <button
-                @click="borrarMensaje(m.id)"
-                class="text-ink-400 hover:text-red-600 text-xs font-semibold shrink-0"
-              >
-                Borrar
-              </button>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section v-if="tieneSerie" class="card p-6 fade-in-up">
-        <div class="flex items-baseline justify-between gap-3 flex-wrap mb-2">
-          <h2 class="section-title !mb-0">Evolución</h2>
-          <div class="flex items-center gap-3 text-xs text-ink-500">
-            <span class="inline-flex items-center gap-1.5">
-              <svg width="10" height="10" viewBox="0 0 10 10">
-                <circle cx="5" cy="5" r="4" fill="#10B981" />
-              </svg>
-              Chatbot
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-              <svg width="11" height="11" viewBox="0 0 11 11">
-                <polygon points="5.5,1 10,10 1,10" fill="#10B981" />
-              </svg>
-              Diario
-            </span>
-          </div>
-        </div>
-        <div class="h-64 mt-3"><canvas ref="chartCanvas"></canvas></div>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <!-- ENTRADAS DEL DIARIO (con análisis BETO)                     -->
-      <!-- ═══════════════════════════════════════════════════════════ -->
-      <section class="card overflow-hidden fade-in-up">
-        <div class="p-6 pb-4 flex items-baseline justify-between gap-3">
-          <h2 class="section-title !mb-0">Entradas del diario</h2>
-          <p class="text-xs text-ink-500">
-            {{ entradasDiario.length }} en total
-          </p>
-        </div>
-
-        <p
-          v-if="entradasDiario.length === 0"
-          class="text-ink-500 text-center py-10 px-6"
-        >
-          Este estudiante todavía no ha escrito en el diario.
-        </p>
-
-        <ul v-else class="divide-y divide-ink-100 border-t border-ink-100">
-          <li v-for="e in entradasDiario" :key="`d-${e.id}`">
-            <button
-              @click="toggleEntrada(e.id)"
-              class="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-green-50/50 transition"
-              :class="{
-                'bg-red-50/40': e.analisis?.crisis_protocolo,
-              }"
-            >
-              <div class="flex items-center gap-3 flex-wrap">
-                <RiskBadge
-                  v-if="e.analisis"
-                  :nivel="e.analisis.nivel_riesgo"
-                  :score="e.analisis.score"
-                />
-                <span v-else class="risk-sin">Análisis pendiente</span>
-                <span class="text-sm text-ink-700">{{
-                  fechaLarga(e.timestamp)
-                }}</span>
-                <span v-if="e.estado_animo" class="chip-ink capitalize">
-                  {{ moodLabel[e.estado_animo] || e.estado_animo }}
-                </span>
-                <span v-if="e.analisis?.crisis_protocolo" class="risk-critico">
-                  Crisis detectada
-                </span>
-              </div>
-              <span
-                class="text-green-700 text-xs font-semibold whitespace-nowrap"
-              >
-                {{ entradaAbierta === e.id ? "▲ Ocultar" : "▼ Ver detalle" }}
-              </span>
-            </button>
-
             <div
-              v-if="entradaAbierta === e.id"
-              class="px-6 pb-6 bg-white border-t border-ink-100 fade-in-up"
+              style="
+                margin-top: 8px;
+                display: flex;
+                gap: 8px;
+                align-items: center;
+              "
             >
-              <!-- Prompt mostrado (si hubo) -->
-              <p
-                v-if="e.prompt_del_dia"
-                class="text-xs text-ink-500 mt-4 italic"
-              >
-                Prompt del día: "{{ e.prompt_del_dia }}"
-              </p>
-
-              <!-- Texto del alumno: NO se muestra por privacidad.        -->
-              <!-- Solo el análisis clínico, ítems y condiciones detectadas. -->
-              <div class="bg-ink-50 rounded-xl p-3 mt-3 flex items-start gap-2">
+              <span v-if="last && last.crisis" class="crisis-flag">
                 <svg
-                  width="14"
-                  height="14"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="1.8"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  class="text-ink-400 mt-0.5 shrink-0"
-                  aria-hidden="true"
                 >
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  <path d="M12 9v4M12 17h.01" />
+                  <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
                 </svg>
-                <p class="text-xs text-ink-500 italic leading-relaxed">
-                  El contenido del diario es personal del estudiante. Solo se
-                  muestran las señales clínicas detectadas por el sistema.
-                </p>
-              </div>
-
-              <!-- Análisis BETO -->
-              <div v-if="e.analisis" class="mt-4 space-y-3">
-                <!-- Resumen PHQ-9 / GAD-7 -->
-                <div class="grid sm:grid-cols-2 gap-3">
-                  <div class="card p-4">
-                    <p
-                      class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
-                    >
-                      PHQ-9 — Depresión
-                    </p>
-                    <p class="text-2xl font-semibold text-ink-900 mt-1">
-                      {{ e.analisis.phq9_total
-                      }}<span class="text-base text-ink-400">/27</span>
-                    </p>
-                    <p class="text-xs text-ink-600 mt-1">
-                      {{ e.analisis.phq9_severidad }}
-                    </p>
-                  </div>
-                  <div class="card p-4">
-                    <p
-                      class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
-                    >
-                      GAD-7 — Ansiedad
-                    </p>
-                    <p class="text-2xl font-semibold text-ink-900 mt-1">
-                      {{ e.analisis.gad7_total
-                      }}<span class="text-base text-ink-400">/21</span>
-                    </p>
-                    <p class="text-xs text-ink-600 mt-1">
-                      {{ e.analisis.gad7_severidad }}
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Ítems PHQ-9/GAD-7 detectados -->
-                <div
-                  v-if="e.analisis.items_detectados?.length"
-                  class="card p-4"
-                >
-                  <p
-                    class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold mb-3"
-                  >
-                    Señales clínicas detectadas en el texto
-                  </p>
-                  <ul class="space-y-2">
-                    <li
-                      v-for="(it, i) in e.analisis.items_detectados"
-                      :key="i"
-                      class="flex items-start gap-3 text-sm"
-                    >
-                      <span class="dsm5-tag shrink-0">
-                        {{ it.modulo }} · {{ it.item }}
-                      </span>
-                      <div class="min-w-0">
-                        <p class="text-ink-900 font-medium">
-                          {{ it.criterio_dsm5 }}
-                          <span class="text-ink-500 font-normal">
-                            · score {{ it.score }}/3</span
-                          >
-                        </p>
-                        <p
-                          v-if="it.keywords?.length"
-                          class="text-xs text-ink-500 mt-0.5"
-                        >
-                          Disparada por:
-                          <span
-                            v-for="(kw, k) in it.keywords"
-                            :key="k"
-                            class="italic"
-                            >"{{ kw }}"<span v-if="k < it.keywords.length - 1"
-                              >,
-                            </span></span
-                          >
-                        </p>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-
-                <!-- Condiciones BERT -->
-                <div
-                  v-if="
-                    e.analisis.condiciones_detectadas &&
-                    Object.keys(e.analisis.condiciones_detectadas).length
-                  "
-                  class="card p-4"
-                >
-                  <p
-                    class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold mb-3"
-                  >
-                    Condiciones BERT (sobre el umbral)
-                  </p>
-                  <div class="flex flex-wrap gap-1.5">
-                    <span
-                      v-for="(c, k) in e.analisis.condiciones_detectadas"
-                      :key="k"
-                      class="chip-brand"
-                    >
-                      {{ c.etiqueta }} · {{ c.confianza }}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <p v-else class="text-sm text-ink-500 italic mt-4">
-                El análisis BETO está pendiente o falló para esta entrada.
-              </p>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-    </div>
-
-    <!-- Modal cita -->
-    <Teleport to="body">
-      <div
-        v-if="modalCita.abierto"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/40 backdrop-blur-sm fade-in-up"
-        @click.self="cerrarModal"
-      >
-        <div class="card-hero w-full max-w-md p-6">
-          <h2 class="text-xl font-bold text-ink-900 mb-1">Agendar cita</h2>
-          <p class="text-sm text-ink-500 mb-5">
-            Con
-            <strong
-              >{{ data?.estudiante.nombre }}
-              {{ data?.estudiante.apellido }}</strong
-            >
-          </p>
-
-          <div v-if="modalCita.exito" class="text-center py-4">
-            <div
-              class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-green-100 text-green-600 text-2xl mb-3"
-            ></div>
-            <p class="font-bold text-green-600">Cita agendada</p>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="label">Fecha</label
-                ><input v-model="modalCita.fecha" type="date" class="input" />
-              </div>
-              <div>
-                <label class="label">Hora</label
-                ><input v-model="modalCita.hora" type="time" class="input" />
-              </div>
-            </div>
-            <div>
-              <label class="label">Modalidad</label>
-              <select v-model="modalCita.modalidad" class="input">
-                <option value="presencial">Presencial</option>
-                <option value="virtual">Virtual</option>
-              </select>
-            </div>
-            <div>
-              <label class="label"
-                >Notas
-                <span class="text-ink-400 font-normal">(opcional)</span></label
-              >
-              <textarea
-                v-model="modalCita.notas"
-                rows="3"
-                class="input resize-none"
-              ></textarea>
-            </div>
-
-            <label
-              class="flex items-start gap-3 rounded-md border border-ink-100 p-3 cursor-pointer hover:border-red-400"
-              :class="modalCita.es_crisis ? 'border-red-500 bg-red-50' : ''"
-            >
-              <input
-                type="checkbox"
-                v-model="modalCita.es_crisis"
-                class="mt-0.5"
-              />
-              <span class="text-sm leading-snug">
-                <strong class="text-red-800">Atención de crisis</strong>
-                <span class="block text-ink-600 mt-0.5">
-                  Marca solo si esta cita responde a una situación de riesgo
-                  (ideación suicida, bullying severo, violencia familiar).
-                  Al completarla, adelanta el cierre del ciclo en curso.
-                </span>
+                Señal de crisis
               </span>
-            </label>
-
-            <p v-if="modalCita.error" class="field-error">
-              {{ modalCita.error }}
-            </p>
-
-            <div class="flex gap-2 pt-2">
-              <button
-                @click="cerrarModal"
-                :disabled="modalCita.guardando"
-                class="btn-ghost flex-1"
-              >
-                Cancelar
-              </button>
-              <button
-                @click="guardarCita"
-                :disabled="modalCita.guardando"
-                class="btn-primary flex-1"
-              >
-                {{ modalCita.guardando ? "Guardando…" : "Agendar" }}
-              </button>
+              <SevChip v-else :nivel="riesgo.label" />
+              <span style="font-size: 12.5px; color: var(--ink-3)">
+                Última actividad {{ ultimaAct }}
+              </span>
             </div>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button" @click="contactar">
+              Contactar
+            </button>
+            <button class="btn primary" type="button" @click="agendar">
+              Agendar sesión
+            </button>
           </div>
         </div>
-      </div>
+
+        <div v-if="last && last.crisis" class="crisis-banner">
+          <span class="ic">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 9v4M12 17h.01" />
+              <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+            </svg>
+          </span>
+          <div>
+            <h3>Protocolo de crisis activado</h3>
+            <p>
+              En la encuesta del ciclo {{ last.n }},
+              {{ student.name.split(" ")[0] }} marcó pensamientos de hacerse
+              daño. Contactar hoy y registrar la gestión en las notas. Si hay
+              riesgo inminente, derivar a la Línea 113 (opción 5) o a
+              urgencias.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="sinDatos" class="panel-card" style="padding: 28px">
+          <p style="font-size: 13px; color: var(--ink-3); text-align: center">
+            Este estudiante todavía no tiene ciclos cerrados.
+          </p>
+        </div>
+
+        <div v-else style="display: flex; flex-direction: column; gap: 18px">
+
+          <!-- ── Filtro de año ──────────────────────────────────────────── -->
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="font-size:13px;font-weight:600;color:#374151">Año</label>
+            <select v-model="anioSeleccionado" class="year-select">
+              <option v-for="a in aniosDisponibles" :key="a" :value="a">{{ a }}</option>
+            </select>
+            <span style="font-size:12px;color:#6b7280">
+              {{ ciclosConDatos.length }} ciclo{{ ciclosConDatos.length !== 1 ? 's' : '' }} con datos
+            </span>
+          </div>
+
+          <!-- ══ Grilla 2×2 de gráficos ══════════════════════════════════ -->
+          <div class="charts-grid">
+
+            <!-- Tarjeta 1: PHQ-A depresión -->
+            <div class="chart-card">
+              <div class="cc-head">
+                <div class="cc-title">Depresión · PHQ-A</div>
+                <div class="cc-badge"
+                  :style="{ background: phqaSev(last?.phqa ?? 0).bg,
+                             color: phqaSev(last?.phqa ?? 0).color }">
+                  {{ phqaSev(last?.phqa ?? 0).label }}
+                </div>
+              </div>
+              <div class="cc-bignum" :style="{ color: phqaSev(last?.phqa ?? 0).color }">
+                {{ last?.phqa ?? 0 }}<span class="cc-denom">/27</span>
+              </div>
+              <div class="cc-sub">último ciclo con datos</div>
+              <EvolChart :cycles="phqaCycles" metric-key="phqa" :max="27" :bands="phqaBands" />
+              <div class="cc-hint">Verde = mínima · Amarillo = leve · Naranja = moderada · Rojo = severa</div>
+            </div>
+
+            <!-- Tarjeta 2: GAD-7 ansiedad -->
+            <div class="chart-card">
+              <div class="cc-head">
+                <div class="cc-title">Ansiedad · GAD-7</div>
+                <div class="cc-badge"
+                  :style="{ background: gad7Sev(last?.gad7 ?? 0).bg,
+                             color: gad7Sev(last?.gad7 ?? 0).color }">
+                  {{ gad7Sev(last?.gad7 ?? 0).label }}
+                </div>
+              </div>
+              <div class="cc-bignum" :style="{ color: gad7Sev(last?.gad7 ?? 0).color }">
+                {{ last?.gad7 ?? 0 }}<span class="cc-denom">/21</span>
+              </div>
+              <div class="cc-sub">último ciclo con datos</div>
+              <EvolChart :cycles="gad7Cycles" metric-key="gad7" :max="21" :bands="gad7Bands" />
+              <div class="cc-hint">Verde = mínima · Amarillo = leve · Naranja = moderada · Rojo = severa</div>
+            </div>
+
+            <!-- Tarjeta 3: Condiciones BETO -->
+            <div class="chart-card">
+              <div class="cc-head">
+                <div class="cc-title">Condiciones detectadas</div>
+                <div class="cc-badge" style="background:#ede9fe;color:#6d28d9">RoBERTa · orientativo</div>
+              </div>
+              <div class="cc-sub" style="margin-bottom:14px">
+                Confianza promedio por condición detectada en los textos del diario
+              </div>
+              <CondicionesChart :cycles="phqaCycles" />
+            </div>
+
+            <!-- Tarjeta 4: Adherencia + Ánimo -->
+            <div class="chart-card">
+              <div class="cc-head">
+                <div class="cc-title">Adherencia y ánimo</div>
+              </div>
+              <div class="cc-sub" style="margin-bottom:12px">
+                Días escritos por ciclo · Ausencia prolongada es señal clínica temprana
+              </div>
+              <!-- adherencia -->
+              <div class="adh-mini" v-for="c in phqaCycles" :key="c.n">
+                <span class="adh-lbl">C{{ c.n }}</span>
+                <div class="adh-track">
+                  <div class="adh-fill"
+                    :style="{
+                      width: Math.min((c.dias/14)*100,100)+'%',
+                      background: c.dias >= 10 ? '#22c55e' : c.dias >= 5 ? '#f59e0b' : '#ef4444'
+                    }"></div>
+                </div>
+                <span class="adh-num"
+                  :style="{ color: c.dias >= 10 ? '#16a34a' : c.dias >= 5 ? '#b45309' : '#dc2626' }">
+                  {{ c.dias }}/14
+                </span>
+              </div>
+              <div style="margin-top:16px; border-top:1px solid #f3f4f6; padding-top:14px">
+                <div class="cc-sub" style="margin-bottom:8px">Estado de ánimo auto-reportado</div>
+                <MoodChart :cycles="phqaCycles" />
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ══ Ciclos completados (acordeón) ══════════════════════════ -->
+          <div class="panel-card">
+            <div class="h">Detalle por ciclo</div>
+              <div
+                v-for="c in ciclosDesc"
+                :key="c.n"
+                class="cyc-item"
+              >
+                <button
+                  class="cyc-row"
+                  type="button"
+                  @click="toggleCiclo(c._i)"
+                >
+                  <span class="cn">
+                    Ciclo {{ c.n
+                    }}<span
+                      v-if="c.encurso"
+                      style="font-weight: 500; color: var(--accent)"
+                      > · en curso</span
+                    >
+                  </span>
+                  <span class="cd">
+                    {{ pRango(c.start, c.end) }} · {{ c.dias }} de 14 días
+                  </span>
+                  <span class="cyc-scores">
+                    <span v-if="c.crisis" class="crisis-flag">
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M12 9v4M12 17h.01" />
+                        <path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                      </svg>
+                      Crisis
+                    </span>
+                    <span class="s">
+                      <span class="v" :style="{ color: phqaSev(c.phqa ?? 0).color }">{{ c.phqa }}</span
+                      ><span class="k">PHQ-A</span>
+                    </span>
+                    <span class="s">
+                      <span class="v" :style="{ color: gad7Sev(c.gad7 ?? 0).color }">{{ c.gad7 }}</span
+                      ><span class="k">GAD-7</span>
+                    </span>
+                    <span
+                      :style="{
+                        transform:
+                          abierto === c._i ? 'rotate(90deg)' : 'none',
+                        color: '#0D9488',
+                        transition: 'transform .15s',
+                      }"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </span>
+                  </span>
+                </button>
+                <template v-if="abierto === c._i">
+                  <div class="cyc-body">
+
+                    <!-- ── Interpretación clínica ──────────────────────── -->
+                    <div class="clinico-banner"
+                      :style="{
+                        background: (c.phqa > 14 || c.gad7 > 14) ? '#FBEBD7' : '#E6F3F1',
+                        borderColor: (c.phqa > 14 || c.gad7 > 14) ? '#CFE6E2' : '#CFE6E2'
+                      }">
+                      <div class="clinico-chips">
+                        <SevChip :nivel="nivelPhqa(c.phqa).nivel" />
+                        <SevChip :nivel="nivelGad7(c.gad7).nivel" />
+                      </div>
+                      <div class="clinico-labels">
+                        <span v-if="labelClinico('depresion', nivelPhqa(c.phqa))" class="label-clinico">
+                          {{ labelClinico('depresion', nivelPhqa(c.phqa)) }}
+                        </span>
+                        <span v-if="labelClinico('ansiedad', nivelGad7(c.gad7))" class="label-clinico">
+                          {{ labelClinico('ansiedad', nivelGad7(c.gad7)) }}
+                        </span>
+                        <span v-if="!labelClinico('depresion', nivelPhqa(c.phqa)) && !labelClinico('ansiedad', nivelGad7(c.gad7))"
+                              style="font-size:12px;color:#16a34a;font-weight:600">
+                          Sin indicadores clínicos significativos en este ciclo
+                        </span>
+                      </div>
+                      <p class="disclaimer-clinico">
+                        Indicadores orientativos según criterios DSM-5. El diagnóstico es competencia exclusiva del profesional de salud mental.
+                      </p>
+                    </div>
+
+                    <!-- ── PHQ-A ítem por ítem (datos reales del diario) ── -->
+                    <div class="items-section">
+                      <div class="items-head">
+                        <span class="items-title">PHQ-A · Depresión</span>
+                        <span class="items-score">{{ c.phqa }}<span class="items-max">/27</span></span>
+                      </div>
+                      <div v-if="c.items_detalle?.filter(i => i.modulo?.startsWith('PHQ')).length">
+                        <div
+                          v-for="it in c.items_detalle.filter(i => i.modulo?.startsWith('PHQ')).sort((a,b)=>b.puntos-a.puntos)"
+                          :key="it.item"
+                          class="item-line"
+                        >
+                          <span class="q">{{ it.criterio_dsm5 || it.item }}</span>
+                          <div class="bar-wrap">
+                            <div class="bar-fill"
+                              :style="{ width: (it.puntos/3*100)+'%',
+                                        background: it.puntos>=2?'#ef4444':it.puntos===1?'#f59e0b':'#22c55e' }">
+                            </div>
+                          </div>
+                          <span class="sc" :style="{color: it.puntos>=2?'#dc2626':it.puntos===1?'#d97706':'#16a34a'}">
+                            {{ it.puntos }}/3
+                          </span>
+                          <span class="likert">{{ it.frase_likert }}</span>
+                        </div>
+                      </div>
+                      <p v-else class="items-empty">No se detectaron síntomas de depresión en este ciclo</p>
+                    </div>
+
+                    <!-- ── GAD-7 ítem por ítem ─────────────────────────── -->
+                    <div class="items-section">
+                      <div class="items-head">
+                        <span class="items-title">GAD-7 · Ansiedad</span>
+                        <span class="items-score">{{ c.gad7 }}<span class="items-max">/21</span></span>
+                      </div>
+                      <div v-if="c.items_detalle?.filter(i => i.modulo?.startsWith('GAD')).length">
+                        <div
+                          v-for="it in c.items_detalle.filter(i => i.modulo?.startsWith('GAD')).sort((a,b)=>b.puntos-a.puntos)"
+                          :key="it.item"
+                          class="item-line"
+                        >
+                          <span class="q">{{ it.criterio_dsm5 || it.item }}</span>
+                          <div class="bar-wrap">
+                            <div class="bar-fill"
+                              :style="{ width: (it.puntos/3*100)+'%',
+                                        background: it.puntos>=2?'#ef4444':it.puntos===1?'#f59e0b':'#22c55e' }">
+                            </div>
+                          </div>
+                          <span class="sc" :style="{color: it.puntos>=2?'#dc2626':it.puntos===1?'#d97706':'#16a34a'}">
+                            {{ it.puntos }}/3
+                          </span>
+                          <span class="likert">{{ it.frase_likert }}</span>
+                        </div>
+                      </div>
+                      <p v-else class="items-empty">No se detectaron síntomas de ansiedad en este ciclo</p>
+                    </div>
+
+                    <!-- ── Fragmentos del diario ───────────────────────── -->
+                    <div v-if="c.entradas_muestra?.length" class="evidencia-section">
+                      <div class="items-title" style="margin-bottom:10px">
+                        Lo que escribió · base de la detección
+                      </div>
+                      <div v-for="(e, ei) in c.entradas_muestra" :key="ei" class="entrada-frag">
+                        <span class="frag-fecha">{{ pCorto(e.fecha) }}</span>
+                        <blockquote class="frag-texto">"{{ e.fragmento }}…"</blockquote>
+                      </div>
+                    </div>
+
+                  </div>
+                </template>
+              </div>
+            </div>
+
+          <!-- ══ Notas clínicas ════════════════════════════════════ -->
+          <div class="panel-card">
+              <div class="h">Notas clínicas</div>
+              <div class="b">
+                <textarea
+                  v-model="draft"
+                  class="nota-input"
+                  placeholder="Anotá observaciones de la sesión, acuerdos, derivaciones…"
+                ></textarea>
+                <div
+                  style="
+                    display: flex;
+                    justify-content: flex-end;
+                    margin-top: 8px;
+                  "
+                >
+                  <button
+                    class="btn primary"
+                    type="button"
+                    :disabled="!draft.trim()"
+                    :style="{ opacity: draft.trim() ? 1 : 0.5 }"
+                    @click="guardarNota"
+                  >
+                    Guardar nota
+                  </button>
+                </div>
+                <div style="margin-top: 16px">
+                  <p
+                    v-if="!notas.length"
+                    style="font-size: 12.5px; color: var(--ink-3); margin: 0"
+                  >
+                    Todavía no hay notas en esta ficha.
+                  </p>
+                  <div v-for="n in notas" :key="n.id" class="nota">
+                    <div class="meta">
+                      {{ pCorto(n.fecha) }} · {{ n.autor
+                      }}{{ n.propia ? " (tú)" : "" }}
+                    </div>
+                    <div class="txt">{{ n.texto }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="h">Diario del estudiante</div>
+              <div class="b">
+                <div class="privacy-note">
+                  <span style="color: var(--ink-3)">
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="4" y="10" width="16" height="11" rx="2" />
+                      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                    </svg>
+                  </span>
+                  <span>
+                    <template v-if="student.entradasCompartidas">
+                      {{ student.name.split(" ")[0] }} eligió compartir sus
+                      entradas contigo. Léelas con cuidado: son su espacio
+                      privado.
+                    </template>
+                    <template v-else>
+                      El contenido del diario es privado. Solo ves los
+                      resultados de las encuestas, no lo que
+                      {{ student.name.split(" ")[0] }} escribe.
+                    </template>
+                  </span>
+                </div>
+                <button
+                  v-if="student.entradasCompartidas"
+                  class="btn"
+                  type="button"
+                  style="margin-top: 12px; width: 100%; justify-content: center"
+                  @click="showToast('Entradas compartidas (demo)')"
+                >
+                  Ver entradas compartidas
+                </button>
+              </div>
+            </div>
+
+        </div>
+      </template>
+    </div>
+
+    <Teleport to="body">
+      <div v-if="toast" class="toast">{{ toast }}</div>
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* ── Grilla 2×2 de gráficos ──────────────────────────────────── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .charts-grid { grid-template-columns: 1fr; }
+}
+.chart-card {
+  background: #fff;
+  border: 1px solid var(--line, #E4EBE9);
+  border-radius: 16px;
+  padding: 18px 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(20,50,48,.04), 0 8px 28px -16px rgba(20,50,48,.12);
+}
+.cc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+.cc-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #143230;
+  font-family: 'Gabarito', sans-serif;
+}
+.cc-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 99px;
+}
+.cc-bignum {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -1px;
+  margin: 4px 0 0;
+  font-family: 'Gabarito', sans-serif;
+}
+.cc-denom {
+  font-size: 16px;
+  font-weight: 500;
+  color: #6b7280;
+}
+.cc-sub {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+.cc-hint {
+  font-size: 10.5px;
+  color: #9ca3af;
+  margin-top: 6px;
+}
+
+/* ── Adherencia mini ─────────────────────────────────────────── */
+.adh-mini {
+  display: grid;
+  grid-template-columns: 24px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.adh-lbl { font-size: 11.5px; font-weight: 700; color: #374151; }
+.adh-track {
+  height: 10px;
+  background: #f3f4f6;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.adh-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width .4s ease;
+}
+.adh-num { font-size: 11.5px; font-weight: 700; text-align: right; }
+
+/* ── Chip (kept for backwards compat) ───────────────────────── */
+.chip-high { background: #d1fae5; color: #065f46; }
+.chip-mid  { background: #fef3c7; color: #92400e; }
+.chip-low  { background: #fee2e2; color: #991b1b; }
+.adh-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+.adh-key {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+.adh-key.high { background: #d1fae5; color: #065f46; }
+.adh-key.mid  { background: #fef3c7; color: #92400e; }
+.adh-key.low  { background: #fee2e2; color: #991b1b; }
+
+/* ── Cuerpo del acordeón de ciclo ────────────────────────── */
+.cyc-body {
+  padding: 0 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Banner de interpretación clínica ────────────────────── */
+.clinico-banner {
+  background: #E6F3F1;
+  border: 1px solid #CFE6E2;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.clinico-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.clinico-labels { display: flex; flex-wrap: wrap; gap: 6px; }
+.label-clinico {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0D9488;
+  background: #E6F3F1;
+  border: 1px solid #CFE6E2;
+  border-radius: 6px;
+  padding: 3px 10px;
+}
+.disclaimer-clinico {
+  font-size: 11px; color: #9ca3af; margin: 0;
+  font-style: italic; line-height: 1.4;
+}
+
+/* ── Sección de ítems PHQ-A / GAD-7 ─────────────────────── */
+.items-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.items-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.items-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #143230;
+  font-family: 'Gabarito', sans-serif;
+}
+.items-score {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+}
+.items-max { font-size: 11px; font-weight: 500; color: #9ca3af; }
+.items-empty { font-size: 12px; color: #9ca3af; margin: 0; font-style: italic; }
+
+.item-line {
+  display: grid;
+  grid-template-columns: 1fr 80px 36px auto;
+  align-items: center;
+  gap: 8px;
+}
+.q { font-size: 12px; color: #374151; }
+.bar-wrap {
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.bar-fill { height: 100%; border-radius: 99px; transition: width .4s; }
+.sc { font-size: 12px; font-weight: 700; text-align: right; }
+.likert {
+  font-size: 10.5px;
+  color: #6b7280;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+/* ── Fragmentos del diario ───────────────────────────────── */
+.evidencia-section {
+  border-top: 1px solid #f3f4f6;
+  padding-top: 14px;
+}
+.entrada-frag {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.frag-fecha {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.frag-texto {
+  margin: 0;
+  font-size: 12.5px;
+  color: #374151;
+  font-style: italic;
+  line-height: 1.55;
+  padding-left: 10px;
+  border-left: 3px solid #0D9488;
+}
+
+/* ── Label clínico (compat) ──────────────────────────────── */
+.label-clinico-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Selector de año ─────────────────────────────────────── */
+.year-select {
+  appearance: none;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  border: 1px solid #CFE6E2;
+  border-radius: 8px;
+  padding: 5px 28px 5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+}
+.year-select:focus { outline: none; border-color: #0D9488; }
+
+@media (max-width: 640px) {
+  .item-line { grid-template-columns: 1fr 60px 32px; }
+  .likert { display: none; }
+}
+</style>

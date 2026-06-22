@@ -19,6 +19,9 @@ import SatisfactionSurveyView from "../views/SatisfactionSurveyView.vue";
 import AdminContentView from "../views/AdminContentView.vue";
 import AdminReportsView from "../views/AdminReportsView.vue";
 import AdminLogsView from "../views/AdminLogsView.vue";
+import OAuthCallbackView from "../views/OAuthCallbackView.vue";
+import PsychologistStudentsView from "../views/PsychologistStudentsView.vue";
+import PsychologistAlertsView from "../views/PsychologistAlertsView.vue";
 
 const routes = [
   { path: "/", redirect: "/login" },
@@ -44,6 +47,12 @@ const routes = [
     path: "/reset-password",
     name: "reset",
     component: ResetPasswordView,
+    meta: { publica: true },
+  },
+  {
+    path: "/oauth-callback",
+    name: "oauth-callback",
+    component: OAuthCallbackView,
     meta: { publica: true },
   },
   {
@@ -86,6 +95,26 @@ const routes = [
     path: "/psicologo",
     name: "psicologo",
     component: PsychologistDashboardView,
+    meta: {
+      requiereAuth: true,
+      requiereConsent: true,
+      roles: ["psicologo", "admin"],
+    },
+  },
+  {
+    path: "/psicologo/estudiantes",
+    name: "psicologo-estudiantes",
+    component: PsychologistStudentsView,
+    meta: {
+      requiereAuth: true,
+      requiereConsent: true,
+      roles: ["psicologo", "admin"],
+    },
+  },
+  {
+    path: "/psicologo/alertas",
+    name: "psicologo-alertas",
+    component: PsychologistAlertsView,
     meta: {
       requiereAuth: true,
       requiereConsent: true,
@@ -147,6 +176,12 @@ const router = createRouter({
   routes,
 });
 
+function inicioPorRol(rol) {
+  if (rol === "psicologo") return { name: "psicologo" };
+  if (rol === "admin") return { name: "admin" };
+  return { name: "menu" };
+}
+
 router.beforeEach((to) => {
   const auth = authStore.isAuthenticated.value;
   const consent = authStore.consentimientoAceptado.value;
@@ -157,9 +192,9 @@ router.beforeEach((to) => {
     return { name: "login", query: { redirect: to.fullPath } };
   }
 
-  // Autenticado yendo a una ruta pública → /menu o /consent
+  // Autenticado yendo a una ruta pública → inicio por rol o /consent
   if (to.meta.publica && auth) {
-    return consent ? { name: "menu" } : { name: "consent" };
+    return consent ? inicioPorRol(rol) : { name: "consent" };
   }
 
   // Autenticado, no aceptó consentimiento y va a algo que lo requiere → /consent
@@ -167,9 +202,14 @@ router.beforeEach((to) => {
     return { name: "consent" };
   }
 
+  // Psicóloga / admin no necesitan el menú del estudiante: van a su panel.
+  if (auth && consent && to.name === "menu" && rol !== "estudiante") {
+    return inicioPorRol(rol);
+  }
+
   // Restricción por rol
   if (to.meta.roles && !to.meta.roles.includes(rol)) {
-    return { name: "menu" };
+    return inicioPorRol(rol);
   }
 
   return true;

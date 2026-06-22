@@ -1,7 +1,7 @@
 """
-NLPService — Clasificación multi-condición de salud mental con BERT español.
+NLPService — Clasificación multi-condición de salud mental con XLM-RoBERTa.
 
-Modelo: Recognai/bert-base-spanish-wwm-cased-xnli (BETO + XNLI)
+Modelo: joeddav/xlm-roberta-large-xnli (XLM-RoBERTa + XNLI, Facebook AI)
 Técnica: Zero-shot multi-label con hipótesis en español + boost de keywords clínicos.
 
 Optimizado para PRECISIÓN:
@@ -54,10 +54,10 @@ class NLPService:
                     cls._load_timestamp = datetime.utcnow().isoformat()
 
                     logger.info("=" * 80)
-                    logger.info("🤖 CARGANDO MODELO BERT (BETO + XNLI)")
+                    logger.info("🤖 CARGANDO MODELO XLM-RoBERTa (Facebook AI + XNLI)")
                     logger.info(f"   Modelo: {settings.MODEL_NAME}")
                     logger.info(f"   Dispositivo: {'CPU' if settings.DEVICE == -1 else f'GPU:{settings.DEVICE}'}")
-                    logger.info("   ⏳ Primera carga puede tardar 1-3 min (descarga ~400MB)...")
+                    logger.info("   ⏳ Primera carga puede tardar 2-5 min (descarga ~1.1GB)...")
                     logger.info("=" * 80)
 
                     try:

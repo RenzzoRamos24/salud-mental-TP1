@@ -13,8 +13,12 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     UserPublic,
     MensajeResponse,
+    OAuthGoogleRequest,
+    OAuthMicrosoftRequest,
+    OAuthConfigResponse,
 )
 from app.services.auth_service import AuthService
+from app.services import oauth_service
 from app.core.deps import get_current_user
 from app.models.user import User
 
@@ -124,6 +128,62 @@ async def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db
         return MensajeResponse(mensaje="Contraseña actualizada correctamente")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────
+# OAUTH — Google / Microsoft (Hotmail / Outlook)
+# ─────────────────────────────────────────────────────────────────
+
+@router.get("/oauth/config", response_model=OAuthConfigResponse)
+async def oauth_config():
+    """Devuelve qué providers están configurados (client_id público + redirect)."""
+    return oauth_service.config_publica()
+
+
+@router.post("/oauth/google", response_model=TokenResponse)
+async def oauth_google(req: OAuthGoogleRequest, db: Session = Depends(get_db)):
+    try:
+        info = await oauth_service.verificar_google(req.id_token)
+    except oauth_service.OAuthNotConfigured as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except oauth_service.OAuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    try:
+        user = AuthService.login_o_registrar_oauth(
+            db=db,
+            email=info["email"],
+            nombre=info["nombre"],
+            apellido=info["apellido"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    token_data = AuthService.emitir_token(user)
+    return TokenResponse(**token_data, user=_user_a_publico(user, db))
+
+
+@router.post("/oauth/microsoft", response_model=TokenResponse)
+async def oauth_microsoft(req: OAuthMicrosoftRequest, db: Session = Depends(get_db)):
+    try:
+        info = await oauth_service.verificar_microsoft(req.access_token)
+    except oauth_service.OAuthNotConfigured as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except oauth_service.OAuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    try:
+        user = AuthService.login_o_registrar_oauth(
+            db=db,
+            email=info["email"],
+            nombre=info["nombre"],
+            apellido=info["apellido"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    token_data = AuthService.emitir_token(user)
+    return TokenResponse(**token_data, user=_user_a_publico(user, db))
 
 
 # ─────────────────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ from app.services.diario_analisis_service import analizar_en_background
 from app.services.recomendaciones_service import recomendaciones_para_estudiante
 from app.services.cita_service import CitaService
 from app.services.ciclo_service import info_ciclo_estudiante
+from app.services import cycle_survey_service
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,50 @@ async def obtener_entrada(
         return DiarioService.obtener_propia(db, entrada_id, user.id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Entrada no encontrada.")
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# PUT /diario/entrada/{id}  — actualizar SOLO la entrada del día en curso
+# ─────────────────────────────────────────────────────────────────────────
+
+@router.put("/entrada/{entrada_id}", response_model=DiarioEntradaOut)
+async def actualizar_entrada(
+    entrada_id: int,
+    payload: DiarioEntradaIn,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _exigir_estudiante(user)
+    try:
+        entrada = DiarioService.obtener_propia(db, entrada_id, user.id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Entrada no encontrada.")
+
+    # Solo permitimos editar la entrada del día actual: no reescribir el
+    # historial. Si fue ayer o antes, se vuelve inmutable.
+    from datetime import date as _date
+    if entrada.fecha != _date.today():
+        raise HTTPException(
+            status_code=403,
+            detail="Solo se puede editar la entrada del día.",
+        )
+
+    texto = (payload.texto or "").strip()
+    if not texto:
+        raise HTTPException(status_code=400, detail="La entrada está vacía.")
+
+    entrada.texto = texto
+    entrada.estado_animo = payload.estado_animo
+    entrada.prompt_del_dia = payload.prompt_del_dia or entrada.prompt_del_dia
+    entrada.timestamp = datetime.utcnow()
+    db.commit()
+    db.refresh(entrada)
+
+    # Reanalizamos en background para mantener el riesgo coherente con el
+    # texto vigente.
+    background_tasks.add_task(analizar_en_background, entrada.id)
+    return entrada
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -193,9 +238,74 @@ async def mi_ciclo(
 ):
     _exigir_estudiante(user)
     try:
-        return info_ciclo_estudiante(db, user.id)
+        info = info_ciclo_estudiante(db, user.id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    pendiente = cycle_survey_service.encuesta_pendiente(db, user.id)
+    info["encuesta_pendiente"] = bool(pendiente)
+    info["encuesta_ciclo_numero"] = pendiente.ciclo_numero if pendiente else None
+    return info
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Encuesta clínica de cierre (PHQ-A + GAD-7)
+# ─────────────────────────────────────────────────────────────────────────
+
+@router.get("/encuesta-clinica/pendiente")
+async def encuesta_clinica_pendiente(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _exigir_estudiante(user)
+    encuesta = cycle_survey_service.encuesta_pendiente(db, user.id)
+    if not encuesta:
+        return {"pendiente": False}
+    return {"pendiente": True, "encuesta": cycle_survey_service.serializar(encuesta)}
+
+
+@router.post("/encuesta-clinica/respuesta")
+async def encuesta_clinica_responder(
+    payload: dict,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _exigir_estudiante(user)
+    item_id = (payload or {}).get("item_id")
+    valor = (payload or {}).get("valor")
+    if not item_id or valor is None:
+        raise HTTPException(status_code=400, detail="Falta item_id o valor.")
+
+    encuesta = cycle_survey_service.encuesta_pendiente(db, user.id)
+    if not encuesta:
+        raise HTTPException(status_code=409, detail="No tienes una encuesta abierta.")
+
+    try:
+        encuesta = cycle_survey_service.guardar_respuesta(
+            db, encuesta, item_id, int(valor)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"ok": True, "encuesta": cycle_survey_service.serializar(encuesta)}
+
+
+@router.post("/encuesta-clinica/cerrar")
+async def encuesta_clinica_cerrar(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _exigir_estudiante(user)
+    encuesta = cycle_survey_service.encuesta_pendiente(db, user.id)
+    if not encuesta:
+        raise HTTPException(status_code=409, detail="No tienes una encuesta abierta.")
+
+    try:
+        resumen = cycle_survey_service.cerrar_encuesta(db, encuesta)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"ok": True, "resumen": resumen, "encuesta": cycle_survey_service.serializar(encuesta)}
 
 
 # ─────────────────────────────────────────────────────────────────────────

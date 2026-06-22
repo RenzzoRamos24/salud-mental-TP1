@@ -16,7 +16,7 @@ class Settings:
     # BETO (BERT en español) + XNLI permite clasificación multi-etiqueta sin traducción.
     MODEL_NAME: str = os.getenv(
         "MODEL_NAME",
-        "Recognai/bert-base-spanish-wwm-cased-xnli"
+        "joeddav/xlm-roberta-large-xnli"
     )
     MAX_QUESTIONS: int = 16  # 9 PHQ-9 + 7 GAD-7
     DEVICE: int = -1  # -1 = CPU, 0 = GPU
@@ -481,5 +481,19 @@ class Settings:
     # ─────────────────────────────────────────────────────────────────
     BACKUP_HORA_DIARIA: int = int(os.getenv("BACKUP_HORA_DIARIA", "2"))      # 02:00 AM
     BACKUP_RETENCION_DIAS: int = int(os.getenv("BACKUP_RETENCION_DIAS", "14"))
+
+    # ─────────────────────────────────────────────────────────────────
+    # OAUTH (Google / Microsoft)
+    # ─────────────────────────────────────────────────────────────────
+    # Si no están configurados, los botones del login devuelven 503 con un
+    # mensaje claro para el frontend (sin romper el resto del flujo).
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    MICROSOFT_CLIENT_ID: str = os.getenv("MICROSOFT_CLIENT_ID", "")
+    # Tenant de Microsoft: "common" acepta Outlook/Hotmail personales + cuentas de trabajo.
+    MICROSOFT_TENANT: str = os.getenv("MICROSOFT_TENANT", "common")
+    # Redirect que recibe el callback OAuth en el frontend.
+    OAUTH_REDIRECT_URI: str = os.getenv(
+        "OAUTH_REDIRECT_URI", "http://localhost:5173/oauth-callback"
+    )
 
 settings = Settings()

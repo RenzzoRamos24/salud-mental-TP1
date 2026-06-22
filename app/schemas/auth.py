@@ -40,6 +40,30 @@ class TokenResponse(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════════
+# OAUTH (Google / Microsoft)
+# ═══════════════════════════════════════════════════════════════════
+
+class OAuthGoogleRequest(BaseModel):
+    id_token: str = Field(..., description="JWT id_token de Google Identity Services.")
+
+
+class OAuthMicrosoftRequest(BaseModel):
+    access_token: str = Field(..., description="Access token devuelto por Microsoft Identity.")
+
+
+class OAuthProviderConfig(BaseModel):
+    configurado: bool
+    client_id: str = ""
+    tenant: Optional[str] = None
+
+
+class OAuthConfigResponse(BaseModel):
+    google: OAuthProviderConfig
+    microsoft: OAuthProviderConfig
+    redirect_uri: str
+
+
+# ═══════════════════════════════════════════════════════════════════
 # RECUPERAR / RESETEAR CONTRASEÑA
 # ═══════════════════════════════════════════════════════════════════
 
