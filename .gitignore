@@ -8,6 +8,16 @@ __pycache__/
 # ─── Secrets / config local ───
 .env
 .env.local
+.azure-config
+
+# ─── Artefactos de despliegue ───
+.deploy.zip
+.deploy*.zip
+*.zip
+
+# ─── Datasets (descargados, no versionados) ───
+data/
+reports/
 
 # ─── Base de datos local ───
 *.db

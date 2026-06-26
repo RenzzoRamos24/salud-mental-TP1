@@ -1,58 +1,59 @@
-# Pendientes — HUs por implementar
+# Pendientes
 
-Estado al 2026-05-21: **37 de 40 HUs completas**. Lo que sigue queda parqueado para una sesión futura.
-
----
-
-## HU-32 — Filtrar estudiantes por nivel de riesgo (psicólogo)
-
-**Donde está hoy:** `project/src/views/PsychologistDashboardView.vue` filtra por nombre/email (`filtro` ref, línea ~16) pero no por nivel de riesgo. El backend ya expone `ultimo_riesgo` por estudiante.
-
-**Cómo abordarlo (~20 min):**
-1. Agregar un ref `filtroRiesgo = ref('todos')` con valores `['todos', 'CRÍTICO', 'ALTO', 'MEDIO', 'BAJO', 'SIN_EVAL']`.
-2. Sumar al computed `filtrados` un filtro extra:
-   ```js
-   .filter(e => filtroRiesgo.value === 'todos'
-     || (e.ultimo_riesgo || 'SIN_EVAL').toUpperCase() === filtroRiesgo.value)
-   ```
-3. Encima de la tabla, antes del input de búsqueda, agregar un toggle de chips usando el mismo patrón que `AdminDashboardView.vue` líneas 76-93 (filtro de rol).
-4. Mismo patrón visual: card blanca con `chip-brand` activo verde y resto gris hover.
-
-**Sin cambios en backend.**
+Estado al 2026-06-24 tras el rediseño completo a sistema de cuestionarios.
 
 ---
 
-## HU-34 — Exportar reporte individual PDF (psicólogo)
+## Funcional — listo
 
-**Donde está hoy:** Hay `window.print()` en `ResultsScreen.vue:233` y `AdminReportsView.vue:87`. Permite "Guardar como PDF" desde el diálogo del navegador, pero no es PDF generado en servidor con plantilla clínica.
-
-**Cómo abordarlo (~1 h):**
-1. Instalar `reportlab` (`pip install reportlab` y agregar a `requirements.txt`).
-2. Crear `app/services/pdf_service.py` con `generar_reporte_estudiante(student_id, db)` que arme un PDF con:
-   - Datos del estudiante (nombre, código, último nivel)
-   - Tabla de sesiones con fecha, score, nivel
-   - Gráfico embebido (matplotlib → png → image en PDF)
-   - Notas privadas del psicólogo (modelo `ClinicalNote`)
-   - Conclusión sugerida
-3. Endpoint `GET /psychologist/students/{id}/report.pdf` en `app/api/v1/endpoints/psychologist.py` que devuelva `StreamingResponse(io.BytesIO(pdf), media_type='application/pdf')`.
-4. En `StudentHistoryView.vue` agregar un botón "Exportar PDF" en `#actions` del `PageHeader` que descargue vía `<a :href="api.pdfUrl(id)" download>`.
-
-**Alternativa rápida:** dejar `window.print()` como está (ya funciona) y solo mejorar la hoja `@media print` en `style.css` para que la versión imprimible se vea más limpia.
+- Banco fijo de instrumentos (PHQ-A, GAD-7, SRQ-20, RSES, WHO-5, UCLA-3) cargado por seed y expuesto vía `/api/v1/banco`.
+- 40 frases incompletas adaptadas de Sacks SSCT, divididas en 8 áreas.
+- Bloques custom: creación, edición y eliminación por la psicóloga, con cortes sugeridos por tercios.
+- Plantillas: creación, edición, eliminación y asignación.
+- Flujo del alumno: lista de pendientes, vista paso a paso con barra de progreso, guardado parcial y cierre.
+- Evaluator: scoring por escala con cortes Johnson/Spitzer/Harding/Rosenberg/WHO/Hughes, banderas de crisis (PHQ-A #9, SRQ-20 #17, BETO ideación) y riesgo compuesto.
+- BETO sobre frases incompletas: 8 categorías emocionales.
+- Panel psicóloga: dashboard, lista de alumnos, alertas, historial, resultado con termómetros + frases analizadas.
+- Admin: usuarios, métricas de cuestionarios, modelo NLP, backups, auditoría.
+- SOS visible globalmente para el alumno.
 
 ---
 
-## HU-37 — Logs en tiempo real (WebSocket)
+## Tesis — pendiente de implementación
 
-**Donde está hoy:** `AdminLogsView.vue` refresca cada 5s con `setInterval` + polling al endpoint `/admin/audit-logs`. Funciona como "live", el usuario ve "En vivo · cada 5s" en la UI. Esto técnicamente cubre la HU si la lees como "ver los logs actualizados en tiempo real".
+Estas piezas no son requisitos funcionales, son entregables académicos planificados en `PLAN_RECOLECCION_DATOS.md` y `METRICAS_VALIDACION.md`.
 
-**Cómo abordarlo si se quiere WebSocket real (~2 h):**
-1. Backend:
-   - Agregar `fastapi-websocket` o usar el built-in. Endpoint `/admin/audit-logs/ws` que mantenga conexión.
-   - En `app/middleware/access_log.py`, después de persistir cada log, hacer `broadcast.publish(log_dict)` a todos los clientes conectados.
-   - Solo permitir admin via token JWT en query param (`?token=...`).
-2. Frontend:
-   - En `AdminLogsView.vue` reemplazar `setInterval(cargar, 5000)` por `new WebSocket('ws://localhost:8000/api/v1/admin/audit-logs/ws?token=' + jwt)`.
-   - En `socket.onmessage`, `logs.value.unshift(JSON.parse(e.data))` y truncar a 100.
-   - Indicador "Conectado" / "Reconectando" en el header.
+### SVM de riesgo — parqueado
+- **Dataset elegido (real):** DASS-42 de Open Source Psychometrics Project, 39,775 respuestas reales, 7,269 adolescentes 13–17 años. Descargado en `data/dass/`.
+- **Estado:** entrenamiento pospuesto a pedido del usuario para priorizar la aplicación. Checklist técnico para retomar en `SVM_PARKED.md`.
+- **Baseline desechable:** un primer experimento con Mendeley PHQ-9 sintético dejó F1 inflado por leakage de feature; no se cita en la tesis.
 
-**Recomendación:** quedarse con el polling 5s actual a menos que sea pedido explícito. Es código simple, no tiene reconexión que mantener, y cinco segundos de latencia es perfectamente aceptable para una auditoría.
+### Evaluación de BETO
+- **Benchmark público listo:** `scripts/eval_beto_emoevent.py` corre el clasificador sobre EmoEvent (Plaza-del-Arco 2020, Apache-2.0, 1,656 tweets test español). Output queda en `reports/beto_emoevent.md`. Es defendible como evidencia primaria.
+- **Set propio (opcional, refuerza dominio específico):** construir 100 respuestas a frases incompletas etiquetadas para mostrar performance en el dominio de Sami. Reportar recall específico de `ideacion_suicida` (≥ 0.90).
+
+### Piloto psicométrico
+- Reclutar 20–30 estudiantes de secundaria del colegio piloto.
+- Aplicar PHQ-A + GAD-7 + RSES.
+- Calcular α de Cronbach por escala con CI 95%.
+
+### Concordancia clínica
+- Preparar 30 vignettes (15 reales del piloto + 15 sintéticos).
+- Entrega ciega a una psicóloga para clasificación de riesgo.
+- Calcular κ Cohen, sensibilidad, especificidad y tasa de falsos negativos en `CRITICO`.
+
+### Rendimiento
+- Script `scripts/load_test.py` con locust (50 usuarios virtuales × 10 min).
+- Reportar latencia p50/p95/p99 por endpoint.
+
+### Usabilidad
+- Sesión moderada con 5–10 usuarios + cuestionario SUS.
+- Reportar puntaje SUS y problemas observados.
+
+---
+
+## Operacional — recomendado pero no bloqueante
+
+- Borrar `backups/*.db` con schema antiguo (si quedaron de versiones previas).
+- Decidir qué hacer con `app/services/scheduler_service.py` (corre todos los días a las 02:00 backups; sigue funcionando).
+- Actualizar `SPRINTS.md` añadiendo el sprint de migración a cuestionarios.

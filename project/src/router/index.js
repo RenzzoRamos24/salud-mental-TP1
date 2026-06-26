@@ -7,130 +7,131 @@ import ForgotPasswordView from "../views/ForgotPasswordView.vue";
 import ResetPasswordView from "../views/ResetPasswordView.vue";
 import ConsentView from "../views/ConsentView.vue";
 import MainMenuView from "../views/MainMenuView.vue";
+import StudentHomeView from "../views/StudentHomeView.vue";
 import ProfileView from "../views/ProfileView.vue";
-import DiarioView from "../views/DiarioView.vue";
-import PsychologistDashboardView from "../views/PsychologistDashboardView.vue";
-import StudentHistoryView from "../views/StudentHistoryView.vue";
-import AdminDashboardView from "../views/AdminDashboardView.vue";
-import MiHistorialView from "../views/MiHistorialView.vue";
 import RecursosView from "../views/RecursosView.vue";
+import OAuthCallbackView from "../views/OAuthCallbackView.vue";
+
+import StudentQuestionnairesView from "../views/StudentQuestionnairesView.vue";
+import StudentAnswerView from "../views/StudentAnswerView.vue";
+
+import PsychologistDashboardView from "../views/PsychologistDashboardView.vue";
+import PsychologistStudentsView from "../views/PsychologistStudentsView.vue";
+import PsychologistAlertsView from "../views/PsychologistAlertsView.vue";
+import StudentHistoryView from "../views/StudentHistoryView.vue";
+import PsychologistBankView from "../views/PsychologistBankView.vue";
+import PsychologistTemplatesView from "../views/PsychologistTemplatesView.vue";
+import PsychologistCustomBlockView from "../views/PsychologistCustomBlockView.vue";
+import PsychologistAssignView from "../views/PsychologistAssignView.vue";
+import PsychologistResultView from "../views/PsychologistResultView.vue";
+import PsychologistSOSView from "../views/PsychologistSOSView.vue";
+import PsychologistAppointmentsView from "../views/PsychologistAppointmentsView.vue";
+
+import AdminDashboardView from "../views/AdminDashboardView.vue";
 import AdminSystemView from "../views/AdminSystemView.vue";
-import SatisfactionSurveyView from "../views/SatisfactionSurveyView.vue";
 import AdminContentView from "../views/AdminContentView.vue";
 import AdminReportsView from "../views/AdminReportsView.vue";
 import AdminLogsView from "../views/AdminLogsView.vue";
-import OAuthCallbackView from "../views/OAuthCallbackView.vue";
-import PsychologistStudentsView from "../views/PsychologistStudentsView.vue";
-import PsychologistAlertsView from "../views/PsychologistAlertsView.vue";
+
+import SatisfactionSurveyView from "../views/SatisfactionSurveyView.vue";
 
 const routes = [
   { path: "/", redirect: "/login" },
+  { path: "/login", name: "login", component: LoginView, meta: { publica: true } },
+  { path: "/register", name: "register", component: RegisterView, meta: { publica: true } },
+  { path: "/forgot-password", name: "forgot", component: ForgotPasswordView, meta: { publica: true } },
+  { path: "/reset-password", name: "reset", component: ResetPasswordView, meta: { publica: true } },
+  { path: "/oauth-callback", name: "oauth-callback", component: OAuthCallbackView, meta: { publica: true } },
+  { path: "/consent", name: "consent", component: ConsentView, meta: { requiereAuth: true } },
+
+  { path: "/menu", name: "menu", component: StudentHomeView, meta: { requiereAuth: true, requiereConsent: true } },
+  { path: "/menu-legacy", name: "menu-legacy", component: MainMenuView, meta: { requiereAuth: true, requiereConsent: true } },
+  { path: "/perfil", name: "perfil", component: ProfileView, meta: { requiereAuth: true, requiereConsent: true } },
+  { path: "/recursos", name: "recursos", component: RecursosView, meta: { requiereAuth: true, requiereConsent: true } },
+
+  // ── Alumno ──
   {
-    path: "/login",
-    name: "login",
-    component: LoginView,
-    meta: { publica: true },
-  },
-  {
-    path: "/register",
-    name: "register",
-    component: RegisterView,
-    meta: { publica: true },
-  },
-  {
-    path: "/forgot-password",
-    name: "forgot",
-    component: ForgotPasswordView,
-    meta: { publica: true },
-  },
-  {
-    path: "/reset-password",
-    name: "reset",
-    component: ResetPasswordView,
-    meta: { publica: true },
-  },
-  {
-    path: "/oauth-callback",
-    name: "oauth-callback",
-    component: OAuthCallbackView,
-    meta: { publica: true },
-  },
-  {
-    path: "/consent",
-    name: "consent",
-    component: ConsentView,
-    meta: { requiereAuth: true },
-  },
-  {
-    path: "/menu",
-    name: "menu",
-    component: MainMenuView,
-    meta: { requiereAuth: true, requiereConsent: true },
-  },
-  {
-    path: "/perfil",
-    name: "perfil",
-    component: ProfileView,
-    meta: { requiereAuth: true, requiereConsent: true },
-  },
-  {
-    path: "/diario",
-    name: "diario",
-    component: DiarioView,
+    path: "/mis-cuestionarios",
+    name: "mis-cuestionarios",
+    component: StudentQuestionnairesView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["estudiante"] },
   },
   {
-    path: "/mi-historial",
-    name: "mi-historial",
-    component: MiHistorialView,
+    path: "/responder/:id",
+    name: "responder",
+    component: StudentAnswerView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["estudiante"] },
   },
-  {
-    path: "/recursos",
-    name: "recursos",
-    component: RecursosView,
-    meta: { requiereAuth: true, requiereConsent: true },
-  },
+
+  // ── Psicóloga ──
   {
     path: "/psicologo",
     name: "psicologo",
     component: PsychologistDashboardView,
-    meta: {
-      requiereAuth: true,
-      requiereConsent: true,
-      roles: ["psicologo", "admin"],
-    },
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {
     path: "/psicologo/estudiantes",
     name: "psicologo-estudiantes",
     component: PsychologistStudentsView,
-    meta: {
-      requiereAuth: true,
-      requiereConsent: true,
-      roles: ["psicologo", "admin"],
-    },
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {
     path: "/psicologo/alertas",
     name: "psicologo-alertas",
     component: PsychologistAlertsView,
-    meta: {
-      requiereAuth: true,
-      requiereConsent: true,
-      roles: ["psicologo", "admin"],
-    },
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {
     path: "/psicologo/estudiante/:id",
     name: "psicologo-estudiante",
     component: StudentHistoryView,
-    meta: {
-      requiereAuth: true,
-      requiereConsent: true,
-      roles: ["psicologo", "admin"],
-    },
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
+  {
+    path: "/psicologo/banco",
+    name: "psicologo-banco",
+    component: PsychologistBankView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/bloque-custom",
+    name: "psicologo-bloque-custom",
+    component: PsychologistCustomBlockView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/plantillas",
+    name: "psicologo-plantillas",
+    component: PsychologistTemplatesView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/asignar",
+    name: "asignar-cuestionario",
+    component: PsychologistAssignView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/resultado/:id",
+    name: "psicologo-resultado",
+    component: PsychologistResultView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/sos",
+    name: "psicologo-sos",
+    component: PsychologistSOSView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/citas",
+    name: "psicologo-citas",
+    component: PsychologistAppointmentsView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+
+  // ── Admin ──
   {
     path: "/admin",
     name: "admin",
@@ -143,14 +144,6 @@ const routes = [
     component: AdminSystemView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["admin"] },
   },
-  // Sprint 7 (estudiante)
-  {
-    path: "/encuesta",
-    name: "encuesta",
-    component: SatisfactionSurveyView,
-    meta: { requiereAuth: true, requiereConsent: true, roles: ["estudiante"] },
-  },
-  // Sprint 8 (admin)
   {
     path: "/admin/contenidos",
     name: "admin-contenidos",
@@ -168,6 +161,14 @@ const routes = [
     name: "admin-logs",
     component: AdminLogsView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["admin"] },
+  },
+
+  // ── Satisfacción ──
+  {
+    path: "/encuesta",
+    name: "encuesta",
+    component: SatisfactionSurveyView,
+    meta: { requiereAuth: true, requiereConsent: true },
   },
 ];
 
@@ -187,31 +188,21 @@ router.beforeEach((to) => {
   const consent = authStore.consentimientoAceptado.value;
   const rol = authStore.rol.value;
 
-  // No autenticado y la ruta requiere auth → /login
   if (to.meta.requiereAuth && !auth) {
     return { name: "login", query: { redirect: to.fullPath } };
   }
-
-  // Autenticado yendo a una ruta pública → inicio por rol o /consent
   if (to.meta.publica && auth) {
     return consent ? inicioPorRol(rol) : { name: "consent" };
   }
-
-  // Autenticado, no aceptó consentimiento y va a algo que lo requiere → /consent
   if (to.meta.requiereConsent && !consent) {
     return { name: "consent" };
   }
-
-  // Psicóloga / admin no necesitan el menú del estudiante: van a su panel.
   if (auth && consent && to.name === "menu" && rol !== "estudiante") {
     return inicioPorRol(rol);
   }
-
-  // Restricción por rol
   if (to.meta.roles && !to.meta.roles.includes(rol)) {
     return inicioPorRol(rol);
   }
-
   return true;
 });
 

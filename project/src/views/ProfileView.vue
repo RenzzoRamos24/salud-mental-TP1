@@ -128,7 +128,7 @@ async function eliminarCuenta() {
 const rolLabel = computed(() => {
   const r = rol.value;
   if (r === "estudiante") return "Estudiante";
-  if (r === "psicologo") return "Psicólogo/a";
+  if (r === "psicologo") return "Psicóloga";
   if (r === "admin") return "Administrador";
   return r;
 });
@@ -315,7 +315,6 @@ const rolLabel = computed(() => {
       title="Tu"
       accent="cuenta"
       subtitle="Tus datos, contraseña y la opción de borrar tu cuenta."
-      tone="peach"
     >
       <template #aside>
         <div class="flex items-center gap-3">

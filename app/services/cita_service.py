@@ -1,6 +1,6 @@
 """Servicio CRUD para citas psicólogo–estudiante (HU-19)."""
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.models.cita import Cita
@@ -98,15 +98,30 @@ class CitaService:
     def solicitar_desde_estudiante(db: Session, estudiante_id: str, datos: dict) -> dict:
         """
         El estudiante propone una cita. Si tiene psicólogo asignado
-        (`User.psicologo_id`), va a él; si no, queda con `psicologo_id=NULL`
-        para que el psicólogo de guardia la tome.
+        (`User.psicologo_id`), va a él; si no, se asigna al primer
+        psicólogo activo del sistema (psicólogo de guardia).
         """
         estudiante = db.query(User).filter(User.id == estudiante_id).first()
         if not estudiante:
             raise ValueError("Estudiante no encontrado")
 
+        psicologo_id = getattr(estudiante, "psicologo_id", None)
+        if not psicologo_id:
+            guardia = (
+                db.query(User)
+                .filter(User.role == "psicologo", User.activo.is_(True))
+                .order_by(User.created_at.asc())
+                .first()
+            )
+            if not guardia:
+                raise ValueError(
+                    "No hay psicólogos disponibles para tomar tu solicitud. "
+                    "Avisa a soporte."
+                )
+            psicologo_id = guardia.id
+
         cita = Cita(
-            psicologo_id=getattr(estudiante, "psicologo_id", None) or None,
+            psicologo_id=psicologo_id,
             estudiante_id=estudiante_id,
             fecha=datos["fecha"],
             hora=datos["hora"],
@@ -127,3 +142,75 @@ class CitaService:
                    .order_by(Cita.fecha.asc(), Cita.hora.asc())
                    .all())
         return [_enriquecer(c, db) for c in citas]
+
+    @staticmethod
+    def slots_sugeridos(
+        db: Session,
+        estudiante_id: str,
+        cantidad: int = 4,
+        dias_horizonte: int = 14,
+    ) -> list[dict]:
+        """
+        Devuelve hasta `cantidad` slots libres (próximos días hábiles)
+        descartando los horarios donde el psicólogo asignado (o de guardia)
+        ya tiene una cita y los que caen sábado/domingo.
+
+        Horarios base: 09:00, 10:00, 11:00, 15:00, 16:00, 17:00.
+        """
+        estudiante = db.query(User).filter(User.id == estudiante_id).first()
+        if not estudiante:
+            return []
+
+        psic_id = getattr(estudiante, "psicologo_id", None)
+        if not psic_id:
+            guardia = (
+                db.query(User)
+                .filter(User.role == "psicologo", User.activo.is_(True))
+                .order_by(User.created_at.asc())
+                .first()
+            )
+            psic_id = guardia.id if guardia else None
+
+        ocupadas = set()
+        if psic_id:
+            ocupadas = {
+                (c.fecha, c.hora)
+                for c in db.query(Cita)
+                .filter(
+                    Cita.psicologo_id == psic_id,
+                    Cita.estado.in_(("pendiente", "confirmada")),
+                )
+                .all()
+            }
+
+        HORARIOS = ("09:00", "10:00", "11:00", "15:00", "16:00", "17:00")
+        DIAS_LBL = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
+        MESES_LBL = ("Ene", "Feb", "Mar", "Abr", "May", "Jun",
+                     "Jul", "Ago", "Sep", "Oct", "Nov", "Dic")
+
+        hoy = datetime.now()
+        out: list[dict] = []
+
+        for off in range(1, dias_horizonte + 1):
+            if len(out) >= cantidad:
+                break
+            d = hoy + timedelta(days=off)
+            dow = d.weekday()
+            if dow >= 5:  # sábado/domingo
+                continue
+            fecha = d.strftime("%Y-%m-%d")
+            for hora in HORARIOS:
+                if (fecha, hora) in ocupadas:
+                    continue
+                out.append({
+                    "fecha": fecha,
+                    "hora": hora,
+                    "label": f"{DIAS_LBL[dow]} {d.day:02d}",
+                    "label_largo": (
+                        f"{DIAS_LBL[dow]} {d.day:02d} {MESES_LBL[d.month - 1]} · {hora}"
+                    ),
+                    "modalidad_sugerida": "online",
+                })
+                if len(out) >= cantidad:
+                    break
+        return out

@@ -1,0 +1,40 @@
+%% Diagrama Mermaid de la arquitectura de Sami para Azure
+%% Renderizable en mermaid.live, Notion, Obsidian, GitHub o draw.io
+
+flowchart TB
+    %% ─── Usuarios ─────────────────────────────────────────
+    A[Alumno<br/>secundaria]:::user
+    P[Psicóloga<br/>del colegio]:::user
+    AD[Admin<br/>sistema]:::user
+
+    %% ─── Frontera Azure ──────────────────────────────────
+    subgraph AZURE["Azure (región: South America)"]
+
+        subgraph APPSVC["Azure App Service · Linux B2<br/>(3.5 GB RAM · 2 vCPU)"]
+            VUE[Vue 3 SPA<br/>build estático]:::vue
+            API[FastAPI<br/>JWT + OAuth<br/>EvaluatorService<br/>Banco · Plantillas · Cuestionarios<br/>Citas · Notas · SOS]:::api
+            BETO[BETO<br/>singleton en memoria<br/>NLP zero-shot]:::nlp
+            VUE --> API
+            API --> BETO
+            BETO -.score.-> API
+        end
+
+        DB[(Azure DB for<br/>PostgreSQL Flexible<br/>Burstable B1ms<br/>2 GB · 32 GB SSD)]:::db
+        BAK[Backups automáticos<br/>diarios · 7 días]:::aux
+
+        API --> DB
+        DB --> BAK
+
+    end
+
+    A -->|HTTPS · JWT| VUE
+    P -->|HTTPS · JWT| VUE
+    AD -->|HTTPS · JWT| VUE
+
+    %% ─── Estilos ─────────────────────────────────────────
+    classDef user fill:#ECFDF5,stroke:#10B981,color:#064E3B,stroke-width:2px
+    classDef vue fill:#41B883,stroke:#34495E,color:#FFFFFF,stroke-width:2px
+    classDef api fill:#10B981,stroke:#047857,color:#FFFFFF,stroke-width:2px
+    classDef nlp fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px
+    classDef db fill:#DBEAFE,stroke:#1D4ED8,color:#1E3A8A,stroke-width:2px
+    classDef aux fill:#F4F5F6,stroke:#71717A,color:#27272A,stroke-width:1px,stroke-dasharray:4 2

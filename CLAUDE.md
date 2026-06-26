@@ -1,6 +1,6 @@
-# Salud Mental UPC — guía rápida para Claude
+# Sami — guía rápida para Claude
 
-Proyecto de tesis: chatbot de bienestar emocional para estudiantes. Está activo, en desarrollo iterativo. Esta guía es para que Claude (vos) sepa moverse rápido sin tener que rastrear todo de cero.
+Proyecto de tesis: sistema de evaluación de salud mental para estudiantes de secundaria de un colegio privado. La psicóloga arma cuestionarios desde un banco clínico y los asigna a los alumnos; el sistema los evalúa y genera reportes.
 
 ## Stack
 
@@ -8,128 +8,152 @@ Proyecto de tesis: chatbot de bienestar emocional para estudiantes. Está activo
 |------|------------|------|
 | Backend | FastAPI + SQLAlchemy + SQLite | `app/` |
 | NLP | `Recognai/bert-base-spanish-wwm-cased-xnli` (BETO + XNLI zero-shot multi-label) | `app/services/nlp_service.py` |
-| Frontend | Vue 3 + Vite + Tailwind + Chart.js | `project/` |
+| Frontend | Vue 3 + Vite + Tailwind | `project/` |
 | Auth | JWT (estudiante / psicologo / admin) | `app/api/v1/endpoints/auth.py` |
 
-## Levantar el stack
-
-Hay venv ya configurado en la raíz.
+## Primer arranque (sistema vacío)
 
 ```bash
-# Backend  (puerto 8000)
-venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+# 1. Variables de entorno (copia + completa)
+cp .env.example .env
 
-# Frontend (puerto 5173 por defecto; durante esta sesión se usó 5179)
-cd project && npm run dev
+# 2. Crear tablas + sembrar el banco fijo de instrumentos
+rm -f mental_health.db
+venv/bin/python -c "from app.database import engine, Base; import app.models; Base.metadata.create_all(bind=engine)"
+venv/bin/python -c "import sqlite3; c=sqlite3.connect('mental_health.db'); c.executescript(open('seeds/banco_instrumentos.sql').read()); c.commit()"
+
+# 3. Crear el primer admin (default: admin@admin.com / Admin12345 — cambia en .env)
+venv/bin/python -m scripts.seed_admin
+
+# 4. Levantar servicios
+venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+cd project && npm run dev    # puerto 5173
 ```
 
-Logs típicos durante el desarrollo: `/tmp/uvicorn.log`, `/tmp/vite.log`.
-
 Docs FastAPI: http://127.0.0.1:8000/docs
+
+Las psicólogas y estudiantes se registran desde `/register`. El admin solo se crea
+con `seed_admin` (no se permite alta vía UI por integridad de roles).
+
+## Modelo conceptual
+
+```
+Banco fijo (validado, no editable)
+  └─ BankInstrumento (PHQ-A, GAD-7, SRQ-20, RSES, WHO-5, UCLA-3)
+       └─ BankItem (ítems con criterio DSM-5 + banderas de crisis)
+  └─ BankFraseIncompleta (40 frases, 8 áreas, adaptación SSCT)
+
+Banco personalizado (psicóloga)
+  └─ BloqueCustom (nombre, escala, cortes)
+       └─ BloqueCustomItem (preguntas propias)
+
+Plantilla
+  └─ PlantillaCuestionario (nombre, descripción)
+       └─ PlantillaBloque (referencia a instrumento, custom o áreas de frases)
+
+Aplicación (asignación al alumno)
+  └─ AplicacionCuestionario (estado: pendiente → en_progreso → completado → revisado)
+       └─ RespuestaAplicacion (valor_num o valor_texto por ítem)
+       └─ resultado_json: bloques con puntaje/severidad + frases con clasificación BETO
+```
 
 ## Estructura
 
 ```
 app/
-  api/v1/endpoints/   auth, consent, chatbot, users, admin, psychologist,
-                       content, sos, survey
-  models/             User, UserSession, UserResponse, RiskResult, Cita,
-                       ClinicalNote, AccessLog, EducationalContent,
-                       SatisfactionSurvey, SosEvent, Configuracion
-  schemas/            Pydantic in/out
-  services/           auth, chat, nlp, admin, psychologist, content, cita,
-                       notes, scheduler, sos, survey, ai_provider
-  middleware/         access_log
-  database.py         engine + Base + SessionLocal
-  config.py           env / settings
-  main.py             app, CORS, startup, NLP warmup, scheduler
-project/
-  src/
-    components/       AppTopbar, AuthShell, PageHeader, ResultsScreen,
-                      RiskBadge, SOSButton, StatCard
-    views/            Login, Register, Forgot/Reset password, Consent,
-                      MainMenu, Chat, Results, Profile, MiHistorial,
-                      Recursos, SatisfactionSurvey, StudentHistory,
-                      PsychologistDashboard, AdminDashboard,
-                      AdminChatbotMessages, AdminContent, AdminLogs,
-                      AdminReports, AdminSystem
-    store/auth.js     reactive store de sesión
-    api.js            cliente axios
-    router/index.js   rutas con guard por rol y consentimiento
-    style.css         design system "Pastel Empático"
-  tailwind.config.js  paleta brand / peach / mint / sky2 / risk / cream / ink
-SPRINTS.md            registro detallado de sprints 1–8
+  api/v1/endpoints/
+    auth, consent, users, psychologist, admin, content, survey, sos,
+    bank, plantilla, cuestionario
+  models/
+    user, consent, password_reset, cita, clinical_note, access_log,
+    configuracion, educational_content, satisfaction_survey, sos_event,
+    bank (todos los modelos del sistema de cuestionarios)
+  services/
+    auth, consent, user, content, survey, sos, cita, notes, oauth,
+    nlp (BETO zero-shot 8 categorías), admin, psychologist, scheduler,
+    bank, plantilla, cuestionario, evaluator
+  schemas/    pydantic in/out (auth, user, consent, cita, admin,
+              psychologist, bank)
+  middleware/ access_log
+  database, config, main
+
+project/src/
+  components/  AppTopbar, AuthShell, PageHeader, RiskBadge, SOSButton,
+               StatCard, StudentTable, AlertRow, SevChip
+  views/
+    Auth:           Login, Register, Forgot/Reset password, OAuthCallback
+    Onboarding:     Consent
+    Comunes:        MainMenu, Profile, Recursos, SatisfactionSurvey
+    Alumno:         StudentQuestionnaires, StudentAnswer
+    Psicóloga:      PsychologistDashboard, PsychologistStudents,
+                    PsychologistAlerts, StudentHistory,
+                    PsychologistBank, PsychologistCustomBlock,
+                    PsychologistTemplates, PsychologistAssign,
+                    PsychologistResult
+    Admin:          AdminDashboard, AdminSystem, AdminContent,
+                    AdminReports, AdminLogs
+  store/auth.js    sesión reactiva (JWT)
+  api.js           cliente axios
+  router/index.js  rutas con guard por rol y consentimiento
+seeds/
+  banco_instrumentos.sql   DDL + inserts del banco fijo
 ```
 
-## Design system "Pastel Empático"
+## Reglas funcionales del sistema
 
-Implementado en `project/src/style.css` + `project/tailwind.config.js`. Aplicado en mayo 2026 tomando como referencia los mocks `Menu.png`, `CHATIA.png` y `LOGIN.png` (en `/home/renzo/`).
+1. **Las 6 escalas validadas no son editables** desde la UI. Su validez depende de la redacción literal publicada.
+2. **Bloques custom**: la psicóloga define nombre, escala (likert o binaria), ítems y cortes. El sistema sugiere cortes por tercios (`GET /banco/sugerir-cortes`).
+3. **Evaluación por capas** (`EvaluatorService`):
+   - Capa 1: puntaje por bloque con cortes científicos.
+   - Capa 2: banderas de crisis (PHQ-A #9 ≥ 1, SRQ-20 #17 = 1, BETO ideación ≥ 0.40).
+   - Capa 3: riesgo compuesto a partir del número de bloques en zona de alerta.
+   - Capa 4: BETO clasifica las frases incompletas en 8 categorías emocionales.
+4. **El alumno nunca ve el reporte clínico**. Solo confirmación de cierre y SOS.
+5. **El sistema no diagnostica**: reporta señales y banderas, la psicóloga interpreta.
 
-**Paleta Tailwind:** `brand-*` (lavanda), `peach-*`, `mint-*`, `sky2-*`, `risk-{bajo,medio,alto,critico,sin}`, `cream-{50,100,200}`, `ink-{100..900}`. Body usa `#FBF1E6` (peach pálido).
+## Identidad visual
 
-**Tipografía:**
-- `Plus Jakarta Sans` — default (sans)
-- `Fraunces` — serif para titulares (clase `.hero-serif`)
+Verde agua + blanco + negro. Tailwind: `green-*`, `brand-*`/`mint-*` (alias del verde), `cream-*` (neutros fríos). Fondo body blanco puro. Tipografía Work Sans. Sombras suaves. Sin emojis decorativos.
 
-**Utilidades clave** (`@layer components`):
-- `.hero-serif` + `.hero-mint` — titular serif con segmento mint
-- `.menu-card` + `.menu-card-arrow` + `.icon-box-{mint,sky,brand,peach,amber}` — tarjetas del menú
-- `.bubble-bot` (cream) / `.bubble-user` (mint sólido) / `.bubble-info` (peach)
-- `.dass-tag` (chip mint con punto) / `.opinion-tag` (chip peach)
-- `.sami-wordmark` (logo serif) / `.sos-fab` (pill coral flotante)
-- `.btn-{primary,secondary,ghost,peach,mint,danger}` / `.btn-sm`
-- `.input` / `.input-lg` / `.label` / `.field-hint` / `.field-error`
-- `.dsm5-tag` (chip lavanda con punto)
-- `.risk-{bajo,medio,alto,critico,sin}`
-- `.chip-{brand,peach,mint,ink}`
-- `.avatar-{sm,md,lg}`
-- `.banner-{info,warn,danger,success,brand}`
-- `.card` / `.card-hero` / `.card-pastel` / `.card-peach` / `.card-mint`
-- `.page-shell` / `.page-shell-wide`
-- `.nav-item` / `.nav-item-active`
+Utilidades clave en `project/src/style.css`: `.hero-serif`, `.hero-mint`, `.menu-card`, `.card`, `.card-hero`, `.btn-{primary,mint,ghost,coral}`, `.chip-mint`, `.label-kicker`, `.banner-{info,warn,danger,success}`, `.page-shell`, `.page-shell-wide`.
 
-**Componentes Vue reutilizables:**
-- `AppTopbar` — wordmark Sami + pill usuario + "Cerrar sesión"
-- `AuthShell` — fondo degradado peach→mint, card blanca, logo planta peach
-- `PageHeader` — título serif con prop `accent` (segmento mint) + icon-box opcional
-- `StatCard`, `RiskBadge`, `SOSButton`, `ResultsScreen`
+## Documentos clave
 
-## Convenciones visuales
+- `BANCO_INSTRUMENTOS.md` — referencia científica de las 6 escalas + 40 frases.
+- `METRICAS_VALIDACION.md` — 6 dimensiones de validación con umbrales.
+- `PLAN_RECOLECCION_DATOS.md` — cómo obtener los datos para cada métrica.
+- `PENDIENTES.md` — qué falta (entregables académicos, no funcionales).
+- `seeds/banco_instrumentos.sql` — DDL + inserts del banco fijo.
 
-- En el **flujo estudiante** los CTA principales usan `btn-mint` (no `btn-primary` lavanda).
-- Hero/títulos de página usan `.hero-serif`, opcionalmente con `accent` para resaltar un segmento en mint.
-- Cards principales son blancas con border `cream-200` y radius 2xl/3xl; no usar shadow agresivo.
-- Para vistas nuevas: componer con clases del DS, no introducir azules genéricos `slate-*` ni botones planos.
+## SVM — parqueado
 
-## Mocks de referencia
+El SVM está **en pausa intencional**. El sistema funciona sin él: el
+`EvaluatorService` calcula el riesgo compuesto por reglas con cortes
+publicados (Johnson, Spitzer, Harding…), lo cual es la base académica
+defendible. El SVM se incorporará como segunda opinión cuando se retome.
 
-Imágenes que el usuario fue compartiendo para alinear el frontend:
+Detalles del trabajo congelado, dataset elegido (DASS-42 real con 39,775
+respuestas, 7,269 adolescentes 13–17 años) y checklist técnico para
+retomar: ver `SVM_PARKED.md`.
 
-| Archivo | Pantalla |
-|---------|----------|
-| `/home/renzo/Menu.png` | Menú principal (estudiante) |
-| `/home/renzo/CHATIA.png` | Chat con Sami (capture larga 1874×12434) |
-| `/home/renzo/LOGIN.png` | Login |
+## Dataset de validación BETO (incorporado)
 
-Cuando el usuario mande nuevos mocks suele dejarlos en `/home/renzo/` con un nombre descriptivo.
+El sistema usa **BETO zero-shot** — no requiere dataset para funcionar. Pero
+para validar académicamente el clasificador (defensa de tesis), está incluido
+el script `scripts/eval_beto_emoevent.py` que descarga **EmoEvent** (Plaza-del-Arco
+et al., 2020) directamente desde GitHub público (Apache-2.0), corre BETO sobre
+los 1,656 tweets etiquetados del split test en español, y produce un reporte
+en `reports/beto_emoevent.md` con F1-macro, accuracy, matriz de confusión y
+clasificación por clase.
 
-## Estado del trabajo
+```bash
+# Evaluación completa (~10 min con CPU + descarga del modelo la 1ra vez)
+venv/bin/python scripts/eval_beto_emoevent.py
 
-### Implementación funcional (HUs)
-- **37 de 40 HUs completas.**
-- Pendientes documentadas en `PENDIENTES.md` (raíz): HU-32 (filtro por riesgo), HU-34 (PDF programático), HU-37 (WebSocket de logs).
+# Prueba rápida con 100 ejemplos
+venv/bin/python scripts/eval_beto_emoevent.py --limite 100
+```
 
-### Rediseño visual (estado actual)
-Identidad final: **verde agua (emerald) + blanco + negro**, sin pastel ni emojis.
-- Paleta única `green-*` (`#10B981` principal, `#34D399` claro, `#ECFDF5` fondos). Aliases `brand`/`mint` apuntan al mismo verde; `peach`/`sky2`/`cream` neutralizados a grises fríos (#F4F5F6).
-- Fondo body blanco puro (#FFFFFF), texto `#0A0A0A`.
-- Tipografía: **Work Sans** (humanista, sobria). No serif.
-- Sombras suaves (`shadow-soft`, `shadow-card`, `shadow-green`) en cards, botones, topbar. Hover de cards eleva con `-translate-y-0.5`.
-- Banners y cards de éxito/info: blancas con barra lateral verde (`border-l-4 border-l-green-600`).
-- Sin emojis decorativos. Todas las vistas barridas y formateadas con Prettier.
-- Recursos diferenciado por rol: estudiante ve líneas de ayuda + consejos; psicólogo/admin ven escalas (PHQ-9, GAD-7, ASRS, UCLA-3, C-SSRS), protocolos por nivel de riesgo y líneas de derivación.
-- Copies en tono conversacional, no spec-sheet ("Cuéntale a Sami cómo te has sentido", "Si lo necesitas ahora", "Borrar tu cuenta").
-
-## SPRINTS.md
-
-`SPRINTS.md` (en la raíz) lleva el registro funcional de cada sprint con HUs, endpoints y vistas. Consultalo cuando aparezca una funcionalidad que ya está definida ahí.
+Mapeo EmoEvent → Sami:
+`anger→ira`, `fear→miedo`, `sadness→tristeza`, `joy→esperanza`, `others→neutral`.
+`disgust` y `surprise` se descartan (no son categorías de Sami).

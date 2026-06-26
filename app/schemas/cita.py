@@ -24,9 +24,17 @@ class CitaUpdate(BaseModel):
     es_crisis: Optional[bool] = None
 
 
+class CitaSolicitudEstudiante(BaseModel):
+    """Pedido de cita iniciado por el estudiante (HU-30)."""
+    fecha: str        # YYYY-MM-DD
+    hora: str         # HH:MM
+    modalidad: str = "online"
+    motivo: Optional[str] = None
+
+
 class CitaOut(BaseModel):
     id: int
-    psicologo_id: str
+    psicologo_id: Optional[str] = None
     estudiante_id: str
     fecha: str
     hora: str

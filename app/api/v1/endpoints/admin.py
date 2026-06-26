@@ -1,5 +1,5 @@
 """
-Endpoints exclusivos para rol admin (Sprint 6: HU-21, HU-22, HU-23, HU-24, HU-36).
+Endpoints exclusivos para rol admin (Sprint 9 — cuestionarios).
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
@@ -9,14 +9,13 @@ from app.database import get_db
 from app.core.deps import require_role
 from app.schemas.admin import UsuarioResumen, StatsUsuarios
 from app.services.admin_service import AdminService
-# Importar modelos para que SQLAlchemy los registre al arrancar
 from app.models.configuracion import Configuracion  # noqa: F401
 from app.models.access_log import AccessLog         # noqa: F401
 
 router = APIRouter()
 
 
-# ── Usuarios (Sprint 1) ───────────────────────────────────────────────────────
+# ── Usuarios ────────────────────────────────────────────────────────────────
 
 @router.get("/users", response_model=list[UsuarioResumen])
 async def listar_usuarios(
@@ -35,37 +34,7 @@ async def stats_usuarios(
     return AdminService.stats(db)
 
 
-# ── HU-21: Configuración de encuesta ─────────────────────────────────────────
-
-class EncuestaUpdate(BaseModel):
-    # PHQ-9 / GAD-7 son ítems clínicos fijos; el admin solo configura frecuencia.
-    # `preguntas` se mantiene opcional por compatibilidad con el cliente, pero
-    # el servicio la ignora.
-    preguntas: list = None
-    frecuencia_dias: int = 7
-
-
-@router.get("/config/encuesta")
-async def get_encuesta(
-    db: Session = Depends(get_db),
-    _admin=Depends(require_role("admin")),
-):
-    return AdminService.get_encuesta(db)
-
-
-@router.put("/config/encuesta")
-async def update_encuesta(
-    payload: EncuestaUpdate,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_role("admin")),
-):
-    try:
-        return AdminService.update_encuesta(db, payload.preguntas, payload.frecuencia_dias)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-# ── HU-22: Auditoría de accesos ───────────────────────────────────────────────
+# ── Auditoría ───────────────────────────────────────────────────────────────
 
 @router.get("/audit-logs")
 async def get_audit_logs(
@@ -76,10 +45,12 @@ async def get_audit_logs(
     db: Session = Depends(get_db),
     _admin=Depends(require_role("admin")),
 ):
-    return AdminService.get_audit_logs(db, limit=limit, offset=offset, role=role, endpoint=endpoint)
+    return AdminService.get_audit_logs(
+        db, limit=limit, offset=offset, role=role, endpoint=endpoint
+    )
 
 
-# ── HU-23: Respaldos ─────────────────────────────────────────────────────────
+# ── Respaldos ───────────────────────────────────────────────────────────────
 
 @router.post("/backup")
 async def crear_backup(_admin=Depends(require_role("admin"))):
@@ -94,49 +65,22 @@ async def listar_backups(_admin=Depends(require_role("admin"))):
     return AdminService.listar_backups()
 
 
-# ── HU-36: Umbrales BERT ──────────────────────────────────────────────────────
+# ── Modelo NLP (BETO) ───────────────────────────────────────────────────────
 
-class UmbralItem(BaseModel):
-    umbral: float
-    etiqueta: str
-    hipotesis: str
-
-
-@router.get("/bert/umbrales")
-async def get_umbrales(
-    db: Session = Depends(get_db),
-    _admin=Depends(require_role("admin")),
-):
-    return AdminService.get_umbrales(db)
-
-
-@router.put("/bert/umbrales")
-async def update_umbrales(
-    payload: dict,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_role("admin")),
-):
-    return AdminService.update_umbrales(db, payload)
-
-
-# ── HU-24: Gestión del modelo BERT ────────────────────────────────────────────
-
-@router.get("/bert/modelo")
+@router.get("/nlp/modelo")
 async def get_modelo(_admin=Depends(require_role("admin"))):
     return AdminService.get_modelo_info()
 
 
-@router.post("/bert/recargar")
+@router.post("/nlp/recargar")
 async def recargar_modelo(_admin=Depends(require_role("admin"))):
     return AdminService.recargar_modelo()
 
 
-# ─────────────────────────────────────────────────────────────────
-# HU-38: Asignar estudiantes a psicólogos
-# ─────────────────────────────────────────────────────────────────
+# ── Asignación estudiante → psicólogo ───────────────────────────────────────
 
 class AsignacionIn(BaseModel):
-    psicologo_id: str | None = None  # None = desasignar
+    psicologo_id: str | None = None
 
 
 @router.post("/students/{student_id}/assign-psychologist")
@@ -152,52 +96,17 @@ async def asignar_psicologo(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-# ─────────────────────────────────────────────────────────────────
-# HU-39: Personalizar mensajes del chatbot
-# ─────────────────────────────────────────────────────────────────
+# ── Estadísticas de cuestionarios ───────────────────────────────────────────
 
-class ChatbotMessagesIn(BaseModel):
-    # Cualquier subconjunto de las claves DEFAULT_CHATBOT_MSGS.
-    mensajes: dict
-
-
-@router.get("/chatbot-messages")
-async def get_chatbot_messages(
+@router.get("/cuestionarios/stats")
+async def cuestionarios_stats(
     db: Session = Depends(get_db),
     _admin=Depends(require_role("admin")),
 ):
-    return AdminService.get_chatbot_messages(db)
+    return AdminService.stats_cuestionarios(db)
 
 
-@router.put("/chatbot-messages")
-async def update_chatbot_messages(
-    payload: ChatbotMessagesIn,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_role("admin")),
-):
-    return AdminService.update_chatbot_messages(db, payload.mensajes)
-
-
-# ─────────────────────────────────────────────────────────────────
-# HU-18 (admin lo expone aquí también): reportes mensuales agregados
-# ─────────────────────────────────────────────────────────────────
-
-@router.get("/reports/monthly")
-async def reporte_mensual_admin(
-    year: int,
-    month: int,
-    db: Session = Depends(get_db),
-    _admin=Depends(require_role("admin")),
-):
-    if not (1 <= month <= 12):
-        raise HTTPException(400, "Mes inválido")
-    from app.services.psychologist_service import PsychologistService
-    return PsychologistService.reporte_mensual(db, year, month)
-
-
-# ─────────────────────────────────────────────────────────────────
-# HU-23: Scheduler de backups automáticos
-# ─────────────────────────────────────────────────────────────────
+# ── Scheduler ───────────────────────────────────────────────────────────────
 
 @router.get("/scheduler/info")
 async def scheduler_info(_admin=Depends(require_role("admin"))):

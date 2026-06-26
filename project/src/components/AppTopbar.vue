@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from "vue";
 import { authStore } from "../store/auth";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
-import { buildAlerts } from "../composables/samiPsicoHelpers";
 
 const router = useRouter();
 const route = useRoute();
@@ -42,30 +41,27 @@ const rolLabel = computed(() => {
 
 const seccion = computed(() => {
   const path = route?.path || "";
-  if (path.startsWith("/diario")) return "Diario";
-  if (path.startsWith("/chat")) return "Chat";
-  if (path.startsWith("/historial")) return "Historial";
+  if (path.startsWith("/mis-cuestionarios")) return "Cuestionarios";
+  if (path.startsWith("/responder")) return "Cuestionario";
   if (path.startsWith("/perfil")) return "Cuenta";
   if (path.startsWith("/recursos")) return "Recursos";
   if (path.startsWith("/psicologo")) return "Panel";
   if (path.startsWith("/admin")) return "Panel";
-  if (path.startsWith("/resultados")) return "Resultados";
   return "";
 });
 
 // ─── Nav para estudiante ──────────────────────────────────────────────
 const navSami = [
   { id: "inicio", label: "Inicio", to: "/menu" },
-  { id: "diario", label: "Diario", to: "/diario" },
-  { id: "historial", label: "Mi historial", to: "/mi-historial" },
+  { id: "cuestionarios", label: "Mis cuestionarios", to: "/mis-cuestionarios" },
   { id: "recursos", label: "Recursos", to: "/recursos" },
 ];
 
 const navActivoEst = computed(() => {
   const p = route?.path || "";
   if (p.startsWith("/menu")) return "inicio";
-  if (p.startsWith("/diario")) return "diario";
-  if (p.startsWith("/mi-historial")) return "historial";
+  if (p.startsWith("/mis-cuestionarios") || p.startsWith("/responder"))
+    return "cuestionarios";
   if (p.startsWith("/recursos")) return "recursos";
   return "";
 });
@@ -74,14 +70,26 @@ const navActivoEst = computed(() => {
 const navClinico = [
   { id: "panel", label: "Panel", to: "/psicologo" },
   { id: "estudiantes", label: "Estudiantes", to: "/psicologo/estudiantes" },
-  { id: "alertas", label: "Alertas", to: "/psicologo/alertas" },
+  { id: "sos", label: "SOS", to: "/psicologo/sos" },
+  { id: "citas", label: "Citas", to: "/psicologo/citas" },
+  { id: "banco", label: "Banco", to: "/psicologo/banco" },
+  { id: "plantillas", label: "Plantillas", to: "/psicologo/plantillas" },
 ];
 
 const navActivoPsi = computed(() => {
   const p = route?.path || "";
   if (p.startsWith("/psicologo/estudiantes")) return "estudiantes";
-  if (p.startsWith("/psicologo/alertas")) return "alertas";
-  if (p.startsWith("/psicologo/estudiante/")) return ""; // ficha = sin tab activa
+  if (p.startsWith("/psicologo/sos")) return "sos";
+  if (p.startsWith("/psicologo/citas")) return "citas";
+  if (
+    p.startsWith("/psicologo/banco") ||
+    p.startsWith("/psicologo/bloque-custom")
+  )
+    return "banco";
+  if (p.startsWith("/psicologo/plantillas")) return "plantillas";
+  if (p.startsWith("/psicologo/estudiante/")) return "";
+  if (p.startsWith("/psicologo/resultado/")) return "";
+  if (p.startsWith("/psicologo/asignar")) return "";
   if (p.startsWith("/psicologo")) return "panel";
   return "";
 });
@@ -91,9 +99,10 @@ const alertasCrit = ref(0);
 async function refrescarAlertas() {
   if (!esPsicologo.value) return;
   try {
-    const data = await api.resumenEstudiantes();
-    const list = buildAlerts(data || []);
-    alertasCrit.value = list.filter((a) => a.tipo === "crit").length;
+    const data = await api.dashboardStats();
+    alertasCrit.value = (data?.estudiantes_en_alerta || []).filter(
+      (a) => (a.riesgo_global || "").toUpperCase().startsWith("C") || a.crisis_activada,
+    ).length;
   } catch (_) {
     alertasCrit.value = 0;
   }

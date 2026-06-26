@@ -2,30 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design tokens — Panel Clínico ─────────────────────────────── */
+/* ── Design tokens — Sami 2026 (paleta teal del handoff) ────────── */
 :root {
-  --green:        #0D9488;
-  --green-deep:   #0E3B38;
-  --green-mid:    #3FA89C;
-  --green-tint:   #E6F3F1;
-  --green-line:   #CFE6E2;
-  --amber:        #E8913C;
-  --amber-tint:   #FBEBD7;
-  --good:         #2BB673;
-  --mild:         #E8B04B;
-  --warn:         #E8913C;
-  --bad:          #E25555;
-  --gray-bar:     #9FB0AD;
-  --bg:           #F1F5F4;
+  --teal:        #45988C;
+  --teal-deep:   #2F7D72;
+  --teal-mid:    #74B8AE;
+  --teal-tint:   #EDF5F3;
+  --teal-line:   #C5E1DC;
+  --teal-border-hover: #9ECFC6;
+
+  --risk-critico: #DC2626;
+  --risk-alto:    #F97316;
+  --risk-medio:   #F59E0B;
+  --risk-bajo:    #0EA5E9;
+  --risk-sin:     #45988C;
+  --risk-eval:    #9CA3AF;
+
+  --bg:           #F4F5F6;
   --surface:      #FFFFFF;
-  --ink:          #143230;
-  --muted:        #6E8C88;
-  --faint:        #9DB2AE;
-  --line:         #E4EBE9;
-  --line-soft:    #EEF3F2;
-  --violet:       #6D5BD0;
-  --violet-tint:  #EEEBFB;
-  --accent:       #0D9488;
+  --ink:          #0A0A0A;
+  --ink-question: #1F2937;
+  --ink-body:     #344054;
+  --muted:        #475467;
+  --faint:        #98A2B3;
+  --line:         #ECECEE;
+  --line-soft:    #F4F5F6;
+  --line-input:   #E5E7EB;
+  --placeholder:  #9CA3AF;
+  --sos:          #F87171;
+  --accent:       #45988C;
 }
 
 html,
@@ -35,16 +40,21 @@ body,
 }
 
 body {
-  background: #edf1e8;
-  color: #27352b;
-  font-family: "Hanken Grotesk", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Work Sans", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3,
 .card-title,
 .h {
-  font-family: "Gabarito", system-ui, sans-serif;
+  font-family: "Work Sans", system-ui, sans-serif;
+}
+
+.font-editorial,
+.hero-editorial {
+  font-family: "Newsreader", Georgia, serif;
 }
 
 /* Números siempre tabulares en datos */
@@ -62,16 +72,16 @@ time {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cfdcc5;
+  background: var(--teal-line);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a6b19f;
+  background: var(--teal-mid);
 }
 
 ::selection {
-  background: #cfdcc5;
-  color: #243a2c;
+  background: var(--teal-tint);
+  color: var(--ink);
 }
 
 @layer components {
@@ -85,17 +95,17 @@ time {
 
   /* ─── Tipografía ─────────────────────────────────────────────────── */
   .gb {
-    font-family: "Gabarito", system-ui, sans-serif;
+    font-family: "Work Sans", system-ui, sans-serif;
   }
   .hero-serif {
-    font-family: "Gabarito", system-ui, sans-serif;
-    @apply font-bold text-green-900 leading-[1.05] tracking-title;
+    font-family: "Newsreader", Georgia, serif;
+    @apply font-medium text-ink-900 leading-[1.05] tracking-title;
   }
   .hero-mint {
-    @apply text-green-700;
+    @apply text-teal-700;
   }
   .eyebrow {
-    @apply text-[14px] font-bold text-coral-300;
+    @apply text-[11.5px] font-bold uppercase tracking-[0.06em] text-teal-700;
   }
   .label-kicker {
     @apply text-[11px] font-bold uppercase tracking-[0.09em] text-ink-300;
@@ -239,7 +249,7 @@ time {
 
   /* ─── Avatares ───────────────────────────────────────────────────── */
   .avatar {
-    @apply inline-flex items-center justify-center rounded-full bg-coral-300 text-white font-bold;
+    @apply inline-flex items-center justify-center rounded-full bg-green-600 text-white font-bold;
   }
   .avatar-sm {
     @apply avatar w-[26px] h-[26px] text-[12px];

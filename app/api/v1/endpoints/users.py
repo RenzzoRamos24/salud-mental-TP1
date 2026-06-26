@@ -2,13 +2,16 @@
 Endpoints de gestión de cuenta del usuario (HU-04, HU-05).
 """
 import logging
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.user import UpdateProfileRequest, ChangePasswordRequest, DeleteAccountRequest
 from app.schemas.auth import UserPublic, MensajeResponse
+from app.schemas.cita import CitaOut, CitaSolicitudEstudiante
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
+from app.services.cita_service import CitaService
 from app.core.deps import get_current_user
 from app.models.user import User
 
@@ -61,6 +64,59 @@ async def cambiar_password(
         return MensajeResponse(mensaje="Contraseña actualizada correctamente")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Citas del estudiante ─────────────────────────────────────────
+@router.get("/me/citas", response_model=List[CitaOut])
+async def mis_citas(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return CitaService.listar_estudiante(db, current_user.id)
+
+
+@router.post("/me/citas", response_model=CitaOut, status_code=201)
+async def solicitar_cita(
+    payload: CitaSolicitudEstudiante,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        return CitaService.solicitar_desde_estudiante(
+            db, current_user.id, payload.model_dump()
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/me/slots-sugeridos")
+async def slots_sugeridos(
+    cantidad: int = 4,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Horarios sugeridos para agendar (descarta los que el psicólogo ya tiene ocupados)."""
+    return CitaService.slots_sugeridos(db, current_user.id, cantidad=cantidad)
+
+
+@router.get("/me/psicologo")
+async def mi_psicologo(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Datos básicos del psicólogo asignado al estudiante."""
+    if not current_user.psicologo_id:
+        return {"asignado": False}
+    p = db.query(User).filter(User.id == current_user.psicologo_id).first()
+    if not p:
+        return {"asignado": False}
+    return {
+        "asignado": True,
+        "id": p.id,
+        "nombre": p.nombre,
+        "apellido": p.apellido,
+        "email": p.email,
+    }
 
 
 # HU-05: eliminar cuenta

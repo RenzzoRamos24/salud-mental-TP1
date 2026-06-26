@@ -1,6 +1,5 @@
 """
-Servicio admin: usuarios, configuración, auditoría, backups y modelo BERT.
-Sprint 6: HU-21, HU-22, HU-23, HU-24, HU-36.
+Servicio admin: usuarios, auditoría, backups y métricas de cuestionarios.
 """
 import json
 import shutil
@@ -8,17 +7,12 @@ import os
 from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from app.models.user import User
 from app.models.configuracion import Configuracion
 from app.models.access_log import AccessLog
+from app.models.bank import AplicacionCuestionario, PlantillaCuestionario, BloqueCustom
 
-# ── Claves de configuración ───────────────────────────────────────────────────
-_KEY_PREGUNTAS = "preguntas_encuesta"
-_KEY_FRECUENCIA = "frecuencia_evaluacion_dias"
-_KEY_UMBRALES = "bert_umbrales"
-# HU-39: mensajes del chatbot editables por el admin (saludo, cierre, acuses, etc.)
-_KEY_CHATBOT_MSGS = "chatbot_messages"
 
 BACKUPS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "backups")
 
@@ -40,7 +34,7 @@ def _set_config(db: Session, clave: str, valor):
 
 class AdminService:
 
-    # ── Usuarios ──────────────────────────────────────────────────────────────
+    # ── Usuarios ────────────────────────────────────────────────────────────
 
     @staticmethod
     def listar_usuarios(db: Session, role: Optional[str] = None) -> list[User]:
@@ -61,43 +55,7 @@ class AdminService:
             "inactivos": sum(1 for u in usuarios if not u.activo),
         }
 
-    # ── HU-21: Configuración de encuesta ─────────────────────────────────────
-    #
-    # NOTA CLÍNICA: las preguntas son ahora ítems validados PHQ-9 + GAD-7
-    # (con criterio DSM-5 mapeado). No se permite que el admin las edite,
-    # porque alterar la redacción rompe la validez psicométrica de la escala.
-    # El admin sí puede ajustar la frecuencia de evaluación.
-
-    @staticmethod
-    def get_encuesta(db: Session) -> dict:
-        from app.services.session_service import SessionService
-        frecuencia = _get_config(db, _KEY_FRECUENCIA, 7)
-        return {
-            "preguntas": SessionService.PREGUNTAS,
-            "frecuencia_dias": frecuencia,
-            "escala": "PHQ-9 + GAD-7",
-            "editable": False,
-            "nota": (
-                "Las preguntas son ítems clínicos validados (PHQ-9 / GAD-7) "
-                "y no son editables. Solo la frecuencia es configurable."
-            ),
-        }
-
-    @staticmethod
-    def update_encuesta(db: Session, preguntas=None, frecuencia_dias: int = None) -> dict:
-        if frecuencia_dias is not None:
-            _set_config(db, _KEY_FRECUENCIA, frecuencia_dias)
-        from app.services.session_service import SessionService
-        return {
-            "preguntas": SessionService.PREGUNTAS,
-            "frecuencia_dias": _get_config(db, _KEY_FRECUENCIA, 7),
-            "nota": (
-                "Las preguntas PHQ-9 / GAD-7 están bloqueadas por integridad clínica. "
-                "Solo se actualizó la frecuencia."
-            ),
-        }
-
-    # ── HU-22: Auditoría de accesos ───────────────────────────────────────────
+    # ── Auditoría ───────────────────────────────────────────────────────────
 
     @staticmethod
     def get_audit_logs(
@@ -132,7 +90,7 @@ class AdminService:
             ],
         }
 
-    # ── HU-23: Respaldos de la BD ─────────────────────────────────────────────
+    # ── Respaldos ───────────────────────────────────────────────────────────
 
     @staticmethod
     def crear_backup() -> dict:
@@ -156,46 +114,18 @@ class AdminService:
             [f for f in os.listdir(BACKUPS_DIR) if f.endswith(".db")],
             reverse=True,
         )
-        resultado = []
-        for nombre in archivos:
-            ruta = os.path.join(BACKUPS_DIR, nombre)
-            resultado.append({
+        return [
+            {
                 "archivo": nombre,
-                "tamanio_bytes": os.path.getsize(ruta),
-                "fecha": datetime.utcfromtimestamp(os.path.getmtime(ruta)).isoformat(),
-            })
-        return resultado
-
-    # ── HU-36: Umbrales del modelo BERT ──────────────────────────────────────
-
-    @staticmethod
-    def get_umbrales(db: Session) -> dict:
-        from app.config import settings
-        umbrales_db = _get_config(db, _KEY_UMBRALES, None)
-        if umbrales_db:
-            return umbrales_db
-        # Fallback: leer de settings
-        return {
-            clave: {
-                "umbral": cfg["umbral"],
-                "etiqueta": cfg["etiqueta"],
-                "hipotesis": cfg["hipotesis"],
+                "tamanio_bytes": os.path.getsize(os.path.join(BACKUPS_DIR, nombre)),
+                "fecha": datetime.utcfromtimestamp(
+                    os.path.getmtime(os.path.join(BACKUPS_DIR, nombre))
+                ).isoformat(),
             }
-            for clave, cfg in settings.CONDICIONES.items()
-        }
+            for nombre in archivos
+        ]
 
-    @staticmethod
-    def update_umbrales(db: Session, umbrales: dict) -> dict:
-        from app.config import settings
-        # Persistir en BD
-        _set_config(db, _KEY_UMBRALES, umbrales)
-        # Aplicar en caliente
-        for clave, vals in umbrales.items():
-            if clave in settings.CONDICIONES and "umbral" in vals:
-                settings.CONDICIONES[clave]["umbral"] = float(vals["umbral"])
-        return umbrales
-
-    # ── HU-24: Gestión del modelo BERT ────────────────────────────────────────
+    # ── Modelo NLP ──────────────────────────────────────────────────────────
 
     @staticmethod
     def get_modelo_info() -> dict:
@@ -210,18 +140,25 @@ class AdminService:
             NLPService._is_loading = False
             NLPService._load_time = None
             NLPService._load_timestamp = None
-        return {"mensaje": "Modelo descargado de memoria. Se recargará en la próxima inferencia."}
+        return {"mensaje": "Modelo descargado. Se recargará en la próxima inferencia."}
 
-    # ── HU-38: Asignar estudiante a psicólogo ────────────────────────────────
+    # ── Asignación ─────────────────────────────────────────────────────────
 
     @staticmethod
     def asignar_psicologo(db: Session, estudiante_id: str, psicologo_id: str | None) -> dict:
-        from app.models.user import User
-        est = db.query(User).filter(User.id == estudiante_id, User.role == "estudiante").first()
+        est = (
+            db.query(User)
+            .filter(User.id == estudiante_id, User.role == "estudiante")
+            .first()
+        )
         if not est:
             raise ValueError("Estudiante no encontrado")
         if psicologo_id:
-            psi = db.query(User).filter(User.id == psicologo_id, User.role == "psicologo").first()
+            psi = (
+                db.query(User)
+                .filter(User.id == psicologo_id, User.role == "psicologo")
+                .first()
+            )
             if not psi:
                 raise ValueError("Psicólogo no encontrado o sin ese rol")
         est.psicologo_id = psicologo_id
@@ -229,50 +166,47 @@ class AdminService:
         db.refresh(est)
         return {"id": est.id, "psicologo_id": est.psicologo_id}
 
-    # ── HU-39: Mensajes del chatbot personalizables por el admin ─────────────
-
-    DEFAULT_CHATBOT_MSGS = {
-        "saludo_inicial": (
-            "¡Hola{nombre_coma_espacio}! ¿Cómo puedo ayudarte? Cuéntame con tus palabras "
-            "qué te trae por aquí — cómo te has estado sintiendo en el cole, en casa, "
-            "con tus amigos o con cualquier otra cosa. Lo que escribas queda entre nosotros."
-        ),
-        "bot_nombre": "Sami",
-        "tagline": "En línea · Opinion-BERT activo",
-        "cierre_resultados": "¿Estás listo para ver tus resultados?",
-        "footer_chat": "🔒 Tus respuestas son confidenciales · Procesado con Opinion-BERT · Mapeado a DSM-5",
-    }
+    # ── Estadísticas de cuestionarios ──────────────────────────────────────
 
     @staticmethod
-    def get_chatbot_messages(db: Session) -> dict:
-        custom = _get_config(db, _KEY_CHATBOT_MSGS, {}) or {}
-        return {**AdminService.DEFAULT_CHATBOT_MSGS, **custom}
+    def stats_cuestionarios(db: Session) -> dict:
+        total_asignados = db.query(AplicacionCuestionario).count()
+        total_completados = (
+            db.query(AplicacionCuestionario)
+            .filter(AplicacionCuestionario.completada_at.isnot(None))
+            .count()
+        )
+        total_plantillas = db.query(PlantillaCuestionario).count()
+        total_bloques_custom = db.query(BloqueCustom).count()
 
-    @staticmethod
-    def update_chatbot_messages(db: Session, mensajes: dict) -> dict:
-        # Validamos las claves para no aceptar basura.
-        valid_keys = set(AdminService.DEFAULT_CHATBOT_MSGS.keys())
-        clean = {k: v for k, v in (mensajes or {}).items() if k in valid_keys and isinstance(v, str)}
-        existente = _get_config(db, _KEY_CHATBOT_MSGS, {}) or {}
-        nuevo = {**existente, **clean}
-        _set_config(db, _KEY_CHATBOT_MSGS, nuevo)
-        return AdminService.get_chatbot_messages(db)
+        distribucion = {
+            "CRITICO": 0, "ALTO": 0, "MEDIO": 0, "BAJO": 0, "SIN_RIESGO": 0,
+        }
+        rows = (
+            db.query(AplicacionCuestionario.riesgo_global, func.count(AplicacionCuestionario.id))
+            .filter(AplicacionCuestionario.riesgo_global.isnot(None))
+            .group_by(AplicacionCuestionario.riesgo_global)
+            .all()
+        )
+        for nivel, n in rows:
+            clave = (nivel or "").upper().replace("Í", "I")
+            if clave in distribucion:
+                distribucion[clave] = int(n)
 
-    # ── Carga de config al arrancar ───────────────────────────────────────────
+        return {
+            "total_asignados": total_asignados,
+            "total_completados": total_completados,
+            "tasa_completitud_pct": round(
+                100 * total_completados / total_asignados, 1
+            ) if total_asignados else 0,
+            "total_plantillas": total_plantillas,
+            "total_bloques_custom": total_bloques_custom,
+            "distribucion_riesgo": distribucion,
+        }
+
+    # ── Compatibilidad ──────────────────────────────────────────────────────
 
     @staticmethod
     def aplicar_config_inicio(db: Session):
-        """
-        Aplica umbrales y preguntas guardados en BD al arrancar la app.
-        Garantiza que cambios del admin persistan entre reinicios.
-        """
-        from app.config import settings
-        umbrales = _get_config(db, _KEY_UMBRALES, None)
-        if umbrales:
-            for clave, vals in umbrales.items():
-                if clave in settings.CONDICIONES and "umbral" in vals:
-                    settings.CONDICIONES[clave]["umbral"] = float(vals["umbral"])
-
-        # Las preguntas PHQ-9/GAD-7 son fijas. Ignoramos cualquier override
-        # legado (list[str]) que haya quedado en config para no corromper
-        # el banco clínico estructurado.
+        """Hook de startup. Por ahora no carga nada dinámico."""
+        return None

@@ -1,238 +1,187 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { api } from "../api";
-import PageHeader from "../components/PageHeader.vue";
-import StatCard from "../components/StatCard.vue";
 
-const usuarios = ref([]);
 const stats = ref(null);
-const actividad = ref(null);
+const usuarios = ref([]);
 const cargando = ref(true);
 const error = ref("");
-const filtroRol = ref("todos");
-const filtroTexto = ref("");
+const filtroRol = ref("");
+const procesando = ref(null);
 
 async function cargar() {
   cargando.value = true;
-  error.value = "";
   try {
-    const hoy = new Date();
-    const [u, s, r] = await Promise.all([
-      api.listarUsuarios(),
+    const [s, u] = await Promise.all([
       api.statsUsuarios(),
-      api
-        .reporteMensualAdmin(hoy.getFullYear(), hoy.getMonth() + 1)
-        .catch(() => null),
+      api.listarUsuarios(),
     ]);
-    usuarios.value = u;
     stats.value = s;
-    actividad.value = r;
+    usuarios.value = u;
   } catch (e) {
-    error.value = e.response?.data?.detail || e.message;
+    error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
     cargando.value = false;
   }
 }
+
 onMounted(cargar);
 
+const psicologas = computed(() =>
+  usuarios.value.filter((u) => u.role === "psicologo" && u.activo),
+);
+
+const estudiantes = computed(() =>
+  usuarios.value.filter((u) => u.role === "estudiante"),
+);
+
 const filtrados = computed(() => {
-  const q = filtroTexto.value.trim().toLowerCase();
-  return usuarios.value.filter((u) => {
-    if (filtroRol.value !== "todos" && u.role !== filtroRol.value) return false;
-    if (q && !`${u.nombre} ${u.apellido} ${u.email}`.toLowerCase().includes(q))
-      return false;
-    return true;
-  });
+  if (!filtroRol.value) return usuarios.value;
+  return usuarios.value.filter((u) => u.role === filtroRol.value);
 });
 
-const rolChip = {
-  estudiante: "chip-brand",
-  psicologo: "chip-mint",
-  admin: "chip-peach",
-};
+async function asignarPsico(est, psicologo_id) {
+  procesando.value = est.id;
+  try {
+    await api.asignarPsicologo(est.id, psicologo_id || null);
+    est.psicologo_id = psicologo_id || null;
+  } catch (e) {
+    alert(e?.response?.data?.detail || "No se pudo asignar.");
+  } finally {
+    procesando.value = null;
+  }
+}
 
-function fechaCorta(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("es-PE", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function nombrePsico(id) {
+  if (!id) return "Sin asignar";
+  const p = psicologas.value.find((x) => x.id === id);
+  return p ? `${p.nombre} ${p.apellido}` : id;
 }
 </script>
 
 <template>
   <div class="page-shell-wide">
-    <PageHeader
-      title="Usuarios"
-      accent="del sistema"
-      subtitle="Estudiantes, psicólogos y administradores."
-      tone="brand"
-    />
+    <header class="mb-6">
+      <p class="eyebrow mb-2">Administración</p>
+      <h1 class="hero-serif text-[28px]">
+        Gestión de <span class="hero-mint">usuarios</span>
+      </h1>
+    </header>
 
-    <!-- Stats -->
-    <section v-if="stats" class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-      <StatCard label="Total" :value="stats.total" tone="brand" />
-      <StatCard label="Estudiantes" :value="stats.estudiantes" tone="sky2" />
-      <StatCard label="Psicólogos" :value="stats.psicologos" tone="mint" />
-      <StatCard label="Admins" :value="stats.admins" tone="peach" />
-      <StatCard label="Inactivos" :value="stats.inactivos" tone="brand" />
-    </section>
+    <div v-if="cargando" class="card p-8 text-center text-ink-500">Cargando…</div>
+    <div v-else-if="error" class="banner-danger">{{ error }}</div>
 
-    <!-- Actividad del mes en curso (modelo del diario) -->
-    <section
-      v-if="actividad"
-      class="card p-6 mb-6 fade-in-up"
-    >
-      <div class="flex items-baseline justify-between mb-4 gap-2 flex-wrap">
-        <h2 class="section-title !mb-0">Actividad del diario · este mes</h2>
-        <span class="text-xs text-ink-500">
-          Resumen del mes en curso
-        </span>
-      </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <template v-else>
+      <div class="grid sm:grid-cols-4 gap-3 mb-6">
         <div class="card p-4">
-          <p
-            class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
-          >
-            Entradas escritas
-          </p>
-          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
-            {{ actividad.entradas_diario || 0 }}
-          </p>
+          <p class="text-xs text-ink-400">Total</p>
+          <p class="text-2xl font-semibold">{{ stats?.total || 0 }}</p>
         </div>
         <div class="card p-4">
-          <p
-            class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
-          >
-            Alumnos activos
-          </p>
-          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
-            {{ actividad.alumnos_activos_diario || 0 }}
-          </p>
+          <p class="text-xs text-ink-400">Estudiantes</p>
+          <p class="text-2xl font-semibold">{{ stats?.estudiantes || 0 }}</p>
         </div>
         <div class="card p-4">
-          <p
-            class="text-[11px] uppercase tracking-wider text-ink-500 font-semibold"
-          >
-            Ciclos cerrados
-          </p>
-          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
-            {{ actividad.ciclos_cerrados || 0 }}
-          </p>
+          <p class="text-xs text-ink-400">Psicólogas</p>
+          <p class="text-2xl font-semibold">{{ stats?.psicologos || 0 }}</p>
         </div>
-        <div class="card p-4 border-l-4 border-l-coral-600">
-          <p
-            class="text-[11px] uppercase tracking-wider text-coral-700 font-semibold"
-          >
-            Crisis detectadas
-          </p>
-          <p class="text-2xl font-semibold text-ink-900 mt-1 tabular-nums">
-            {{ actividad.crisis_detectadas || 0 }}
-          </p>
+        <div class="card p-4">
+          <p class="text-xs text-ink-400">Admins</p>
+          <p class="text-2xl font-semibold">{{ stats?.admins || 0 }}</p>
         </div>
       </div>
-    </section>
 
-    <!-- Filtros -->
-    <div class="flex flex-wrap items-center gap-3 mb-4 fade-in-up">
-      <div
-        class="flex gap-1 bg-white rounded-xl p-1 border border-ink-100 shadow-soft"
-      >
-        <button
-          v-for="op in ['todos', 'estudiante', 'psicologo', 'admin']"
-          :key="op"
-          @click="filtroRol = op"
-          :class="[
-            'px-3 py-1.5 text-sm rounded-xl transition capitalize',
-            filtroRol === op
-              ? 'bg-green-600 text-white shadow-soft'
-              : 'text-ink-600 hover:bg-green-50',
-          ]"
-        >
-          {{ op === "todos" ? "Todos" : op + "s" }}
-        </button>
+      <!-- ── Asignación estudiante ↔ psicóloga ────────────────────── -->
+      <h2 class="text-lg font-semibold mb-3">
+        Asignar estudiantes a psicólogas
+      </h2>
+      <p class="text-xs text-ink-500 mb-3">
+        Cada estudiante puede tener una psicóloga responsable. Las alertas y
+        SOS llegan a ella primero.
+      </p>
+      <div v-if="estudiantes.length === 0" class="card p-6 text-ink-500 mb-8">
+        No hay estudiantes registrados todavía.
       </div>
-      <input
-        v-model="filtroTexto"
-        type="text"
-        placeholder="Buscar nombre o correo"
-        class="input flex-1 min-w-[220px]"
-      />
-    </div>
-
-    <p v-if="cargando" class="text-center text-ink-500 py-12">
-      Cargando usuarios…
-    </p>
-    <p v-else-if="error" class="banner-danger">{{ error }}</p>
-    <p
-      v-else-if="filtrados.length === 0"
-      class="text-center text-ink-500 py-12"
-    >
-      No encontramos a nadie con esos filtros.
-    </p>
-
-    <div v-else class="card overflow-hidden fade-in-up">
-      <div class="overflow-x-auto">
+      <div v-else class="card p-2 mb-8 overflow-x-auto">
         <table class="w-full text-sm">
-          <thead
-            class="bg-white text-ink-500 text-left text-xs uppercase tracking-wider"
-          >
-            <tr>
-              <th class="px-5 py-3">Usuario</th>
-              <th class="px-5 py-3">Correo</th>
-              <th class="px-5 py-3">Rol</th>
-              <th class="px-5 py-3">Estado</th>
-              <th class="px-5 py-3">Registrado</th>
+          <thead>
+            <tr class="text-left text-xs text-ink-400 border-b border-cream-200">
+              <th class="p-2">Estudiante</th>
+              <th class="p-2">Email</th>
+              <th class="p-2">Psicóloga asignada</th>
+              <th class="p-2"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-ink-100">
+          <tbody>
             <tr
-              v-for="u in filtrados"
-              :key="u.id"
-              class="hover:bg-green-50/50 transition"
+              v-for="e in estudiantes"
+              :key="e.id"
+              class="border-b border-cream-100"
             >
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-3">
-                  <div class="avatar-sm">
-                    {{ (u.nombre[0] + (u.apellido[0] || "")).toUpperCase() }}
-                  </div>
-                  <p class="font-semibold text-ink-900">
-                    {{ u.nombre }} {{ u.apellido }}
-                  </p>
-                </div>
+              <td class="p-2 font-medium">{{ e.nombre }} {{ e.apellido }}</td>
+              <td class="p-2 text-xs text-ink-500">{{ e.email }}</td>
+              <td class="p-2 text-xs text-ink-500">
+                {{ nombrePsico(e.psicologo_id) }}
               </td>
-              <td class="px-5 py-3 text-ink-600 font-mono text-xs">
-                {{ u.email }}
-              </td>
-              <td class="px-5 py-3">
-                <span
-                  :class="rolChip[u.role] || 'chip-ink'"
-                  class="capitalize"
-                  >{{ u.role }}</span
+              <td class="p-2">
+                <select
+                  class="input text-sm"
+                  :value="e.psicologo_id || ''"
+                  :disabled="procesando === e.id"
+                  @change="asignarPsico(e, $event.target.value)"
                 >
-              </td>
-              <td class="px-5 py-3">
-                <span
-                  v-if="u.activo"
-                  class="text-green-600 text-xs font-semibold inline-flex items-center gap-1"
-                >
-                  Activo
-                </span>
-                <span
-                  v-else
-                  class="text-ink-400 text-xs font-semibold inline-flex items-center gap-1"
-                >
-                  Inactivo
-                </span>
-              </td>
-              <td class="px-5 py-3 text-ink-600">
-                {{ fechaCorta(u.created_at) }}
+                  <option value="">Sin asignar</option>
+                  <option
+                    v-for="p in psicologas"
+                    :key="p.id"
+                    :value="p.id"
+                  >
+                    {{ p.nombre }} {{ p.apellido }}
+                  </option>
+                </select>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+
+      <!-- ── Lista total de usuarios ─────────────────────────────── -->
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">Todos los usuarios</h2>
+        <select v-model="filtroRol" class="input text-sm" style="width: 200px">
+          <option value="">Todos los roles</option>
+          <option value="estudiante">Estudiantes</option>
+          <option value="psicologo">Psicólogas</option>
+          <option value="admin">Administradores</option>
+        </select>
+      </div>
+      <div class="grid gap-2">
+        <div
+          v-for="u in filtrados"
+          :key="u.id"
+          class="card p-3 flex items-center justify-between text-sm"
+        >
+          <div>
+            <p class="font-semibold">{{ u.nombre }} {{ u.apellido }}</p>
+            <p class="text-xs text-ink-500">{{ u.email }}</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="chip-mint">{{ u.role }}</span>
+            <span
+              v-if="u.activo"
+              class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200"
+            >
+              activo
+            </span>
+            <span
+              v-else
+              class="px-2 py-0.5 rounded-full bg-gray-50 text-gray-700 border border-gray-200"
+            >
+              inactivo
+            </span>
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>

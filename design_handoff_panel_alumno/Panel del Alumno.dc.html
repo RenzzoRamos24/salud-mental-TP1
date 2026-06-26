@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Figtree', system-ui, sans-serif; background: #f5f7f8; }
+  .scrolly::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #cfd8d6; border-radius: 8px; }
+  .scrolly::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+
+<div style="display:flex; height:100vh; width:100%; overflow:hidden; color:#33424a;">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="width:264px; flex:0 0 264px; background:#ffffff; border-right:1px solid #eef1f2; display:flex; flex-direction:column; position:relative;">
+
+    <div style="height:64px; display:flex; align-items:center; gap:12px; padding:0 18px; border-bottom:1px solid #f1f4f4;">
+      <div style="width:38px; height:38px; border-radius:11px; background:linear-gradient(135deg,#22b8a6,#0e8d7e); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(20,150,135,.35);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M7 9.5V14c0 1.5 2.5 3 5 3s5-1.5 5-3V9.5"/><path d="M21 7v5"/></svg>
+      </div>
+      <span style="font-size:22px; font-weight:800; color:#243239; letter-spacing:-.5px;">Sami</span>
+      <button style="margin-left:auto; width:30px; height:30px; border:none; background:#f3f6f6; border-radius:8px; color:#6b7b80; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+
+    <div style="padding:22px 18px 18px; text-align:center; border-bottom:1px solid #f1f4f4;">
+      <img src="https://i.pravatar.cc/120?img=15" alt="Lucas Ferreira" style="width:62px; height:62px; border-radius:50%; object-fit:cover; border:3px solid #eaf5f2;">
+      <div style="margin-top:10px; font-weight:700; font-size:15px; color:#243239;">Lucas Ferreira</div>
+      <div style="margin-top:2px; font-size:12px; color:#9aa7ab;">Alumno · 3.º Año</div>
+    </div>
+
+    <nav class="scrolly" style="flex:1; overflow-y:auto; padding:14px 12px;">
+      <a href="#" onClick="{{ goInicio }}" style="{{ navInicioA }}">
+        <span style="{{ navInicioIcon }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg>
+        </span>
+        Inicio
+      </a>
+
+      <a href="#" onClick="{{ goCuestionario }}" style="{{ navCuestionarioA }}">
+        <span style="{{ navCuestionarioIcon }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        </span>
+        Cuestionario
+      </a>
+
+      <a href="#" onClick="{{ goReuniones }}" style="{{ navReunionesA }}">
+        <span style="{{ navReunionesIcon }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3v-4z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+        </span>
+        Reuniones
+      </a>
+
+      <a href="#" onClick="{{ goRecursos }}" style="{{ navRecursosA }}">
+        <span style="{{ navRecursosIcon }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h7v18H6a2 2 0 0 0-2 2V5z"/><path d="M20 3h-5v18h5V3z"/></svg>
+        </span>
+        Recursos de apoyo
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V7l8-4z"/><path d="M12 9v4M12 16h.01"/></svg>
+        </span>
+        SOS · Ayuda
+      </a>
+
+      <a href="#" onClick="{{ goBienestar }}" style="{{ navBienestarA }}">
+        <span style="{{ navBienestarIcon }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-7-9.2A4 4 0 0 1 12 8a4 4 0 0 1 7 3.8C19 15.7 12 20 12 20z"/></svg>
+        </span>
+        Mi bienestar
+      </a>
+
+      <a href="#" onClick="{{ goPerfil }}" style="{{ navPerfilA }}">
+        <span style="{{ navPerfilIcon }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>
+        </span>
+        Mi Perfil
+      </a>
+    </nav>
+
+    <div style="padding:14px 14px 16px;">
+      <div style="background:linear-gradient(135deg,#1aa896,#0c8475); border-radius:14px; padding:16px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 18px rgba(15,130,115,.3); cursor:pointer;">
+        <div style="width:40px; height:40px; border-radius:11px; background:rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; flex:0 0 40px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.3-7-9.2A4 4 0 0 1 12 8a4 4 0 0 1 7 3.8C19 16.7 12 21 12 21z"/><circle cx="12" cy="11" r="1.6"/></svg>
+        </div>
+        <div style="line-height:1.25; min-width:0;">
+          <div style="color:#fff; font-weight:800; font-size:15px; white-space:nowrap;">Hablar con psicólogo</div>
+          <div style="color:rgba(255,255,255,.82); font-size:12px;">Apoyo cuando lo necesites</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+    <!-- topbar -->
+    <header style="height:64px; flex:0 0 64px; background:#fff; border-bottom:1px solid #eef1f2; display:flex; align-items:center; padding:0 26px; gap:18px;">
+      <div style="position:relative; width:340px; max-width:42vw;">
+        <svg style="position:absolute; left:14px; top:50%; transform:translateY(-50%);" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aa7ab" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        <input placeholder="Buscar recursos de apoyo…" style="width:100%; height:42px; border:1px solid #e7ecec; background:#f8fafa; border-radius:12px; padding:0 14px 0 40px; font-size:14px; font-family:inherit; color:#33424a; outline:none;">
+      </div>
+
+      <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+        <button style="position:relative; width:38px; height:38px; border:none; background:#f4f7f7; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#5a6a70;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9z"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span style="position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#f5b301; border:1.5px solid #fff;"></span>
+        </button>
+        <button style="position:relative; width:38px; height:38px; border:none; background:#f4f7f7; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#5a6a70;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12 7.6L3 21l1.9-6A8.4 8.4 0 1 1 21 11.5z"/></svg>
+          <span style="position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#1fbf75; border:1.5px solid #fff;"></span>
+        </button>
+        <div style="position:relative; margin-left:2px;">
+          <img src="https://i.pravatar.cc/80?img=15" alt="" style="width:40px; height:40px; border-radius:11px; object-fit:cover;">
+          <span style="position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:50%; background:#1fbf75; border:2px solid #fff;"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- content -->
+    <main class="scrolly" style="flex:1; overflow-y:auto; background:linear-gradient(180deg,#e9f4f1 0%,#f5f7f8 220px); padding:22px 26px 40px;">
+
+      <div style="display:flex; align-items:center; margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:10px; font-size:15px;">
+          <span onClick="{{ goInicio }}" style="display:flex; cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0e8d7e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg></span>
+          <span style="color:#9aa7ab;">/</span>
+          <span style="color:#0e8d7e; font-weight:700;">{{ crumb }}</span>
+        </div>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #e7ecec; border-radius:12px; padding:9px 14px; font-size:14px; color:#33424a; font-weight:500;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e8d7e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+          Semana 12 · Junio 2026
+        </div>
+      </div>
+
+      <sc-if value="{{ isInicio }}" hint-placeholder-val="{{ true }}">
+      <!-- grid -->
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:20px; align-items:start;">
+
+        <!-- LEFT COLUMN -->
+        <div style="display:flex; flex-direction:column; gap:20px; min-width:0;">
+
+          <!-- KPIs -->
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+
+            <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+              <div style="display:flex; align-items:flex-start; gap:16px;">
+                <div style="width:56px; height:56px; border-radius:50%; border:1.5px solid #d3e8e3; display:flex; align-items:center; justify-content:center; flex:0 0 56px; color:#0e8d7e;">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:30px; font-weight:800; color:#243239; line-height:1.05;">Bien</div>
+                  <div style="margin-top:6px; font-size:14px; color:#8b999e;">Estado de ánimo</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:20px;">
+                <a href="#" onClick="{{ goBienestar }}" style="display:flex; align-items:center; gap:6px; color:#0e8d7e; font-weight:600; font-size:14px; text-decoration:none; cursor:pointer;">Mi bienestar
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <div style="text-align:right;">
+                  <div style="color:#1aa896; font-weight:700; font-size:13px;">↑ mejor</div>
+                  <div style="margin-top:5px; background:#e3f3ef; color:#0e8d7e; font-weight:600; font-size:11px; padding:3px 9px; border-radius:7px;">esta semana</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+              <div style="display:flex; align-items:flex-start; gap:16px;">
+                <div style="width:56px; height:56px; border-radius:50%; border:1.5px solid #d3e8e3; display:flex; align-items:center; justify-content:center; flex:0 0 56px; color:#0e8d7e;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:34px; font-weight:800; color:#243239; line-height:1;">5</div>
+                  <div style="margin-top:6px; font-size:14px; color:#8b999e;">Cuestionarios enviados</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:20px;">
+                <a href="#" onClick="{{ goCuestionario }}" style="display:flex; align-items:center; gap:6px; color:#0e8d7e; font-weight:600; font-size:14px; text-decoration:none; cursor:pointer;">Historial
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <div style="text-align:right;">
+                  <div style="color:#1aa896; font-weight:700; font-size:13px;">+2</div>
+                  <div style="margin-top:5px; background:#e3f3ef; color:#0e8d7e; font-weight:600; font-size:11px; padding:3px 9px; border-radius:7px;">este mes</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+              <div style="display:flex; align-items:flex-start; gap:16px;">
+                <div style="width:56px; height:56px; border-radius:50%; border:1.5px solid #d3e8e3; display:flex; align-items:center; justify-content:center; flex:0 0 56px; color:#0e8d7e;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3v-4z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:30px; font-weight:800; color:#243239; line-height:1.05;">Hoy</div>
+                  <div style="margin-top:6px; font-size:14px; color:#8b999e;">Próxima reunión</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:20px;">
+                <a href="#" onClick="{{ goReuniones }}" style="display:flex; align-items:center; gap:6px; color:#0e8d7e; font-weight:600; font-size:14px; text-decoration:none; cursor:pointer;">Ver agenda
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <div style="text-align:right;">
+                  <div style="color:#1aa896; font-weight:700; font-size:13px;">16:00</div>
+                  <div style="margin-top:5px; background:#e3f3ef; color:#0e8d7e; font-weight:600; font-size:11px; padding:3px 9px; border-radius:7px;">Psic. Méndez</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CUESTIONARIO (acceso) -->
+          <div style="background:#fff; border-radius:18px; padding:22px 24px; box-shadow:0 6px 20px rgba(35,80,95,.05); display:flex; align-items:center; gap:18px;">
+            <div style="width:52px; height:52px; border-radius:14px; background:#e3f3ef; color:#0e8d7e; flex:0 0 52px; display:flex; align-items:center; justify-content:center;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:17px; font-weight:700; color:#243239;">Cuestionario de bienestar</div>
+              <div style="font-size:13.5px; color:#8b999e; margin-top:3px;">Cuéntale a tu psicólogo cómo te sientes. Te toma menos de un minuto.</div>
+            </div>
+            <!-- Apunta este href a tu plantilla del cuestionario -->
+            <a href="#" style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; text-decoration:none; border-radius:11px; padding:12px 22px; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 6px 14px rgba(15,130,115,.3); flex:0 0 auto;">
+              Comenzar cuestionario
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+
+          <!-- RECURSOS -->
+          <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="display:flex; align-items:center; margin-bottom:18px;">
+              <div style="font-size:18px; font-weight:700; color:#243239;">Recursos de apoyo</div>
+              <a href="#" onClick="{{ goRecursos }}" style="margin-left:auto; color:#0e8d7e; font-weight:600; font-size:14px; text-decoration:none; cursor:pointer;">Ver todos</a>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px;">
+
+              <a href="#" style="display:flex; gap:14px; padding:16px; border:1px solid #eef1f2; border-radius:14px; text-decoration:none; align-items:center;" style-hover="border-color:#bfe3db; background:#fafdfc;">
+                <div style="width:46px; height:46px; border-radius:11px; background:#fdecec; color:#e0524c; flex:0 0 46px; display:flex; align-items:center; justify-content:center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h6M8 17h5"/></svg>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-weight:700; font-size:14px; color:#33424a;">Manejo del estrés · Guía</div>
+                  <div style="margin-top:4px; font-size:12px; color:#9aa7ab;">PDF · 10 págs · 12 min</div>
+                </div>
+              </a>
+
+              <a href="#" style="display:flex; gap:14px; padding:16px; border:1px solid #eef1f2; border-radius:14px; text-decoration:none; align-items:center;" style-hover="border-color:#bfe3db; background:#fafdfc;">
+                <div style="width:46px; height:46px; border-radius:11px; background:#eaf0fb; color:#3a78b3; flex:0 0 46px; display:flex; align-items:center; justify-content:center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3V9z"/></svg>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-weight:700; font-size:14px; color:#33424a;">Técnicas de respiración · Video</div>
+                  <div style="margin-top:4px; font-size:12px; color:#9aa7ab;">Video · 7 min</div>
+                </div>
+              </a>
+
+              <a href="#" style="display:flex; gap:14px; padding:16px; border:1px solid #eef1f2; border-radius:14px; text-decoration:none; align-items:center;" style-hover="border-color:#bfe3db; background:#fafdfc;">
+                <div style="width:46px; height:46px; border-radius:11px; background:#e3f3ef; color:#0e8d7e; flex:0 0 46px; display:flex; align-items:center; justify-content:center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-weight:700; font-size:14px; color:#33424a;">Cómo dormir mejor · Artículo</div>
+                  <div style="margin-top:4px; font-size:12px; color:#9aa7ab;">Lectura · 6 min</div>
+                </div>
+              </a>
+
+              <a href="#" style="display:flex; gap:14px; padding:16px; border:1px solid #eef1f2; border-radius:14px; text-decoration:none; align-items:center;" style-hover="border-color:#bfe3db; background:#fafdfc;">
+                <div style="width:46px; height:46px; border-radius:11px; background:#fef3e2; color:#d98a1f; flex:0 0 46px; display:flex; align-items:center; justify-content:center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8 4.5 6 5v13c2-.5 4.5 0 6 1.5 1.5-1.5 4-2 6-1.5V5c-2-.5-4.5 0-6 1.5z"/><path d="M12 6.5V19"/></svg>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-weight:700; font-size:14px; color:#33424a;">Diario de emociones · Cuaderno</div>
+                  <div style="margin-top:4px; font-size:12px; color:#9aa7ab;">Actividad · 15 min</div>
+                </div>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+
+          <!-- SOS -->
+          <div style="border-radius:18px; padding:24px; background:linear-gradient(150deg,#ff6b6b,#e0413c); box-shadow:0 12px 26px rgba(224,65,60,.32); color:#fff; position:relative; overflow:hidden;">
+            <div style="position:absolute; right:-30px; top:-30px; width:130px; height:130px; border-radius:50%; background:rgba(255,255,255,.10);"></div>
+            <div style="display:flex; align-items:center; gap:12px; position:relative;">
+              <div style="width:48px; height:48px; border-radius:13px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V7l8-4z"/><path d="M12 9v4M12 16h.01"/></svg>
+              </div>
+              <div>
+                <div style="font-weight:800; font-size:18px;">SOS · ¿Necesitas ayuda?</div>
+                <div style="font-size:12.5px; color:rgba(255,255,255,.85); margin-top:2px;">Soporte disponible 24/7</div>
+              </div>
+            </div>
+
+            <button style="width:100%; margin-top:18px; background:#fff; color:#e0413c; border:none; border-radius:12px; padding:13px; font-size:15px; font-weight:800; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+              Llamar ahora
+            </button>
+
+            <div style="display:flex; flex-direction:column; gap:9px; margin-top:14px;">
+              <a href="#" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.14); border-radius:11px; padding:11px 13px; text-decoration:none; color:#fff; font-size:13.5px; font-weight:600;" style-hover="background:rgba(255,255,255,.22);">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"/></svg>
+                Chat con el psicólogo
+              </a>
+              <a href="#" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.14); border-radius:11px; padding:11px 13px; text-decoration:none; color:#fff; font-size:13.5px; font-weight:600;" style-hover="background:rgba(255,255,255,.22);">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1 7.8 7.7 7.8-7.7 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+                Apoyo emocional
+              </a>
+            </div>
+          </div>
+
+          <!-- REUNIONES -->
+          <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="display:flex; align-items:center; margin-bottom:16px;">
+              <div style="font-size:18px; font-weight:700; color:#243239;">Reuniones con el psicólogo</div>
+              <a href="#" onClick="{{ goReuniones }}" style="margin-left:auto; color:#0e8d7e; font-weight:600; font-size:13px; text-decoration:none; cursor:pointer;">Agenda</a>
+            </div>
+
+            <div style="border:1.5px solid #cfeae3; background:#f4fbf9; border-radius:14px; padding:16px;">
+              <div style="display:flex; align-items:center; gap:8px; color:#0e8d7e; font-size:12px; font-weight:700;">
+                <span style="width:8px; height:8px; border-radius:50%; background:#1fbf75; display:inline-block; box-shadow:0 0 0 4px rgba(31,191,117,.18);"></span>
+                EN VIVO EN 25 MIN
+              </div>
+              <div style="font-weight:700; font-size:15px; color:#243239; margin-top:8px;">Sesión con tu psicólogo</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:6px; font-size:13px; color:#8b999e;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                Hoy · 16:00 – 16:45 · Psic. Méndez
+              </div>
+              <button style="width:100%; margin-top:14px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; border:none; border-radius:11px; padding:11px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3v-4z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+                Unirse
+              </button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid #f1f4f4;">
+                <img src="https://i.pravatar.cc/60?img=33" alt="" style="width:38px; height:38px; border-radius:10px; object-fit:cover;">
+                <div style="min-width:0; flex:1;">
+                  <div style="font-weight:600; font-size:13.5px; color:#33424a;">Seguimiento semanal</div>
+                  <div style="font-size:12px; color:#9aa7ab;">Mar 30 · 10:00 · Psic. Méndez</div>
+                </div>
+                <span style="font-size:12px; font-weight:600; color:#0e8d7e; background:#e3f3ef; padding:4px 9px; border-radius:7px;">Online</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 4px;">
+                <img src="https://i.pravatar.cc/60?img=52" alt="" style="width:38px; height:38px; border-radius:10px; object-fit:cover;">
+                <div style="min-width:0; flex:1;">
+                  <div style="font-weight:600; font-size:13.5px; color:#33424a;">Sesión individual</div>
+                  <div style="font-size:12px; color:#9aa7ab;">Vie 27 · 14:30 · Psic. Soto</div>
+                </div>
+                <span style="font-size:12px; font-weight:600; color:#d98a1f; background:#fef3e2; padding:4px 9px; border-radius:7px;">Presencial</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- estado de ánimo semanal -->
+      <div style="background:#fff; border-radius:18px; padding:22px 24px 16px; box-shadow:0 6px 20px rgba(35,80,95,.05); margin-top:20px;">
+        <div style="display:flex; align-items:center; margin-bottom:18px;">
+          <div style="font-size:18px; font-weight:700; color:#243239;">Tu estado de ánimo</div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; color:#8b999e;"><span style="width:9px;height:9px;border-radius:3px;background:#1aa896;display:inline-block;"></span>nivel por día</div>
+        </div>
+        <div style="position:relative; height:200px;">
+          <div style="position:absolute; inset:0 0 24px 0; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+            <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+            <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+            <div style="border-top:1px solid #e7ecec; height:0;"></div>
+          </div>
+          {{ chart }}
+          <div style="position:absolute; left:0; right:0; bottom:0; display:flex; gap:10px; padding:0 4px;">
+            <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Lun</div>
+            <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Mar</div>
+            <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Mié</div>
+            <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Jue</div>
+            <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Vie</div>
+            <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Sáb</div>
+            <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Dom</div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isReuniones }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start;">
+
+        <!-- LEFT: lista de reuniones -->
+        <div style="display:flex; flex-direction:column; gap:18px; min-width:0;">
+
+          <!-- tabs + agendar -->
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="display:flex; gap:6px; background:#fff; padding:5px; border-radius:12px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+              <button style="border:none; background:#0e8d7e; color:#fff; font-weight:700; font-size:13px; padding:8px 16px; border-radius:9px; cursor:pointer; font-family:inherit;">Próximas</button>
+              <button style="border:none; background:transparent; color:#5a6a70; font-weight:600; font-size:13px; padding:8px 16px; border-radius:9px; cursor:pointer; font-family:inherit;">Pasadas</button>
+            </div>
+            <button style="margin-left:auto; display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; border:none; border-radius:11px; padding:11px 18px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 6px 14px rgba(15,130,115,.3);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Agendar reunión
+            </button>
+          </div>
+
+          <!-- FEATURED: próxima reunión -->
+          <div style="background:#fff; border-radius:18px; box-shadow:0 6px 20px rgba(35,80,95,.05); overflow:hidden;">
+            <div style="background:linear-gradient(120deg,#e7f6f1,#f4fbf9); padding:20px 24px; border-bottom:1px solid #eaf3ef;">
+              <div style="display:flex; align-items:center; gap:8px; color:#0e8d7e; font-size:12px; font-weight:800; letter-spacing:.3px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:#1fbf75; display:inline-block; box-shadow:0 0 0 4px rgba(31,191,117,.18);"></span>
+                EN VIVO EN 25 MIN
+              </div>
+              <div style="display:flex; align-items:center; gap:14px; margin-top:14px;">
+                <img src="https://i.pravatar.cc/90?img=47" alt="" style="width:52px; height:52px; border-radius:14px; object-fit:cover;">
+                <div>
+                  <div style="font-weight:800; font-size:18px; color:#243239;">Sesión de seguimiento</div>
+                  <div style="font-size:13px; color:#6b7b80; margin-top:2px;">Psic. Carla Méndez · Bienestar estudiantil</div>
+                </div>
+              </div>
+            </div>
+            <div style="padding:20px 24px;">
+              <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <div style="width:34px; height:34px; border-radius:9px; background:#e3f3ef; color:#0e8d7e; flex:0 0 34px; display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+                  <div><div style="font-size:12px; color:#9aa7ab;">Fecha</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:2px;">Hoy · 25 jun 2026</div></div>
+                </div>
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <div style="width:34px; height:34px; border-radius:9px; background:#e3f3ef; color:#0e8d7e; flex:0 0 34px; display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+                  <div><div style="font-size:12px; color:#9aa7ab;">Hora</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:2px;">16:00 – 16:45</div></div>
+                </div>
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <div style="width:34px; height:34px; border-radius:9px; background:#e3f3ef; color:#0e8d7e; flex:0 0 34px; display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3v-4z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></div>
+                  <div><div style="font-size:12px; color:#9aa7ab;">Modalidad</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:2px;">Videollamada</div></div>
+                </div>
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                  <div style="width:34px; height:34px; border-radius:9px; background:#e3f3ef; color:#0e8d7e; flex:0 0 34px; display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg></div>
+                  <div><div style="font-size:12px; color:#9aa7ab;">Enlace</div><div style="font-size:14px; font-weight:700; color:#0e8d7e; margin-top:2px;">meet.sami.app/lf21</div></div>
+                </div>
+              </div>
+
+              <div style="margin-top:18px; background:#f7faf9; border:1px solid #eef3f1; border-radius:12px; padding:14px 16px;">
+                <div style="font-size:12px; color:#9aa7ab; font-weight:600; margin-bottom:4px;">Objetivo de la sesión</div>
+                <div style="font-size:14px; color:#33424a; line-height:1.5;">Revisaremos cómo te has sentido esta semana y la última novedad que compartiste en el cuestionario.</div>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:10px; margin-top:18px; flex-wrap:wrap;">
+                <button style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; border:none; border-radius:11px; padding:12px 20px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 6px 14px rgba(15,130,115,.3);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3v-4z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+                  Unirse a la videollamada
+                </button>
+                <button style="border:1px solid #d3e8e3; background:#fff; color:#0e8d7e; border-radius:11px; padding:12px 18px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;">Reagendar</button>
+                <button style="display:flex; align-items:center; gap:7px; border:1px solid #d3e8e3; background:#fff; color:#0e8d7e; border-radius:11px; padding:12px 18px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 13v4M10 15h4"/></svg>
+                  Añadir al calendario
+                </button>
+                <button style="margin-left:auto; border:none; background:none; color:#e0524c; font-weight:600; font-size:13.5px; font-family:inherit; cursor:pointer;">Cancelar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reunión 2 -->
+          <div style="background:#fff; border-radius:18px; padding:20px 22px; box-shadow:0 6px 20px rgba(35,80,95,.05); display:flex; gap:18px;">
+            <div style="width:64px; flex:0 0 64px; text-align:center; background:#f4fbf9; border:1px solid #e3f0ec; border-radius:12px; padding:10px 0; height:fit-content;">
+              <div style="font-size:11px; font-weight:700; color:#0e8d7e; text-transform:uppercase;">Mar</div>
+              <div style="font-size:24px; font-weight:800; color:#243239; line-height:1.1;">30</div>
+              <div style="font-size:11px; color:#9aa7ab;">Jun</div>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="font-weight:700; font-size:16px; color:#243239;">Seguimiento semanal</div>
+                <span style="margin-left:auto; font-size:12px; font-weight:600; color:#0e8d7e; background:#e3f3ef; padding:4px 10px; border-radius:7px;">Online</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:9px;">
+                <img src="https://i.pravatar.cc/60?img=47" alt="" style="width:26px; height:26px; border-radius:7px; object-fit:cover;">
+                <span style="font-size:13px; color:#6b7b80; font-weight:600;">Psic. Carla Méndez</span>
+                <span style="color:#cfd8d6;">·</span>
+                <span style="font-size:13px; color:#8b999e;">10:00 – 10:45</span>
+              </div>
+              <div style="font-size:13.5px; color:#6b7b80; line-height:1.5; margin-top:10px;">Espacio semanal para conversar sobre tu progreso y resolver cualquier inquietud.</div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+                <button style="border:1px solid #d3e8e3; background:#fff; color:#0e8d7e; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;">Reagendar</button>
+                <button style="display:flex; align-items:center; gap:6px; border:1px solid #e7ecec; background:#fff; color:#5a6a70; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                  Calendario
+                </button>
+                <button style="margin-left:auto; border:none; background:none; color:#e0524c; font-weight:600; font-size:13px; font-family:inherit; cursor:pointer;">Cancelar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reunión 3 -->
+          <div style="background:#fff; border-radius:18px; padding:20px 22px; box-shadow:0 6px 20px rgba(35,80,95,.05); display:flex; gap:18px;">
+            <div style="width:64px; flex:0 0 64px; text-align:center; background:#fef7ee; border:1px solid #f3e6d2; border-radius:12px; padding:10px 0; height:fit-content;">
+              <div style="font-size:11px; font-weight:700; color:#d98a1f; text-transform:uppercase;">Vie</div>
+              <div style="font-size:24px; font-weight:800; color:#243239; line-height:1.1;">27</div>
+              <div style="font-size:11px; color:#9aa7ab;">Jun</div>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="font-weight:700; font-size:16px; color:#243239;">Sesión individual</div>
+                <span style="margin-left:auto; font-size:12px; font-weight:600; color:#d98a1f; background:#fef3e2; padding:4px 10px; border-radius:7px;">Presencial</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:9px;">
+                <img src="https://i.pravatar.cc/60?img=52" alt="" style="width:26px; height:26px; border-radius:7px; object-fit:cover;">
+                <span style="font-size:13px; color:#6b7b80; font-weight:600;">Psic. Daniel Soto</span>
+                <span style="color:#cfd8d6;">·</span>
+                <span style="font-size:13px; color:#8b999e;">14:30 – 15:15</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:7px; margin-top:10px; font-size:13px; color:#6b7b80;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa7ab" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Consultorio 2 · Bloque B, planta baja
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+                <button style="border:1px solid #d3e8e3; background:#fff; color:#0e8d7e; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;">Reagendar</button>
+                <button style="display:flex; align-items:center; gap:6px; border:1px solid #e7ecec; background:#fff; color:#5a6a70; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  Cómo llegar
+                </button>
+                <button style="margin-left:auto; border:none; background:none; color:#e0524c; font-weight:600; font-size:13px; font-family:inherit; cursor:pointer;">Cancelar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pasada -->
+          <div style="font-size:13px; font-weight:700; color:#9aa7ab; text-transform:uppercase; letter-spacing:.4px; margin-top:6px;">Anteriores</div>
+          <div style="background:#fff; border-radius:18px; padding:20px 22px; box-shadow:0 6px 20px rgba(35,80,95,.05); display:flex; gap:18px; opacity:.9;">
+            <div style="width:64px; flex:0 0 64px; text-align:center; background:#f4f6f6; border:1px solid #eaeeee; border-radius:12px; padding:10px 0; height:fit-content;">
+              <div style="font-size:11px; font-weight:700; color:#9aa7ab; text-transform:uppercase;">Mié</div>
+              <div style="font-size:24px; font-weight:800; color:#7c8b90; line-height:1.1;">18</div>
+              <div style="font-size:11px; color:#9aa7ab;">Jun</div>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="font-weight:700; font-size:16px; color:#5a6a70;">Primera sesión</div>
+                <span style="margin-left:auto; display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; color:#1aa896; background:#eef7f4; padding:4px 10px; border-radius:7px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Realizada
+                </span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:9px;">
+                <img src="https://i.pravatar.cc/60?img=47" alt="" style="width:26px; height:26px; border-radius:7px; object-fit:cover;">
+                <span style="font-size:13px; color:#8b999e; font-weight:600;">Psic. Carla Méndez</span>
+                <span style="color:#cfd8d6;">·</span>
+                <span style="font-size:13px; color:#9aa7ab;">11:00 – 11:50</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+                <button style="display:flex; align-items:center; gap:6px; border:1px solid #d3e8e3; background:#fff; color:#0e8d7e; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+                  Ver resumen
+                </button>
+                <button style="border:1px solid #e7ecec; background:#fff; color:#5a6a70; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;">Volver a agendar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: psicólogo + agendar -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+
+          <div style="background:#fff; border-radius:18px; padding:24px 22px; box-shadow:0 6px 20px rgba(35,80,95,.05); text-align:center;">
+            <img src="https://i.pravatar.cc/120?img=47" alt="" style="width:74px; height:74px; border-radius:50%; object-fit:cover; border:3px solid #eaf5f2;">
+            <div style="font-weight:800; font-size:16px; color:#243239; margin-top:12px;">Psic. Carla Méndez</div>
+            <div style="font-size:12.5px; color:#9aa7ab; margin-top:2px;">Psicóloga · Bienestar estudiantil</div>
+            <div style="display:inline-flex; align-items:center; gap:6px; margin-top:12px; background:#eef7f4; color:#1aa896; font-size:12px; font-weight:700; padding:5px 12px; border-radius:20px;">
+              <span style="width:7px; height:7px; border-radius:50%; background:#1fbf75; display:inline-block;"></span>
+              Disponible hoy
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:18px;">
+              <button style="display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; border:none; border-radius:11px; padding:12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 6px 14px rgba(15,130,115,.3);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"/></svg>
+                Enviar mensaje
+              </button>
+              <button style="background:#fff; color:#0e8d7e; border:1px solid #d3e8e3; border-radius:11px; padding:12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;">Ver perfil</button>
+            </div>
+          </div>
+
+          <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:16px; font-weight:700; color:#243239;">Agendar nueva reunión</div>
+            <div style="font-size:13px; color:#9aa7ab; margin-top:4px;">Horarios disponibles esta semana</div>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px;">
+              <button style="display:flex; flex-direction:column; align-items:center; gap:3px; border:1px solid #e3f0ec; background:#f7faf9; border-radius:10px; padding:11px; font-size:13px; font-family:inherit; cursor:pointer; color:#33424a;"><span style="color:#0e8d7e; font-weight:700;">Jue 26</span><span>16:00</span></button>
+              <button style="display:flex; flex-direction:column; align-items:center; gap:3px; border:1px solid #e3f0ec; background:#f7faf9; border-radius:10px; padding:11px; font-size:13px; font-family:inherit; cursor:pointer; color:#33424a;"><span style="color:#0e8d7e; font-weight:700;">Vie 27</span><span>10:00</span></button>
+              <button style="display:flex; flex-direction:column; align-items:center; gap:3px; border:1px solid #e3f0ec; background:#f7faf9; border-radius:10px; padding:11px; font-size:13px; font-family:inherit; cursor:pointer; color:#33424a;"><span style="color:#0e8d7e; font-weight:700;">Lun 30</span><span>09:00</span></button>
+              <button style="display:flex; flex-direction:column; align-items:center; gap:3px; border:1px solid #e3f0ec; background:#f7faf9; border-radius:10px; padding:11px; font-size:13px; font-family:inherit; cursor:pointer; color:#33424a;"><span style="color:#0e8d7e; font-weight:700;">Mar 01</span><span>15:30</span></button>
+            </div>
+            <a href="#" style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:16px; color:#0e8d7e; font-weight:600; font-size:13.5px; text-decoration:none;">Ver más horarios
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ VISTA: CUESTIONARIO ============ -->
+      <sc-if value="{{ isCuestionario }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start;">
+        <div style="display:flex; flex-direction:column; gap:18px; min-width:0;">
+
+          <div style="background:linear-gradient(120deg,#e7f6f1,#f4fbf9); border:1px solid #e0f0ea; border-radius:18px; padding:22px 24px;">
+            <div style="font-size:20px; font-weight:800; color:#243239;">¿Tienes alguna novedad?</div>
+            <div style="font-size:14px; color:#56666c; margin-top:6px; line-height:1.5; max-width:560px;">Completa este cuestionario cuando quieras contarle algo a tu psicólogo. Es confidencial y te toma menos de un minuto.</div>
+          </div>
+
+          <div style="background:#fff; border-radius:18px; padding:40px 28px; box-shadow:0 6px 20px rgba(35,80,95,.05); text-align:center;">
+            <div style="width:68px; height:68px; border-radius:18px; background:#e3f3ef; color:#0e8d7e; display:flex; align-items:center; justify-content:center; margin:0 auto;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+            </div>
+            <div style="font-size:19px; font-weight:800; color:#243239; margin-top:18px;">Cuestionario de bienestar</div>
+            <div style="font-size:14px; color:#8b999e; margin-top:8px; line-height:1.5; max-width:420px; margin-left:auto; margin-right:auto;">Responde unas preguntas rápidas para contarle a tu psicólogo cómo te sientes. Es confidencial.</div>
+            <!-- Apunta este href a tu plantilla del cuestionario -->
+            <a href="#" style="display:inline-flex; align-items:center; gap:9px; margin-top:22px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; text-decoration:none; border-radius:12px; padding:14px 28px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 6px 14px rgba(15,130,115,.3);">
+              Comenzar cuestionario
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- historial -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:16px; font-weight:700; color:#243239; margin-bottom:14px;">Cuestionarios enviados</div>
+            <div style="display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f1f4f4;">
+                <div style="width:38px; height:38px; border-radius:10px; background:#e6f5f0; color:#1aa896; flex:0 0 38px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></div>
+                <div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:700; color:#33424a;">25 jun · Ánimo: Bien</div><div style="font-size:12px; color:#9aa7ab;">Enviado hoy</div></div>
+                <span style="font-size:11px; font-weight:600; color:#1aa896; background:#eef7f4; padding:4px 9px; border-radius:7px;">Revisado</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f1f4f4;">
+                <div style="width:38px; height:38px; border-radius:10px; background:#fbf7e6; color:#c2a02a; flex:0 0 38px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 15h8"/><path d="M9 9h.01M15 9h.01"/></svg></div>
+                <div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:700; color:#33424a;">18 jun · Ánimo: Regular</div><div style="font-size:12px; color:#9aa7ab;">Hace 1 semana</div></div>
+                <span style="font-size:11px; font-weight:600; color:#1aa896; background:#eef7f4; padding:4px 9px; border-radius:7px;">Revisado</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 0;">
+                <div style="width:38px; height:38px; border-radius:10px; background:#e6f5f0; color:#1aa896; flex:0 0 38px; display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></div>
+                <div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:700; color:#33424a;">10 jun · Ánimo: Bien</div><div style="font-size:12px; color:#9aa7ab;">Hace 2 semanas</div></div>
+                <span style="font-size:11px; font-weight:600; color:#1aa896; background:#eef7f4; padding:4px 9px; border-radius:7px;">Revisado</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#f7faf9; border:1px solid #eef3f1; border-radius:18px; padding:20px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0e8d7e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <div style="font-size:14px; font-weight:700; color:#243239;">100% confidencial</div>
+            </div>
+            <div style="font-size:13px; color:#6b7b80; line-height:1.5; margin-top:8px;">Solo tu psicólogo asignado puede ver tus respuestas. Nadie más del centro tiene acceso.</div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ VISTA: RECURSOS ============ -->
+      <sc-if value="{{ isRecursos }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button style="border:none; background:#0e8d7e; color:#fff; font-weight:700; font-size:13px; padding:9px 16px; border-radius:10px; cursor:pointer; font-family:inherit;">Todos</button>
+          <button style="border:1px solid #e7ecec; background:#fff; color:#5a6a70; font-weight:600; font-size:13px; padding:9px 16px; border-radius:10px; cursor:pointer; font-family:inherit;">Estrés</button>
+          <button style="border:1px solid #e7ecec; background:#fff; color:#5a6a70; font-weight:600; font-size:13px; padding:9px 16px; border-radius:10px; cursor:pointer; font-family:inherit;">Sueño</button>
+          <button style="border:1px solid #e7ecec; background:#fff; color:#5a6a70; font-weight:600; font-size:13px; padding:9px 16px; border-radius:10px; cursor:pointer; font-family:inherit;">Ansiedad</button>
+          <button style="border:1px solid #e7ecec; background:#fff; color:#5a6a70; font-weight:600; font-size:13px; padding:9px 16px; border-radius:10px; cursor:pointer; font-family:inherit;">Mindfulness</button>
+        </div>
+
+        <!-- destacado -->
+        <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 6px 20px rgba(35,80,95,.05); display:flex; gap:22px; align-items:center;">
+          <div style="width:96px; height:96px; border-radius:18px; background:linear-gradient(135deg,#22b8a6,#0e8d7e); color:#fff; flex:0 0 96px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px rgba(15,130,115,.3);">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2z"/><path d="M9 21h6M10 18v3M14 18v3"/></svg>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <span style="font-size:11px; font-weight:700; color:#0e8d7e; background:#e3f3ef; padding:4px 10px; border-radius:7px;">DESTACADO</span>
+            <div style="font-size:19px; font-weight:800; color:#243239; margin-top:10px;">Calma en 3 minutos: ejercicio guiado</div>
+            <div style="font-size:14px; color:#6b7b80; line-height:1.5; margin-top:6px; max-width:520px;">Una práctica corta para bajar la tensión antes de un examen o cuando te sientas abrumado.</div>
+          </div>
+          <button style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; border:none; border-radius:11px; padding:12px 22px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 6px 14px rgba(15,130,115,.3); flex:0 0 auto;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8V4z"/></svg>
+            Empezar
+          </button>
+        </div>
+
+        <!-- grid -->
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:18px;">
+
+          <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(35,80,95,.05); overflow:hidden;">
+            <div style="height:90px; background:#fdecec; display:flex; align-items:center; justify-content:center; color:#e0524c;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h6M8 17h5"/></svg></div>
+            <div style="padding:16px 18px 18px;"><div style="font-size:11px; color:#9aa7ab; font-weight:600;">PDF · 12 min</div><div style="font-size:15px; font-weight:700; color:#33424a; margin-top:5px;">Manejo del estrés</div><a href="#" style="display:inline-flex; align-items:center; gap:5px; margin-top:10px; color:#0e8d7e; font-weight:600; font-size:13px; text-decoration:none;">Leer guía <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+          </div>
+
+          <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(35,80,95,.05); overflow:hidden;">
+            <div style="height:90px; background:#eaf0fb; display:flex; align-items:center; justify-content:center; color:#3a78b3;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3V9z"/></svg></div>
+            <div style="padding:16px 18px 18px;"><div style="font-size:11px; color:#9aa7ab; font-weight:600;">Video · 7 min</div><div style="font-size:15px; font-weight:700; color:#33424a; margin-top:5px;">Técnicas de respiración</div><a href="#" style="display:inline-flex; align-items:center; gap:5px; margin-top:10px; color:#0e8d7e; font-weight:600; font-size:13px; text-decoration:none;">Ver video <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+          </div>
+
+          <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(35,80,95,.05); overflow:hidden;">
+            <div style="height:90px; background:#e3f3ef; display:flex; align-items:center; justify-content:center; color:#0e8d7e;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+            <div style="padding:16px 18px 18px;"><div style="font-size:11px; color:#9aa7ab; font-weight:600;">Lectura · 6 min</div><div style="font-size:15px; font-weight:700; color:#33424a; margin-top:5px;">Cómo dormir mejor</div><a href="#" style="display:inline-flex; align-items:center; gap:5px; margin-top:10px; color:#0e8d7e; font-weight:600; font-size:13px; text-decoration:none;">Leer artículo <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+          </div>
+
+          <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(35,80,95,.05); overflow:hidden;">
+            <div style="height:90px; background:#fef3e2; display:flex; align-items:center; justify-content:center; color:#d98a1f;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8 4.5 6 5v13c2-.5 4.5 0 6 1.5 1.5-1.5 4-2 6-1.5V5c-2-.5-4.5 0-6 1.5z"/><path d="M12 6.5V19"/></svg></div>
+            <div style="padding:16px 18px 18px;"><div style="font-size:11px; color:#9aa7ab; font-weight:600;">Actividad · 15 min</div><div style="font-size:15px; font-weight:700; color:#33424a; margin-top:5px;">Diario de emociones</div><a href="#" style="display:inline-flex; align-items:center; gap:5px; margin-top:10px; color:#0e8d7e; font-weight:600; font-size:13px; text-decoration:none;">Abrir <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+          </div>
+
+          <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(35,80,95,.05); overflow:hidden;">
+            <div style="height:90px; background:#efeafa; display:flex; align-items:center; justify-content:center; color:#7a5cc4;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 18 0M3 12a9 9 0 0 0 18 0M8 12h8"/><circle cx="12" cy="12" r="2"/></svg></div>
+            <div style="padding:16px 18px 18px;"><div style="font-size:11px; color:#9aa7ab; font-weight:600;">Audio · 5 min</div><div style="font-size:15px; font-weight:700; color:#33424a; margin-top:5px;">Mindfulness guiado</div><a href="#" style="display:inline-flex; align-items:center; gap:5px; margin-top:10px; color:#0e8d7e; font-weight:600; font-size:13px; text-decoration:none;">Escuchar <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+          </div>
+
+          <div style="background:#fff; border-radius:16px; box-shadow:0 6px 20px rgba(35,80,95,.05); overflow:hidden;">
+            <div style="height:90px; background:#fdecec; display:flex; align-items:center; justify-content:center; color:#e0524c;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V7l8-4z"/><path d="M12 9v4M12 16h.01"/></svg></div>
+            <div style="padding:16px 18px 18px;"><div style="font-size:11px; color:#9aa7ab; font-weight:600;">Guía · 9 min</div><div style="font-size:15px; font-weight:700; color:#33424a; margin-top:5px;">Gestionar la ansiedad</div><a href="#" style="display:inline-flex; align-items:center; gap:5px; margin-top:10px; color:#0e8d7e; font-weight:600; font-size:13px; text-decoration:none;">Leer guía <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ VISTA: MI BIENESTAR ============ -->
+      <sc-if value="{{ isBienestar }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start;">
+        <div style="display:flex; flex-direction:column; gap:20px; min-width:0;">
+
+          <!-- check-in de ánimo -->
+          <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:18px; font-weight:700; color:#243239;">¿Cómo te sientes hoy?</div>
+            <div style="font-size:13px; color:#9aa7ab; margin-top:4px;">Registra tu ánimo para ver tu evolución.</div>
+            <div style="display:flex; gap:10px; margin-top:18px;">
+              <button style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; border:none; background:none; cursor:pointer; font-family:inherit;"><span style="width:54px; height:54px; border-radius:50%; background:#fdecec; color:#e0524c; display:flex; align-items:center; justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 16q4-3 8 0" /><path d="M9 9h.01M15 9h.01"/></svg></span><span style="font-size:12px; color:#8b999e;">Muy mal</span></button>
+              <button style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; border:none; background:none; cursor:pointer; font-family:inherit;"><span style="width:54px; height:54px; border-radius:50%; background:#fef3e2; color:#d98a1f; display:flex; align-items:center; justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 15.5q3.5-1.5 7 0"/><path d="M9 9h.01M15 9h.01"/></svg></span><span style="font-size:12px; color:#8b999e;">Mal</span></button>
+              <button style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; border:none; background:none; cursor:pointer; font-family:inherit;"><span style="width:54px; height:54px; border-radius:50%; background:#fbf7e6; color:#c2a02a; display:flex; align-items:center; justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 15h8"/><path d="M9 9h.01M15 9h.01"/></svg></span><span style="font-size:12px; color:#8b999e;">Regular</span></button>
+              <button style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; border:none; background:none; cursor:pointer; font-family:inherit;"><span style="width:54px; height:54px; border-radius:50%; background:#e6f5f0; color:#1aa896; display:flex; align-items:center; justify-content:center; outline:2.5px solid #1aa896; outline-offset:2px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14q3.5 2.5 7 0"/><path d="M9 9h.01M15 9h.01"/></svg></span><span style="font-size:12px; color:#1aa896; font-weight:700;">Bien</span></button>
+              <button style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; border:none; background:none; cursor:pointer; font-family:inherit;"><span style="width:54px; height:54px; border-radius:50%; background:#def0ea; color:#0e8d7e; display:flex; align-items:center; justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 13q4 4 8 0"/><path d="M9 9h.01M15 9h.01"/></svg></span><span style="font-size:12px; color:#8b999e;">Muy bien</span></button>
+            </div>
+          </div>
+
+          <!-- chart -->
+          <div style="background:#fff; border-radius:18px; padding:22px 24px 16px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="display:flex; align-items:center; margin-bottom:18px;">
+              <div style="font-size:18px; font-weight:700; color:#243239;">Tu ánimo esta semana</div>
+              <div style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:13px; color:#8b999e;"><span style="width:9px;height:9px;border-radius:3px;background:#1aa896;display:inline-block;"></span>nivel por día</div>
+            </div>
+            <div style="position:relative; height:200px;">
+              <div style="position:absolute; inset:0 0 24px 0; display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+                <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+                <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+                <div style="border-top:1px solid #e7ecec; height:0;"></div>
+              </div>
+              {{ chart }}
+              <div style="position:absolute; left:0; right:0; bottom:0; display:flex; gap:10px; padding:0 4px;">
+                <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Lun</div>
+                <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Mar</div>
+                <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Mié</div>
+                <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Jue</div>
+                <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Vie</div>
+                <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Sáb</div>
+                <div style="flex:1; text-align:center; font-size:12px; color:#9aa7ab;">Dom</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- side stats -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:16px; font-weight:700; color:#243239; margin-bottom:14px;">Resumen</div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:42px; height:42px; border-radius:11px; background:#e6f5f0; color:#1aa896; display:flex; align-items:center; justify-content:center; flex:0 0 42px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></div>
+                <div><div style="font-size:18px; font-weight:800; color:#243239;">Bien</div><div style="font-size:12px; color:#9aa7ab;">Ánimo promedio (3.6/5)</div></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:42px; height:42px; border-radius:11px; background:#fef3e2; color:#d98a1f; display:flex; align-items:center; justify-content:center; flex:0 0 42px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.5 3 4 4 4 7a4 4 0 0 1-8 0c0-1 .5-2 1-2.5"/></svg></div>
+                <div><div style="font-size:18px; font-weight:800; color:#243239;">7 días</div><div style="font-size:12px; color:#9aa7ab;">Racha de registros</div></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:42px; height:42px; border-radius:11px; background:#e3f3ef; color:#0e8d7e; display:flex; align-items:center; justify-content:center; flex:0 0 42px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div>
+                <div><div style="font-size:18px; font-weight:800; color:#243239;">5</div><div style="font-size:12px; color:#9aa7ab;">Cuestionarios enviados</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:linear-gradient(150deg,#1aa896,#0c8475); border-radius:18px; padding:22px; box-shadow:0 10px 22px rgba(15,130,115,.28); color:#fff;">
+            <div style="font-size:14px; font-weight:800;">Consejo del día</div>
+            <div style="font-size:13.5px; color:rgba(255,255,255,.9); line-height:1.55; margin-top:8px;">Tómate 5 minutos para respirar profundo antes de estudiar. Tu mente lo agradecerá.</div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ VISTA: MI PERFIL ============ -->
+      <sc-if value="{{ isPerfil }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start;">
+        <div style="display:flex; flex-direction:column; gap:20px; min-width:0;">
+
+          <!-- header -->
+          <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 6px 20px rgba(35,80,95,.05); display:flex; align-items:center; gap:18px;">
+            <img src="https://i.pravatar.cc/120?img=15" alt="" style="width:78px; height:78px; border-radius:50%; object-fit:cover; border:3px solid #eaf5f2;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:20px; font-weight:800; color:#243239;">Lucas Ferreira</div>
+              <div style="font-size:13px; color:#9aa7ab; margin-top:3px;">Alumno · 3.º Año · ID 2026-0481</div>
+            </div>
+            <button style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#1aa896,#0c8475); color:#fff; border:none; border-radius:11px; padding:11px 18px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 6px 14px rgba(15,130,115,.3);">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              Editar perfil
+            </button>
+          </div>
+
+          <!-- info personal -->
+          <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:16px; font-weight:700; color:#243239; margin-bottom:16px;">Información personal</div>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px;">
+              <div style="border:1px solid #eef1f2; border-radius:12px; padding:14px 16px;"><div style="font-size:12px; color:#9aa7ab;">Nombre completo</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:3px;">Lucas Ferreira</div></div>
+              <div style="border:1px solid #eef1f2; border-radius:12px; padding:14px 16px;"><div style="font-size:12px; color:#9aa7ab;">Año / Curso</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:3px;">3.º Año</div></div>
+              <div style="border:1px solid #eef1f2; border-radius:12px; padding:14px 16px;"><div style="font-size:12px; color:#9aa7ab;">Correo</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:3px;">lucas.ferreira@sami.edu</div></div>
+              <div style="border:1px solid #eef1f2; border-radius:12px; padding:14px 16px;"><div style="font-size:12px; color:#9aa7ab;">Teléfono</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:3px;">+34 612 345 678</div></div>
+              <div style="border:1px solid #eef1f2; border-radius:12px; padding:14px 16px;"><div style="font-size:12px; color:#9aa7ab;">Documento</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:3px;">48 921 037-K</div></div>
+              <div style="border:1px solid #eef1f2; border-radius:12px; padding:14px 16px;"><div style="font-size:12px; color:#9aa7ab;">Contacto de emergencia</div><div style="font-size:14px; font-weight:700; color:#33424a; margin-top:3px;">Marta Ferreira (madre)</div></div>
+            </div>
+          </div>
+
+          <!-- preferencias -->
+          <div style="background:#fff; border-radius:18px; padding:24px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:16px; font-weight:700; color:#243239; margin-bottom:14px;">Preferencias</div>
+            <div style="display:flex; align-items:center; padding:12px 0; border-bottom:1px solid #f1f4f4;">
+              <div><div style="font-size:14px; font-weight:600; color:#33424a;">Recordatorios de reunión</div><div style="font-size:12px; color:#9aa7ab;">Avísame 30 min antes de cada sesión</div></div>
+              <span style="margin-left:auto; width:42px; height:24px; border-radius:13px; background:#1aa896; position:relative;"><span style="position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; background:#fff;"></span></span>
+            </div>
+            <div style="display:flex; align-items:center; padding:12px 0; border-bottom:1px solid #f1f4f4;">
+              <div><div style="font-size:14px; font-weight:600; color:#33424a;">Notificaciones por correo</div><div style="font-size:12px; color:#9aa7ab;">Resúmenes y respuestas del psicólogo</div></div>
+              <span style="margin-left:auto; width:42px; height:24px; border-radius:13px; background:#1aa896; position:relative;"><span style="position:absolute; top:3px; right:3px; width:18px; height:18px; border-radius:50%; background:#fff;"></span></span>
+            </div>
+            <div style="display:flex; align-items:center; padding:12px 0;">
+              <div><div style="font-size:14px; font-weight:600; color:#33424a;">Modo privado</div><div style="font-size:12px; color:#9aa7ab;">Oculta tu ánimo en pantallas compartidas</div></div>
+              <span style="margin-left:auto; width:42px; height:24px; border-radius:13px; background:#e1e6e6; position:relative;"><span style="position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff;"></span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- side -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:13px; font-weight:700; color:#9aa7ab; text-transform:uppercase; letter-spacing:.4px; margin-bottom:14px;">Tu psicólogo</div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img src="https://i.pravatar.cc/90?img=47" alt="" style="width:48px; height:48px; border-radius:50%; object-fit:cover;">
+              <div><div style="font-size:14.5px; font-weight:700; color:#243239;">Psic. Carla Méndez</div><div style="font-size:12px; color:#9aa7ab;">Bienestar estudiantil</div></div>
+            </div>
+            <button onClick="{{ goReuniones }}" style="width:100%; margin-top:16px; background:#fff; color:#0e8d7e; border:1px solid #d3e8e3; border-radius:11px; padding:11px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;">Agendar reunión</button>
+          </div>
+
+          <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:13px; font-weight:700; color:#9aa7ab; text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px;">Cuenta</div>
+            <a href="#" style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f1f4f4; text-decoration:none; color:#33424a; font-size:14px; font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c8b90" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Cambiar contraseña</a>
+            <a href="#" style="display:flex; align-items:center; gap:12px; padding:12px 0; text-decoration:none; color:#e0524c; font-size:14px; font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>Cerrar sesión</a>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </main>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = { step: 0, answers: {}, sent: false, view: 'inicio' };
+
+  setView(v) { this.setState({ view: v }); }
+
+  steps = [
+    {
+      key: 'animo',
+      q: '¿Cómo te has sentido esta semana?',
+      options: ['Muy bien', 'Bien', 'Regular', 'Mal', 'Necesito hablar con alguien'],
+    },
+    {
+      key: 'tema',
+      q: '¿Con qué se relaciona tu novedad?',
+      options: ['Todo en orden', 'Estrés o carga académica', 'Situación personal o familiar', 'Ansiedad o ánimo bajo'],
+    },
+    {
+      key: 'reunion',
+      q: '¿Quieres agendar una reunión con el psicólogo?',
+      options: ['Sí, lo antes posible', 'Sí, esta semana', 'No por ahora'],
+    },
+  ];
+
+  pick(value) {
+    const key = this.steps[this.state.step].key;
+    this.setState({ answers: { ...this.state.answers, [key]: value } });
+  }
+
+  next() {
+    if (this.state.step >= this.steps.length - 1) {
+      this.setState({ sent: true });
+    } else {
+      this.setState({ step: this.state.step + 1 });
+    }
+  }
+
+  back() {
+    if (this.state.step > 0) this.setState({ step: this.state.step - 1 });
+  }
+
+  reset() {
+    this.setState({ step: 0, answers: {}, sent: false });
+  }
+
+  renderVals() {
+    const step = this.steps[this.state.step];
+    const total = this.steps.length;
+    const num = this.state.step + 1;
+    const current = this.state.answers[step.key];
+
+    const quizOptions = step.options.map((text) => {
+      const selected = current === text;
+      const mark = selected
+        ? React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: '#1aa896', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round', key: 'c' }, React.createElement('path', { d: 'M20 6 9 17l-5-5' }))
+        : '';
+      return {
+        text,
+        onPick: () => this.pick(text),
+        mark,
+        style: {
+          display: 'flex', alignItems: 'center', gap: '14px', textAlign: 'left',
+          padding: '14px 16px',
+          border: selected ? '1.5px solid #1aa896' : '1.5px solid #eef1f2',
+          background: selected ? '#f1faf7' : '#fff',
+          borderRadius: '12px', fontFamily: 'inherit', fontSize: '14.5px',
+          fontWeight: selected ? 700 : 500, color: '#33424a',
+          cursor: 'pointer', width: '100%', transition: 'all .15s',
+        },
+        bulletStyle: {
+          width: '20px', height: '20px', flex: '0 0 20px', borderRadius: '50%',
+          border: selected ? '6px solid #1aa896' : '2px solid #cfd8d6',
+          background: '#fff', transition: 'all .15s',
+        },
+      };
+    });
+
+    // weekly mood chart (level 1-5)
+    const mood = [3, 4, 2, 3, 4, 4, 5];
+    const max = 5;
+    const today = 4; // Vie
+    const bars = mood.map((m, i) =>
+      React.createElement('div', { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' } },
+        React.createElement('div', { style: {
+          width: '46%', height: (m / max * 100) + '%',
+          background: i === today ? 'linear-gradient(180deg,#22b8a6,#0e8d7e)' : 'rgba(26,168,150,.30)',
+          borderRadius: '6px 6px 0 0',
+        } })
+      )
+    );
+    const chart = React.createElement('div', { style: { position: 'absolute', inset: '0 0 24px 0', display: 'flex', alignItems: 'flex-end', gap: 10, padding: '0 4px' } }, bars);
+
+    // ---- view + nav ----
+    const view = this.state.view;
+    const navIdleA = { display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '10px', marginBottom: '4px', textDecoration: 'none', fontSize: '14px', background: 'transparent', color: '#5a6a70', fontWeight: 500, cursor: 'pointer' };
+    const navActiveA = { ...navIdleA, background: '#e3f3ef', color: '#0e8d7e', fontWeight: 700 };
+    const navIdleIcon = { width: '30px', height: '30px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c8b90' };
+    const navActiveIcon = { width: '30px', height: '30px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg,#22b8a6,#0e8d7e)', boxShadow: '0 4px 9px rgba(20,150,135,.4)' };
+    const na = (k) => (view === k ? navActiveA : navIdleA);
+    const ni = (k) => (view === k ? navActiveIcon : navIdleIcon);
+    const crumbs = { inicio: 'Panel del Alumno', cuestionario: 'Cuestionario', reuniones: 'Reuniones con el psicólogo', recursos: 'Recursos de apoyo', bienestar: 'Mi bienestar', perfil: 'Mi perfil' };
+
+    return {
+      isInicio: view === 'inicio',
+      isCuestionario: view === 'cuestionario',
+      isReuniones: view === 'reuniones',
+      isRecursos: view === 'recursos',
+      isBienestar: view === 'bienestar',
+      isPerfil: view === 'perfil',
+      crumb: crumbs[view] || 'Panel del Alumno',
+      goInicio: () => this.setView('inicio'),
+      goCuestionario: () => this.setView('cuestionario'),
+      goReuniones: () => this.setView('reuniones'),
+      goRecursos: () => this.setView('recursos'),
+      goBienestar: () => this.setView('bienestar'),
+      goPerfil: () => this.setView('perfil'),
+      navInicioA: na('inicio'), navInicioIcon: ni('inicio'),
+      navCuestionarioA: na('cuestionario'), navCuestionarioIcon: ni('cuestionario'),
+      navReunionesA: na('reuniones'), navReunionesIcon: ni('reuniones'),
+      navRecursosA: na('recursos'), navRecursosIcon: ni('recursos'),
+      navBienestarA: na('bienestar'), navBienestarIcon: ni('bienestar'),
+      navPerfilA: na('perfil'), navPerfilIcon: ni('perfil'),
+      sent: this.state.sent,
+      notSent: !this.state.sent,
+      quizQuestion: step.q,
+      quizOptions,
+      qNumber: num,
+      qTotal: total,
+      quizProgress: Math.round(num / total * 100) + '%',
+      quizBtnLabel: this.state.step >= total - 1 ? 'Enviar al psicólogo' : 'Siguiente',
+      quizNext: () => this.next(),
+      quizBack: () => this.back(),
+      quizReset: () => this.reset(),
+      backStyle: {
+        background: '#fff', color: this.state.step === 0 ? '#c8d0d2' : '#5a6a70',
+        border: '1px solid #e7ecec', borderRadius: '11px', padding: '11px 18px',
+        fontSize: '14px', fontWeight: 600, fontFamily: 'inherit',
+        cursor: this.state.step === 0 ? 'default' : 'pointer',
+      },
+      chart,
+    };
+  }
+}
+</script>
+</body>
+</html>

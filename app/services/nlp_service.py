@@ -1,34 +1,45 @@
 """
-NLPService — Clasificación multi-condición de salud mental con XLM-RoBERTa.
+NLPService — Clasificación zero-shot multi-label con BETO / XLM-RoBERTa.
 
-Modelo: joeddav/xlm-roberta-large-xnli (XLM-RoBERTa + XNLI, Facebook AI)
-Técnica: Zero-shot multi-label con hipótesis en español + boost de keywords clínicos.
-
-Optimizado para PRECISIÓN:
-  1. Zero-shot multi-label (cada condición evaluada independientemente).
-  2. Hypothesis templating ("Este texto expresa {}.") - más natural que etiquetas planas.
-  3. Keyword boost - refuerza score cuando hay términos diagnósticos explícitos.
-  4. Umbrales calibrados por condición (riesgo suicida con sensibilidad alta: 0.40).
-
-Optimizado para VELOCIDAD:
-  1. Singleton del modelo (carga única en memoria, ~400MB vs 2.2GB del anterior).
-  2. Un solo forward pass sobre texto concatenado (no por pregunta).
-  3. Thread-safe con double-check locking.
+Modelo: Recognai/bert-base-spanish-wwm-cased-xnli (BETO + XNLI).
+Uso en Sami: clasificar respuestas abiertas (frases incompletas) en categorías
+emocionales (tristeza, ansiedad, soledad, ira, miedo, ideación, esperanza,
+neutral). El servicio mantiene una única instancia del pipeline en memoria
+(singleton thread-safe) para que la inferencia sea instantánea tras la primera
+carga.
 """
-from transformers import pipeline
-from sqlalchemy.orm import Session
-from app.models.risk import RiskResult
-from app.config import settings
 import logging
 import threading
 import time
 from datetime import datetime
+from transformers import pipeline
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
+# Categorías emocionales que clasificamos sobre las frases incompletas.
+# Una respuesta puede tener varias etiquetas (multi-label).
+CATEGORIAS_EMOCIONALES = {
+    "tristeza":         "Este texto expresa tristeza o desánimo.",
+    "ansiedad":         "Este texto expresa ansiedad o preocupación.",
+    "soledad":          "Este texto expresa soledad o aislamiento.",
+    "ira":              "Este texto expresa enojo o frustración.",
+    "miedo":            "Este texto expresa miedo o temor.",
+    "ideacion_suicida": "Este texto expresa deseos de hacerse daño o pensamientos sobre la muerte.",
+    "esperanza":        "Este texto expresa esperanza o motivación.",
+    "neutral":          "Este texto es neutro y no expresa una emoción intensa.",
+}
+
+# Umbral por defecto para considerar una etiqueta "detectada".
+UMBRAL_DETECCION = 0.50
+# La ideación suicida activa la bandera de crisis con un umbral más bajo
+# (preferimos un falso positivo a perder un caso real).
+UMBRAL_CRISIS = 0.40
+
+
 class NLPService:
-    """Servicio NLP con patrón Singleton para carga única del modelo BERT."""
+    """Singleton thread-safe para el pipeline BETO zero-shot."""
 
     _classifier = None
     _lock = threading.Lock()
@@ -36,16 +47,10 @@ class NLPService:
     _load_time = None
     _load_timestamp = None
 
-    # ═══════════════════════════════════════════════════════════════════
-    # CARGA DEL MODELO (Singleton thread-safe)
-    # ═══════════════════════════════════════════════════════════════════
+    # ── Carga del modelo ───────────────────────────────────────────────
 
     @classmethod
     def get_classifier(cls):
-        """
-        Carga el pipeline BERT zero-shot en la primera llamada.
-        Posteriores llamadas retornan el modelo cacheado en memoria.
-        """
         if cls._classifier is None:
             with cls._lock:
                 if cls._classifier is None:
@@ -53,13 +58,7 @@ class NLPService:
                     tiempo_inicio = time.time()
                     cls._load_timestamp = datetime.utcnow().isoformat()
 
-                    logger.info("=" * 80)
-                    logger.info("🤖 CARGANDO MODELO XLM-RoBERTa (Facebook AI + XNLI)")
-                    logger.info(f"   Modelo: {settings.MODEL_NAME}")
-                    logger.info(f"   Dispositivo: {'CPU' if settings.DEVICE == -1 else f'GPU:{settings.DEVICE}'}")
-                    logger.info("   ⏳ Primera carga puede tardar 2-5 min (descarga ~1.1GB)...")
-                    logger.info("=" * 80)
-
+                    logger.info("Cargando modelo NLP: %s", settings.MODEL_NAME)
                     try:
                         cls._classifier = pipeline(
                             "zero-shot-classification",
@@ -67,30 +66,13 @@ class NLPService:
                             device=settings.DEVICE,
                         )
                         cls._load_time = time.time() - tiempo_inicio
-                        cls._is_loading = False
-
-                        logger.info("=" * 80)
-                        logger.info("✅ MODELO BERT CARGADO")
-                        logger.info(f"   ⏱️  Tiempo de carga: {cls._formatear_tiempo(cls._load_time)}")
-                        logger.info("   Próximas inferencias serán instantáneas ⚡")
-                        logger.info("=" * 80)
-
+                        logger.info("Modelo cargado en %.2fs", cls._load_time)
                     except Exception as e:
-                        cls._is_loading = False
-                        logger.error(f"❌ Error cargando modelo BERT: {e}")
+                        logger.error("Error cargando modelo NLP: %s", e)
                         raise
-
+                    finally:
+                        cls._is_loading = False
         return cls._classifier
-
-    @staticmethod
-    def _formatear_tiempo(segundos: float) -> str:
-        if segundos < 1:
-            return f"{segundos*1000:.2f}ms"
-        if segundos < 60:
-            return f"{segundos:.2f}s"
-        if segundos < 3600:
-            return f"{segundos/60:.2f}m"
-        return f"{segundos/3600:.2f}h"
 
     @classmethod
     def modelo_cargado(cls) -> bool:
@@ -109,504 +91,58 @@ class NLPService:
             "dispositivo": settings.DEVICE,
             "timestamp_carga": cls._load_timestamp,
             "tiempo_carga_segundos": cls._load_time,
+            "categorias": list(CATEGORIAS_EMOCIONALES.keys()),
         }
 
-    # ═══════════════════════════════════════════════════════════════════
-    # ANÁLISIS MULTI-CONDICIÓN
-    # ═══════════════════════════════════════════════════════════════════
+    # ── Clasificación de una frase ─────────────────────────────────────
 
     @classmethod
-    def analizar_respuestas(cls, respuestas_dict: list) -> dict:
+    def clasificar_frase(cls, texto: str) -> dict:
         """
-        Analiza las respuestas del usuario y devuelve scores por condición clínica.
-
-        Proceso:
-            1. Concatena respuestas preservando español (sin traducir).
-            2. Ejecuta zero-shot multi-label sobre todas las hipótesis clínicas.
-            3. Aplica keyword boost por condición.
-            4. Decide qué condiciones superan su umbral.
-            5. Calcula nivel de riesgo global.
-
-        Args:
-            respuestas_dict: lista de dicts con clave "respuesta".
-
-        Returns:
-            dict con nivel_riesgo, condiciones_detectadas, scores, explicación.
-        """
-        tiempo_inicio = time.time()
-        logger.info("=" * 80)
-        logger.info("🔍 INICIANDO ANÁLISIS MULTI-CONDICIÓN")
-        logger.info("=" * 80)
-
-        if not respuestas_dict:
-            raise ValueError("Se requiere al menos una respuesta para analizar")
-
-        # 1️⃣ Concatenar respuestas
-        respuestas_lista = [
-            r["respuesta"].strip()
-            for r in respuestas_dict
-            if isinstance(r, dict) and r.get("respuesta", "").strip()
-        ]
-        if not respuestas_lista:
-            raise ValueError("Se requiere al menos una respuesta válida")
-
-        texto_completo = " ".join(respuestas_lista)
-        logger.info(f"   📋 Respuestas procesadas: {len(respuestas_lista)}")
-        logger.info(f"   📝 Caracteres totales: {len(texto_completo)}")
-
-        # 2️⃣ Construir hipótesis multi-label
-        claves = list(settings.CONDICIONES.keys())
-        hipotesis = [settings.CONDICIONES[k]["hipotesis"] for k in claves]
-        hipotesis_a_clave = dict(zip(hipotesis, claves))
-
-        # 3️⃣ Inferencia zero-shot multi-label (un solo forward pass)
-        classifier = cls.get_classifier()
-        t_infer = time.time()
-
-        resultado = classifier(
-            texto_completo,
-            candidate_labels=hipotesis,
-            multi_label=True,
-            hypothesis_template=settings.HYPOTHESIS_TEMPLATE,
-        )
-
-        tiempo_inferencia = time.time() - t_infer
-        logger.info(f"   ⚡ Inferencia BERT: {cls._formatear_tiempo(tiempo_inferencia)}")
-
-        # 4️⃣ Mapear scores base a cada condición
-        scores = {}
-        for hip, score in zip(resultado["labels"], resultado["scores"]):
-            scores[hipotesis_a_clave[hip]] = float(score)
-
-        # 5️⃣ Keyword boost — refuerza cuando hay términos clínicos explícitos
-        texto_lower = texto_completo.lower()
-        boost_info = {}
-        for clave, keywords in settings.KEYWORDS.items():
-            matches = [kw for kw in keywords if kw in texto_lower]
-            if matches:
-                boost = min(
-                    settings.KEYWORD_BOOST_PER_MATCH * len(matches),
-                    settings.KEYWORD_BOOST_MAX,
-                )
-                score_previo = scores.get(clave, 0.0)
-                scores[clave] = min(score_previo + boost, 1.0)
-                boost_info[clave] = {
-                    "matches": matches,
-                    "boost_aplicado": boost,
-                    "score_antes": score_previo,
-                    "score_despues": scores[clave],
-                }
-
-        # 6️⃣ Log detallado de scores
-        logger.info("   " + "─" * 76)
-        logger.info("   📊 SCORES POR CONDICIÓN (modelo + keyword boost):")
-        for clave in claves:
-            cfg = settings.CONDICIONES[clave]
-            score = scores.get(clave, 0.0)
-            umbral = cfg["umbral"]
-            detectado = "🔴 DETECTADO" if score >= umbral else "⚪ descartado"
-            barra = "█" * int(score * 20)
-            logger.info(
-                f"   {cfg['etiqueta']:<42} {score*100:5.1f}% "
-                f"(umbral {umbral*100:.0f}%) {detectado} {barra}"
-            )
-
-        # 7️⃣ Determinar condiciones detectadas (≠ estabilidad)
-        condiciones_detectadas = {}
-        for clave in claves:
-            if clave == "estabilidad":
-                continue
-            if scores[clave] >= settings.CONDICIONES[clave]["umbral"]:
-                condiciones_detectadas[clave] = {
-                    "etiqueta": settings.CONDICIONES[clave]["etiqueta"],
-                    "confianza": round(scores[clave] * 100, 1),
-                }
-
-        # 8️⃣ Nivel de riesgo global (jerárquico, prioriza seguridad)
-        nivel_riesgo = cls._calcular_nivel_riesgo(scores, condiciones_detectadas)
-
-        # 9️⃣ Explicación
-        explicacion = cls._generar_explicacion(
-            nivel_riesgo, condiciones_detectadas, scores, len(respuestas_lista)
-        )
-
-        tiempo_total = time.time() - tiempo_inicio
-        logger.info("   " + "─" * 76)
-        logger.info(f"   🎯 Nivel de riesgo global: {nivel_riesgo}")
-        logger.info(f"   🩺 Condiciones detectadas: {len(condiciones_detectadas)}")
-        logger.info(f"   ⏱️  Tiempo total del análisis: {cls._formatear_tiempo(tiempo_total)}")
-        logger.info("=" * 80)
-
-        return {
-            "nivel_riesgo": nivel_riesgo,
-            "condiciones_detectadas": condiciones_detectadas,
-            "scores_completos": {k: round(v * 100, 1) for k, v in scores.items()},
-            "boost_aplicado": boost_info,
-            "explicacion": explicacion,
-            "respuestas_analizadas": len(respuestas_lista),
-            "caracteres_totales": len(texto_completo),
-            "tiempo_inferencia": tiempo_inferencia,
-            "tiempo_total": tiempo_total,
-            "modelo": settings.MODEL_NAME,
-        }
-
-    # ═══════════════════════════════════════════════════════════════════
-    # ANÁLISIS POR RESPUESTA INDIVIDUAL
-    # ═══════════════════════════════════════════════════════════════════
-
-    @classmethod
-    def analizar_respuesta_individual(cls, texto: str) -> dict:
-        """
-        Calcula un score de criticidad (0..1) para una sola respuesta.
-
-        Útil para mostrar el peso clínico de cada pregunta en el historial
-        del psicólogo. Aplica el mismo zero-shot multi-label + keyword boost
-        que `analizar_respuestas`, pero sobre una respuesta sola.
-
-        Returns:
-            dict con keys: score (float 0..1), nivel (BAJO/MEDIO/ALTO/CRÍTICO),
-            condicion (clave de la condición dominante).
-        """
-        if not texto or not texto.strip():
-            return {"score": 0.0, "nivel": "BAJO", "condicion": None}
-
-        claves = list(settings.CONDICIONES.keys())
-        hipotesis = [settings.CONDICIONES[k]["hipotesis"] for k in claves]
-        hipotesis_a_clave = dict(zip(hipotesis, claves))
-
-        classifier = cls.get_classifier()
-        resultado = classifier(
-            texto.strip(),
-            candidate_labels=hipotesis,
-            multi_label=True,
-            hypothesis_template=settings.HYPOTHESIS_TEMPLATE,
-        )
-
-        scores = {}
-        for hip, score in zip(resultado["labels"], resultado["scores"]):
-            scores[hipotesis_a_clave[hip]] = float(score)
-
-        # Keyword boost local
-        texto_lower = texto.lower()
-        for clave, keywords in settings.KEYWORDS.items():
-            matches = [kw for kw in keywords if kw in texto_lower]
-            if matches:
-                boost = min(
-                    settings.KEYWORD_BOOST_PER_MATCH * len(matches),
-                    settings.KEYWORD_BOOST_MAX,
-                )
-                scores[clave] = min(scores.get(clave, 0.0) + boost, 1.0)
-
-        # Score de criticidad: máximo entre condiciones negativas (excluye estabilidad)
-        scores_negativos = {k: v for k, v in scores.items() if k != "estabilidad"}
-        if not scores_negativos:
-            return {"score": 0.0, "nivel": "BAJO", "condicion": None}
-
-        condicion_dom = max(scores_negativos, key=scores_negativos.get)
-        score_max = scores_negativos[condicion_dom]
-
-        # Riesgo suicida sube directo a CRÍTICO si supera su umbral sensible
-        umbral_suicida = settings.CONDICIONES["riesgo_suicida"]["umbral"]
-        if scores_negativos.get("riesgo_suicida", 0.0) >= umbral_suicida:
-            return {"score": float(scores_negativos["riesgo_suicida"]),
-                    "nivel": "CRÍTICO",
-                    "condicion": "riesgo_suicida"}
-
-        if score_max >= 0.75:
-            nivel = "ALTO"
-        elif score_max >= settings.CONDICIONES[condicion_dom]["umbral"]:
-            nivel = "MEDIO"
-        else:
-            nivel = "BAJO"
-
-        return {"score": float(score_max), "nivel": nivel, "condicion": condicion_dom}
-
-    # ═══════════════════════════════════════════════════════════════════
-    # PHQ-9 / GAD-7 — Propuesta de score Likert 0-3 por ítem
-    # ═══════════════════════════════════════════════════════════════════
-
-    # Hipótesis de frecuencia que serán "rellenadas" en la plantilla Likert.
-    # Mantienen orden consistente con OPCIONES_LIKERT (valor 0..3).
-    _FRECUENCIAS_LIKERT = [
-        "nunca",
-        "algunos días",
-        "más de la mitad de los días",
-        "casi todos los días",
-    ]
-
-    @classmethod
-    def proponer_score_likert(cls, texto: str, item: dict) -> dict:
-        """
-        Propone un score Likert 0-3 para un ítem PHQ-9/GAD-7 a partir del
-        texto libre del usuario.
-
-        Estrategia:
-          1. Zero-shot BERT sobre 4 hipótesis combinadas
-             ("Este texto describe que <criterio> ocurre <frecuencia>.")
-             para las 4 frecuencias del PHQ-9/GAD-7.
-          2. Boost si aparecen keywords clínicas específicas del ítem.
-          3. Si el score 0 ("nunca") domina con alta confianza ⇒ propone 0.
-          4. Si la confianza del top score supera UMBRAL_CONFIANZA_LIKERT ⇒
-             aceptado automáticamente.
-          5. En caso contrario ⇒ requiere_seleccion=True para que el frontend
-             muestre los 4 botones.
-
-        Args:
-            texto: respuesta libre del usuario.
-            item:  dict del banco PHQ-9/GAD-7 (debe traer `hipotesis_likert`).
-
-        Returns:
-            dict {score_propuesto, confianza, requiere_seleccion,
-                  distribucion, keywords_detectadas}
+        Clasifica una respuesta a frase incompleta en las 8 categorías
+        emocionales. Devuelve:
+            {
+              "scores": {categoria: prob_float, ...},  # todas las categorías
+              "detectadas": [categoria, ...],          # las que superan umbral
+              "crisis": bool,                          # ideación >= UMBRAL_CRISIS
+              "dominante": categoria_con_max_score,
+            }
         """
         if not texto or not texto.strip():
             return {
-                "score_propuesto": 0,
-                "confianza": 0.0,
-                "requiere_seleccion": True,
-                "distribucion": {},
-                "keywords_detectadas": [],
+                "scores": {k: 0.0 for k in CATEGORIAS_EMOCIONALES},
+                "detectadas": [],
+                "crisis": False,
+                "dominante": None,
             }
 
-        criterio = item.get("hipotesis_likert", "este síntoma")
-        # Construye una hipótesis por frecuencia (4 hipótesis).
-        hipotesis = [
-            f"{criterio} {frecuencia}" for frecuencia in cls._FRECUENCIAS_LIKERT
-        ]
-
         classifier = cls.get_classifier()
+        claves = list(CATEGORIAS_EMOCIONALES.keys())
+        hipotesis = [CATEGORIAS_EMOCIONALES[k] for k in claves]
+        hipotesis_a_clave = dict(zip(hipotesis, claves))
+
         resultado = classifier(
             texto.strip(),
             candidate_labels=hipotesis,
-            multi_label=False,  # las 4 frecuencias son mutuamente excluyentes
-            hypothesis_template=settings.HYPOTHESIS_TEMPLATE_LIKERT,
+            multi_label=True,
         )
 
-        # Reordena scores por índice 0..3
-        scores_por_valor = {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0}
-        for label, score in zip(resultado["labels"], resultado["scores"]):
-            try:
-                idx = hipotesis.index(label)
-                scores_por_valor[idx] = float(score)
-            except ValueError:
-                pass
+        scores = {}
+        for hip, score in zip(resultado["labels"], resultado["scores"]):
+            scores[hipotesis_a_clave[hip]] = float(score)
 
-        # Boost por keywords clínicas específicas del ítem
-        texto_lower = texto.lower()
-        keywords_detectadas = [
-            kw for kw in item.get("keywords_signal", []) if kw in texto_lower
-        ]
-        if keywords_detectadas:
-            # Cuanta más evidencia léxica positiva, más empuja a frecuencias altas.
-            boost = min(
-                settings.KEYWORD_BOOST_PER_MATCH * len(keywords_detectadas) * 2,
-                settings.KEYWORD_BOOST_MAX * 2,
-            )
-            # Reparte el boost entre los valores 1-3 (síntoma presente)
-            scores_por_valor[1] = min(scores_por_valor[1] + boost * 0.2, 1.0)
-            scores_por_valor[2] = min(scores_por_valor[2] + boost * 0.4, 1.0)
-            scores_por_valor[3] = min(scores_por_valor[3] + boost * 0.4, 1.0)
-
-        # Selección del score con mayor confianza
-        score_propuesto = max(scores_por_valor, key=scores_por_valor.get)
-        confianza = scores_por_valor[score_propuesto]
-
-        # Aceptamos automáticamente si:
-        #  - la confianza top supera el umbral, O
-        #  - la diferencia entre top y segundo es ≥ MARGEN_MINIMO_LIKERT
-        # (con 4 etiquetas mutuamente excluyentes el umbral absoluto solo no
-        # basta; el margen captura casos en que un valor domina con claridad).
-        valores_ordenados = sorted(scores_por_valor.values(), reverse=True)
-        margen = valores_ordenados[0] - valores_ordenados[1]
-
-        umbral = settings.UMBRAL_CONFIANZA_LIKERT
-        margen_min = getattr(settings, "MARGEN_MINIMO_LIKERT", 0.10)
-        requiere_seleccion = (confianza < umbral) and (margen < margen_min)
-
-        logger.info(
-            f"   🎚️  Likert propuesto para {item.get('id')}: "
-            f"{score_propuesto} (conf {confianza*100:.1f}%, margen {margen*100:.1f}%) "
-            f"{'⚠️ pide confirmación' if requiere_seleccion else '✅ auto'}"
-            f" — keywords: {keywords_detectadas or 'ninguna'}"
-        )
+        detectadas = [k for k, v in scores.items() if v >= UMBRAL_DETECCION and k != "neutral"]
+        crisis = scores.get("ideacion_suicida", 0.0) >= UMBRAL_CRISIS
+        dominante = max(scores, key=scores.get) if scores else None
 
         return {
-            "score_propuesto": int(score_propuesto),
-            "confianza": round(float(confianza), 4),
-            "requiere_seleccion": bool(requiere_seleccion),
-            "distribucion": {
-                str(k): round(v, 4) for k, v in scores_por_valor.items()
-            },
-            "keywords_detectadas": keywords_detectadas,
+            "scores": {k: round(v, 4) for k, v in scores.items()},
+            "detectadas": detectadas,
+            "crisis": crisis,
+            "dominante": dominante,
         }
 
-    # ═══════════════════════════════════════════════════════════════════
-    # NIVEL DE RIESGO GLOBAL
-    # ═══════════════════════════════════════════════════════════════════
-
-    @staticmethod
-    def _calcular_nivel_riesgo(scores: dict, detectadas: dict) -> str:
-        """
-        Jerarquía de riesgo (prioriza seguridad clínica):
-          CRÍTICO   — riesgo suicida detectado (cualquier score ≥ umbral)
-          ALTO      — ≥2 condiciones detectadas, o alguna con confianza ≥ 75%
-          MEDIO     — 1 condición detectada con confianza moderada
-          BAJO      — ninguna condición detectada y estabilidad alta
-        """
-        if "riesgo_suicida" in detectadas:
-            return "CRÍTICO"
-
-        confianzas = [d["confianza"] for d in detectadas.values()]
-        if len(detectadas) >= 2 or any(c >= 75.0 for c in confianzas):
-            return "ALTO"
-
-        if len(detectadas) == 1:
-            return "MEDIO"
-
-        if scores.get("estabilidad", 0) >= settings.CONDICIONES["estabilidad"]["umbral"]:
-            return "BAJO"
-
-        return "MEDIO"
-
-    # ═══════════════════════════════════════════════════════════════════
-    # EXPLICACIÓN CLÍNICA EN ESPAÑOL
-    # ═══════════════════════════════════════════════════════════════════
-
-    @staticmethod
-    def _generar_explicacion(
-        nivel: str, detectadas: dict, scores: dict, num_respuestas: int
-    ) -> str:
-        disclaimer = (
-            "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "⚠️  ACLARACIÓN IMPORTANTE\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "Este análisis es INFORMATIVO, basado en procesamiento de texto con IA.\n"
-            "NO constituye un diagnóstico clínico ni sustituye la evaluación de\n"
-            "un profesional de salud mental calificado.\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        )
-
-        # Encabezado según nivel
-        encabezados = {
-            "CRÍTICO": (
-                "🔴🔴🔴 NIVEL CRÍTICO — ATENCIÓN URGENTE 🔴🔴🔴\n"
-                "Se detectaron indicadores de ideación suicida o autolesión.\n"
-                "Por favor, busca ayuda profesional INMEDIATAMENTE.\n"
-            ),
-            "ALTO": (
-                "🔴 NIVEL ALTO — Afectación emocional significativa\n"
-                "Se detectaron múltiples indicadores clínicos relevantes.\n"
-                "Se recomienda encarecidamente evaluación profesional.\n"
-            ),
-            "MEDIO": (
-                "🟡 NIVEL MEDIO — Indicadores moderados\n"
-                "Se detectaron señales que merecen seguimiento.\n"
-                "Considera conversar con un profesional de salud mental.\n"
-            ),
-            "BAJO": (
-                "🟢 NIVEL BAJO — Estabilidad emocional\n"
-                "No se detectaron indicadores clínicos significativos.\n"
-                "Mantén tus hábitos de autocuidado.\n"
-            ),
-        }
-
-        bloque_condiciones = ""
-        if detectadas:
-            bloque_condiciones = "\n📋 CONDICIONES DETECTADAS:\n─────────────────────────────\n"
-            for clave, info in detectadas.items():
-                bloque_condiciones += f"  • {info['etiqueta']}: {info['confianza']}% de confianza\n"
-        else:
-            bloque_condiciones = (
-                "\n📋 CONDICIONES DETECTADAS:\n─────────────────────────────\n"
-                "  • Ninguna condición supera el umbral de detección.\n"
-            )
-
-        # Recomendaciones por condición detectada
-        recomendaciones = NLPService._recomendaciones_por_condiciones(detectadas)
-
-        return (
-            f"{encabezados.get(nivel, encabezados['MEDIO'])}"
-            f"\nBasado en {num_respuestas} respuestas analizadas.\n"
-            f"{bloque_condiciones}"
-            f"{recomendaciones}"
-            f"{disclaimer}"
-        )
-
-    @staticmethod
-    def _recomendaciones_por_condiciones(detectadas: dict) -> str:
-        """Genera recomendaciones específicas por cada condición detectada."""
-        if not detectadas:
-            return (
-                "\n💡 RECOMENDACIONES PARA MANTENER BIENESTAR:\n"
-                "─────────────────────────────────────────\n"
-                "  • Mantén rutina de sueño (7-8h), actividad física y vínculos sociales.\n"
-                "  • Si en algún momento notas cambios, busca orientación profesional.\n"
-            )
-
-        recs = {
-            "depresion": (
-                "  🔹 Ánimo bajo: habla con el psicólogo/a del colegio o un\n"
-                "     adulto de confianza; mantén horarios de sueño regulares,\n"
-                "     mueve el cuerpo y conserva el contacto con tus amigos."
-            ),
-            "ansiedad": (
-                "  🔹 Ansiedad: practica respiración 4-4-6 (inhala 4s, sostén 4s,\n"
-                "     exhala 6s); evita energizantes; si los nervios siguen, "
-                "     conversa con el psicólogo/a del colegio."
-            ),
-            "tdah": (
-                "  🔹 Dificultad de atención: la evaluación con un profesional\n"
-                "     puede ayudar a entenderlo mejor. Mientras: estudia en\n"
-                "     bloques cortos (25 min), haz listas y silencia el celular."
-            ),
-            "estres_academico": (
-                "  🔹 Estrés del colegio: habla con tus profes o tutor/a si\n"
-                "     sientes que la carga es demasiado; organiza tu agenda\n"
-                "     con tiempo y no te quites horas de sueño por estudiar."
-            ),
-            "soledad": (
-                "  🔹 Soledad: acércate a actividades extracurriculares del\n"
-                "     colegio, busca compañeros con intereses parecidos;\n"
-                "     conversa también con tu familia en casa."
-            ),
-            "riesgo_suicida": (
-                "  🆘 ATENCIÓN INMEDIATA:\n"
-                "     • Línea 113 (MINSA Perú), opción 5 — salud mental 24/7.\n"
-                "     • Habla AHORA con el psicólogo/a o tutor/a del colegio.\n"
-                "     • Cuéntale a un adulto de confianza (papá, mamá, tío/a).\n"
-                "     • Si hay peligro inmediato: emergencias 106 o acude al hospital."
-            ),
-        }
-
-        salida = "\n💡 RECOMENDACIONES POR CONDICIÓN:\n─────────────────────────────\n"
-        for clave in detectadas.keys():
-            if clave in recs:
-                salida += recs[clave] + "\n"
-        return salida
-
-    # ═══════════════════════════════════════════════════════════════════
-    # PERSISTENCIA
-    # ═══════════════════════════════════════════════════════════════════
-
-    @staticmethod
-    def guardar_resultado(db: Session, session_id: str, user_id: str, resultado: dict) -> RiskResult:
-        """Persiste el resultado en la tabla risk_results."""
-        # Score principal: score de la condición dominante (o estabilidad si no hay detectadas)
-        if resultado["condiciones_detectadas"]:
-            score_principal = max(
-                d["confianza"] for d in resultado["condiciones_detectadas"].values()
-            ) / 100.0
-        else:
-            score_principal = resultado["scores_completos"].get("estabilidad", 0.0) / 100.0
-
-        risk = RiskResult(
-            session_id=session_id,
-            user_id=user_id,
-            nivel_riesgo=resultado["nivel_riesgo"],
-            score=score_principal,
-            explicacion=resultado["explicacion"],
-        )
-        db.add(risk)
-        db.commit()
-        db.refresh(risk)
-        return risk
+    @classmethod
+    def clasificar_frases(cls, textos: list[str]) -> list[dict]:
+        """Aplica `clasificar_frase` a una lista. Devuelve la lista de resultados."""
+        return [cls.clasificar_frase(t) for t in textos]

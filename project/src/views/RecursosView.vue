@@ -62,23 +62,23 @@ const urgent = [
 // ─── Para leer con calma — fallback si no hay contenidos en el backend
 const tips = [
   {
-    title: "Cómo releer tu diario sin juzgarte",
-    desc: "Releer entradas viejas puede ser incómodo. Algunas ideas para hacerlo con un poco más de amabilidad.",
-    read: "4 min",
-  },
-  {
     title: "Dormir mal una semana no es 'no saber dormir'",
     desc: "Qué dice la evidencia sobre el sueño en época de exámenes, y qué probar primero.",
     read: "6 min",
   },
   {
-    title: "Tres líneas también cuentan",
-    desc: "Por qué las entradas cortas sostienen el hábito mejor que las largas.",
-    read: "3 min",
+    title: "Cuándo conviene pedir una cita",
+    desc: "Señales de que hablar con la psicóloga del colegio puede ayudarte más que esperar a que pase.",
+    read: "5 min",
   },
   {
-    title: "Cuándo conviene pedir una cita",
-    desc: "Señales de que hablar con alguien del equipo de bienestar puede ayudarte más que seguir solo.",
+    title: "Bloqueo mental en exámenes: qué hacer",
+    desc: "Técnicas simples de respiración y enfoque que sirven antes y durante una prueba.",
+    read: "4 min",
+  },
+  {
+    title: "Hablar con tus papás de lo que te pasa",
+    desc: "Ideas para iniciar una conversación difícil sin que se sienta como un problema.",
     read: "5 min",
   },
 ];
@@ -95,8 +95,12 @@ const lecturas = computed(() => {
 
 // ─── Vista psicólogo / admin ─────────────────────────────────────────
 const escalas = [
-  { nombre: "PHQ-9", descripcion: "Patient Health Questionnaire — síntomas depresivos.", rango: "0–27" },
+  { nombre: "PHQ-A", descripcion: "Patient Health Questionnaire para adolescentes — depresión.", rango: "0–27" },
   { nombre: "GAD-7", descripcion: "Generalized Anxiety Disorder — síntomas ansiosos.", rango: "0–21" },
+  { nombre: "SRQ-20", descripcion: "Self-Reporting Questionnaire (OMS) — tamizaje general.", rango: "0–20" },
+  { nombre: "RSES", descripcion: "Rosenberg Self-Esteem Scale — autoestima global.", rango: "10–40" },
+  { nombre: "WHO-5", descripcion: "WHO-5 Well-Being Index — bienestar subjetivo.", rango: "0–100" },
+  { nombre: "UCLA-3", descripcion: "Loneliness Scale — soledad social y emocional.", rango: "3–9" },
 ];
 
 const protocolos = [
@@ -113,7 +117,7 @@ const protocolos = [
     titulo: "Riesgo alto",
     pasos: [
       "Agendar cita en la semana.",
-      "Confirmar diagnóstico con escalas validadas (PHQ-9, GAD-7).",
+      "Confirmar diagnóstico con escalas validadas (PHQ-A, GAD-7).",
       "Plan de intervención breve y reevaluación a las dos semanas.",
     ],
   },
@@ -142,7 +146,7 @@ const lineasDerivacion = [
     <div class="page-inner" style="max-width: 820px">
       <h1>Recursos</h1>
       <p class="sub">
-        Para cuando escribir no alcanza. Pedir ayuda también es cuidarse.
+        Para cuando hablar con alguien hace falta. Pedir ayuda también es cuidarse.
       </p>
 
       <div style="font-size: 13.5px; font-weight: 700; margin: 0 0 10px">

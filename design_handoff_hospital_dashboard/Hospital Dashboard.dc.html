@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Figtree', system-ui, sans-serif; background: #f5f7f8; }
+  .scrolly::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #cfd8d6; border-radius: 8px; }
+  .scrolly::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+
+<div style="display:flex; height:100vh; width:100%; overflow:hidden; color:#33424a;">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="width:264px; flex:0 0 264px; background:#ffffff; border-right:1px solid #eef1f2; display:flex; flex-direction:column; position:relative;">
+
+    <!-- logo row -->
+    <div style="height:64px; display:flex; align-items:center; gap:12px; padding:0 18px; border-bottom:1px solid #f1f4f4;">
+      <div style="width:38px; height:38px; border-radius:11px; background:linear-gradient(135deg,#22b8a6,#0e8d7e); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(20,150,135,.35);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 5h7v14H4zM13 5h7v14h-7z" fill="#fff" opacity=".9"/><path d="M7.5 9.5v5M5 12h5M16.5 9.5v5M14 12h5" stroke="#0e8d7e" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <span style="font-size:22px; font-weight:800; color:#243239; letter-spacing:-.5px;">Apollo</span>
+      <button style="margin-left:auto; width:30px; height:30px; border:none; background:#f3f6f6; border-radius:8px; color:#6b7b80; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+
+    <!-- profile -->
+    <div style="padding:22px 18px 18px; text-align:center; border-bottom:1px solid #f1f4f4;">
+      <img src="https://i.pravatar.cc/120?img=47" alt="Ema Wilson" style="width:62px; height:62px; border-radius:50%; object-fit:cover; border:3px solid #eaf5f2;">
+      <div style="margin-top:10px; font-weight:700; font-size:15px; color:#243239;">Ema Wilson</div>
+      <div style="margin-top:2px; font-size:12px; color:#9aa7ab;">Department Admin</div>
+    </div>
+
+    <!-- nav -->
+    <nav class="scrolly" style="flex:1; overflow-y:auto; padding:14px 12px;">
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; background:#e3f3ef; color:#0e8d7e; font-weight:700; font-size:14px;">
+        <span style="width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,#22b8a6,#0e8d7e); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 9px rgba(20,150,135,.4);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12M10 21v-6h4v6"/></svg>
+        </span>
+        Hospital Admin
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </span>
+        Medical Dashboard
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg>
+        </span>
+        Clinic Dashboard
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        </span>
+        Appointments
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.3-7-9.2A4 4 0 0 1 12 7a4 4 0 0 1 7 3.8C19 15.7 12 20 12 20z"/></svg>
+        </span>
+        My Patients
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>
+        </span>
+        Patient Profile
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v6a5 5 0 0 0 10 0V3M5 6h2M13 6h2M10 14v3a4 4 0 0 0 8 0v-1"/><circle cx="18" cy="15" r="2"/></svg>
+        </span>
+        Doctors Dashboard
+      </a>
+
+      <a href="#" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:4px; text-decoration:none; color:#5a6a70; font-weight:500; font-size:14px;" style-hover="background:#f4f7f7;">
+        <span style="width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#7c8b90;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v6a5 5 0 0 0 10 0V3M5 6h2M13 6h2M10 14v3a4 4 0 0 0 8 0v-1"/><circle cx="18" cy="15" r="2"/></svg>
+        </span>
+        Doctors Grid
+      </a>
+    </nav>
+
+    <!-- support card -->
+    <div style="padding:14px 14px 16px;">
+      <div style="background:linear-gradient(135deg,#1aa896,#0c8475); border-radius:14px; padding:16px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 18px rgba(15,130,115,.3);">
+        <div style="width:40px; height:40px; border-radius:11px; background:rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; flex:0 0 40px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+        </div>
+        <div style="line-height:1.2;">
+          <div style="color:#fff; font-weight:800; font-size:17px;">0987654321</div>
+          <div style="color:rgba(255,255,255,.82); font-size:12px;">Customer Support</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+
+    <!-- topbar -->
+    <header style="height:64px; flex:0 0 64px; background:#fff; border-bottom:1px solid #eef1f2; display:flex; align-items:center; padding:0 26px; gap:18px;">
+      <div style="position:relative; width:340px; max-width:42vw;">
+        <svg style="position:absolute; left:14px; top:50%; transform:translateY(-50%);" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aa7ab" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        <input placeholder="Search" style="width:100%; height:42px; border:1px solid #e7ecec; background:#f8fafa; border-radius:12px; padding:0 14px 0 40px; font-size:14px; font-family:inherit; color:#33424a; outline:none;">
+      </div>
+
+      <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+        <!-- flag -->
+        <button style="width:38px; height:38px; border:none; background:#f4f7f7; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:0;">
+          <span style="display:flex; width:22px; height:16px; border-radius:3px; overflow:hidden;"><span style="flex:1; background:#0055a4;"></span><span style="flex:1; background:#fff;"></span><span style="flex:1; background:#ef4135;"></span></span>
+        </button>
+        <button style="width:38px; height:38px; border:none; background:#f4f7f7; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#5a6a70;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.6 5.6L21 9.5l-4.5 4.3L17.6 21 12 17.8 6.4 21l1.1-7.2L3 9.5l6.4-.9z"/></svg>
+        </button>
+        <button style="position:relative; width:38px; height:38px; border:none; background:#f4f7f7; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#5a6a70;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          <span style="position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#f5b301; border:1.5px solid #fff;"></span>
+        </button>
+        <button style="position:relative; width:38px; height:38px; border:none; background:#f4f7f7; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#5a6a70;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13M12 8c-2 0-4-1-4-3a2 2 0 0 1 4 0m0 3c2 0 4-1 4-3a2 2 0 0 0-4 0"/></svg>
+          <span style="position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#1fbf75; border:1.5px solid #fff;"></span>
+        </button>
+        <button style="position:relative; width:38px; height:38px; border:none; background:#f4f7f7; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#5a6a70;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12 7.6L3 21l1.9-6A8.4 8.4 0 1 1 21 11.5z"/></svg>
+          <span style="position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#ef4444; border:1.5px solid #fff;"></span>
+        </button>
+        <div style="position:relative; margin-left:2px;">
+          <img src="https://i.pravatar.cc/80?img=12" alt="" style="width:40px; height:40px; border-radius:11px; object-fit:cover;">
+          <span style="position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:50%; background:#ef4444; border:2px solid #fff;"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- content -->
+    <main class="scrolly" style="flex:1; overflow-y:auto; background:linear-gradient(180deg,#e9f4f1 0%,#f5f7f8 220px); padding:22px 26px 40px;">
+
+      <!-- breadcrumb row -->
+      <div style="display:flex; align-items:center; margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:10px; font-size:15px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0e8d7e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg>
+          <span style="color:#9aa7ab;">/</span>
+          <span style="color:#0e8d7e; font-weight:700;">Hospital Dashboard</span>
+        </div>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #e7ecec; border-radius:12px; padding:9px 14px; font-size:14px; color:#33424a; font-weight:500;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e8d7e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+          05/27/2026 - 06/25/2026
+        </div>
+      </div>
+
+      <!-- grid: left col (stats+specialities) + right col (lungs) -->
+      <div style="display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:20px; align-items:start;">
+
+        <!-- LEFT COLUMN -->
+        <div style="display:flex; flex-direction:column; gap:20px; min-width:0;">
+
+          <!-- stat cards -->
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+
+            <!-- patients -->
+            <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+              <div style="display:flex; align-items:flex-start; gap:16px;">
+                <div style="width:56px; height:56px; border-radius:50%; border:1.5px solid #d3e8e3; display:flex; align-items:center; justify-content:center; flex:0 0 56px; color:#0e8d7e;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 16 0"/><path d="M4 13c0 2 1.5 3 4 3s2-2 4-2 1.5 2 4 2 4-1 4-3"/><path d="M9 13V9a3 3 0 0 1 6 0v4"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:34px; font-weight:800; color:#243239; line-height:1;">980</div>
+                  <div style="margin-top:6px; font-size:14px; color:#8b999e;">Patients</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:20px;">
+                <a href="#" style="display:flex; align-items:center; gap:6px; color:#0e8d7e; font-weight:600; font-size:14px; text-decoration:none;">View All
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <div style="text-align:right;">
+                  <div style="color:#1aa896; font-weight:700; font-size:13px;">+40%</div>
+                  <div style="margin-top:5px; background:#e3f3ef; color:#0e8d7e; font-weight:600; font-size:11px; padding:3px 9px; border-radius:7px;">this month</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- appointments -->
+            <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+              <div style="display:flex; align-items:flex-start; gap:16px;">
+                <div style="width:56px; height:56px; border-radius:50%; border:1.5px solid #d3e8e3; display:flex; align-items:center; justify-content:center; flex:0 0 56px; color:#0e8d7e;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4c-3 0-5 2-5 5 0 4 4 7 7 11 3-4 7-7 7-11 0-3-2-5-5-5"/><path d="M9 9h6M12 6v6"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:34px; font-weight:800; color:#243239; line-height:1;">260</div>
+                  <div style="margin-top:6px; font-size:14px; color:#8b999e;">Appointments</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:20px;">
+                <a href="#" style="display:flex; align-items:center; gap:6px; color:#0e8d7e; font-weight:600; font-size:14px; text-decoration:none;">View All
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <div style="text-align:right;">
+                  <div style="color:#1aa896; font-weight:700; font-size:13px;">+30%</div>
+                  <div style="margin-top:5px; background:#e3f3ef; color:#0e8d7e; font-weight:600; font-size:11px; padding:3px 9px; border-radius:7px;">this month</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- revenue -->
+            <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+              <div style="display:flex; align-items:flex-start; gap:16px;">
+                <div style="width:56px; height:56px; border-radius:50%; border:1.5px solid #d3e8e3; display:flex; align-items:center; justify-content:center; flex:0 0 56px; color:#0e8d7e;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-1-1.6-1.4-2.8-1.4-1.6 0-2.7.8-2.7 2 0 2.8 5.5 1.4 5.5 4.3 0 1.3-1.2 2.1-3 2.1-1.3 0-2.5-.5-3-1.5M12 6v1.6M12 16.4V18"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:34px; font-weight:800; color:#243239; line-height:1;">$6800</div>
+                  <div style="margin-top:6px; font-size:14px; color:#8b999e;">Revenue</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:20px;">
+                <a href="#" style="display:flex; align-items:center; gap:6px; color:#0e8d7e; font-weight:600; font-size:14px; text-decoration:none;">View All
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <div style="text-align:right;">
+                  <div style="color:#1aa896; font-weight:700; font-size:13px;">+20%</div>
+                  <div style="margin-top:5px; background:#e3f3ef; color:#0e8d7e; font-weight:600; font-size:11px; padding:3px 9px; border-radius:7px;">this month</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- specialities -->
+          <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+            <div style="font-size:18px; font-weight:700; color:#243239; margin-bottom:18px;">Specialities</div>
+            <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:16px;">
+
+              <div style="border:1px solid #eef1f2; border-radius:14px; padding:20px 12px; text-align:center;">
+                <div style="height:54px; display:flex; align-items:center; justify-content:center; color:#0e8d7e;">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><path d="M7.5 6.5 16.5 17.5M6 7c-2 2-3 4 0 6M18 17c2-2 3-4 0-6"/></svg>
+                </div>
+                <div style="margin-top:10px; font-weight:700; font-size:15px; color:#33424a;">Orthopedic</div>
+                <div style="margin-top:6px; font-size:24px; font-weight:800; color:#1aa896;">9</div>
+              </div>
+
+              <div style="border:1px solid #eef1f2; border-radius:14px; padding:20px 12px; text-align:center;">
+                <div style="height:54px; display:flex; align-items:center; justify-content:center; color:#0e8d7e;">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4C5 4 3.5 6.5 3.5 9.5S5 16 7 17c1.5.8 2.5-.5 2.5-2.5 0-1.5-1-2-1-3.5S9.5 9 9.5 7.5 9.5 4 8 4Z"/><path d="M16 4c3 0 4.5 2.5 4.5 5.5S19 16 17 17c-1.5.8-2.5-.5-2.5-2.5 0-1.5 1-2 1-3.5S14.5 9 14.5 7.5 14.5 4 16 4Z"/><path d="M8 8v3M16 8v3"/></svg>
+                </div>
+                <div style="margin-top:10px; font-weight:700; font-size:15px; color:#33424a;">Kidney</div>
+                <div style="margin-top:6px; font-size:24px; font-weight:800; color:#1aa896;">5</div>
+              </div>
+
+              <div style="border:1px solid #eef1f2; border-radius:14px; padding:20px 12px; text-align:center;">
+                <div style="height:54px; display:flex; align-items:center; justify-content:center; color:#0e8d7e;">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7c4-1 12-2 16 0 1.5.6 0 5-3 7-2 1.4-3 3-5 3-4 0-8-3-8-7 0-1.5.5-2.7 0-3Z"/><path d="M11 9v1.5M9.5 9.7h3"/></svg>
+                </div>
+                <div style="margin-top:10px; font-weight:700; font-size:15px; color:#33424a;">Liver</div>
+                <div style="margin-top:6px; font-size:24px; font-weight:800; color:#1aa896;">6</div>
+              </div>
+
+              <div style="border:1px solid #eef1f2; border-radius:14px; padding:20px 12px; text-align:center;">
+                <div style="height:54px; display:flex; align-items:center; justify-content:center; color:#0e8d7e;">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4c-2 0-4 1.5-4 4 0 5 3 12 7 12s5-4 5-7c0-2-1-3-3-3-1.5 0-2 1-2 1"/><circle cx="9" cy="9" r="1.3"/><path d="M9 4c2 0 3 1 3 1"/></svg>
+                </div>
+                <div style="margin-top:10px; font-weight:700; font-size:15px; color:#33424a;">Surgery</div>
+                <div style="margin-top:6px; font-size:24px; font-weight:800; color:#1aa896;">12</div>
+              </div>
+
+              <div style="border:1px solid #eef1f2; border-radius:14px; padding:20px 12px; text-align:center;">
+                <div style="height:54px; display:flex; align-items:center; justify-content:center; color:#0e8d7e;">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="7" r="3"/><path d="m11 9-6 7c-.7.8-.7 2 0 2.8.8.7 2 .7 2.8 0l6-7M4 21h7"/></svg>
+                </div>
+                <div style="margin-top:10px; font-weight:700; font-size:15px; color:#33424a;">Laboratory</div>
+                <div style="margin-top:6px; font-size:24px; font-weight:800; color:#1aa896;">5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN : lungs -->
+        <div style="background:#fff; border-radius:18px; padding:22px; box-shadow:0 6px 20px rgba(35,80,95,.05);">
+          <div style="display:flex; align-items:center; justify-content:center; padding:6px 0 14px;">
+            {{ lungs }}
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:6px;">
+            <div style="text-align:center;">
+              <div style="font-size:13px; color:#8b999e; margin-bottom:8px;">Left</div>
+              {{ gaugeLeft }}
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:13px; color:#8b999e; margin-bottom:8px;">Health</div>
+              {{ gaugeHealth }}
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:13px; color:#8b999e; margin-bottom:8px;">Right</div>
+              {{ gaugeRight }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- patients by age -->
+      <div style="background:#fff; border-radius:18px; padding:22px 24px 16px; box-shadow:0 6px 20px rgba(35,80,95,.05); margin-top:20px;">
+        <div style="font-size:18px; font-weight:700; color:#243239; margin-bottom:18px;">Patients by Age</div>
+        <div style="position:relative; height:230px;">
+          <div style="position:absolute; inset:0 0 24px 0; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+            <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+            <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+            <div style="border-top:1px dashed #eef1f2; height:0;"></div>
+            <div style="border-top:1px solid #e7ecec; height:0;"></div>
+          </div>
+          {{ chart }}
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- chat widget -->
+  <sc-if value="{{ showChat }}" hint-placeholder-val="{{ true }}">
+    <div style="position:fixed; right:26px; bottom:24px; width:300px; background:#fff; border-radius:16px; box-shadow:0 14px 40px rgba(30,60,70,.18); overflow:hidden; z-index:50;">
+      <div style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
+        <img src="https://i.pravatar.cc/60?img=32" alt="" style="width:30px; height:30px; border-radius:50%; object-fit:cover;">
+        <span style="font-weight:700; font-size:14px; color:#243239;">Monster Bot</span>
+        <button style="margin-left:auto; border:none; background:none; cursor:pointer; color:#9aa7ab; font-size:18px; line-height:1;">✕</button>
+      </div>
+      <div style="padding:4px 16px 18px;">
+        <div style="display:inline-block; background:#f1f4f4; color:#4a585e; font-size:13px; padding:10px 14px; border-radius:12px 12px 12px 4px;">Hi! What can I do for you?</div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:820},&quot;showChat&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const teal = '#0e8d7e';
+    // ---- lungs illustration ----
+    const lungs = React.createElement('svg', { width: 250, height: 230, viewBox: '0 0 250 230', key: 'lungs' },
+      React.createElement('defs', null,
+        React.createElement('linearGradient', { id: 'lungG', x1: 0, y1: 0, x2: 0, y2: 1 },
+          React.createElement('stop', { offset: '0%', stopColor: '#7fc3e8' }),
+          React.createElement('stop', { offset: '100%', stopColor: '#2f6fb0' })
+        )
+      ),
+      // trachea
+      React.createElement('rect', { x: 118, y: 14, width: 14, height: 46, rx: 7, fill: '#3a78b3' }),
+      React.createElement('path', { d: 'M125 58 C110 64 95 72 84 86 M125 58 C140 64 155 72 166 86', stroke: '#3a78b3', strokeWidth: 9, fill: 'none', strokeLinecap: 'round' }),
+      // left lung
+      React.createElement('path', { d: 'M112 78 C108 70 88 70 70 86 C46 108 36 148 44 178 C50 200 78 208 96 196 C110 186 112 160 112 138 Z', fill: 'url(#lungG)', opacity: .92 }),
+      // right lung
+      React.createElement('path', { d: 'M138 78 C142 70 162 70 180 86 C204 108 214 148 206 178 C200 200 172 208 154 196 C140 186 138 160 138 138 Z', fill: 'url(#lungG)', opacity: .92 }),
+      // bronchi left
+      React.createElement('path', { d: 'M108 86 C96 96 86 110 80 128 M96 104 80 112 M88 120 74 130 M100 130 86 142 M104 150 92 164', stroke: '#b5732f', strokeWidth: 3, fill: 'none', strokeLinecap: 'round', opacity: .8 }),
+      // bronchi right
+      React.createElement('path', { d: 'M142 86 C154 96 164 110 170 128 M154 104 170 112 M162 120 176 130 M150 130 164 142 M146 150 158 164', stroke: '#b5732f', strokeWidth: 3, fill: 'none', strokeLinecap: 'round', opacity: .8 }),
+      // highlight dots
+      React.createElement('circle', { cx: 92, cy: 110, r: 4, fill: '#fff', opacity: .85 }),
+      React.createElement('circle', { cx: 156, cy: 150, r: 4, fill: '#fff', opacity: .85 }),
+      React.createElement('circle', { cx: 120, cy: 170, r: 4, fill: '#fff', opacity: .85 })
+    );
+
+    // ---- gauges ----
+    const gauge = (pct, color, key) => {
+      const r = 22, c = 2 * Math.PI * r, off = c * (1 - pct);
+      return React.createElement('svg', { width: 64, height: 64, viewBox: '0 0 64 64', key },
+        React.createElement('circle', { cx: 32, cy: 32, r, fill: 'none', stroke: '#eef1f2', strokeWidth: 7 }),
+        React.createElement('circle', { cx: 32, cy: 32, r, fill: 'none', stroke: color, strokeWidth: 7, strokeLinecap: 'round', strokeDasharray: c, strokeDashoffset: off, transform: 'rotate(-90 32 32)' })
+      );
+    };
+
+    // ---- bar chart ----
+    const heights = [10, 7, 9, 6, 11, 8, 13, 9, 15, 11, 18, 14, 24, 19, 30, 26, 42, 36, 58, 80, 64, 96];
+    const max = 110;
+    const bars = heights.map((h, i) =>
+      React.createElement('div', { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' } },
+        React.createElement('div', { style: {
+          width: '58%',
+          height: (h / max * 100) + '%',
+          background: i >= heights.length - 3 ? 'rgba(14,141,126,.55)' : 'rgba(26,168,150,.28)',
+          borderRadius: '5px 5px 0 0'
+        } })
+      )
+    );
+    const chart = React.createElement('div', { style: { position: 'absolute', inset: '0 0 24px 0', display: 'flex', alignItems: 'flex-end', gap: 6, padding: '0 4px' } }, bars);
+
+    return {
+      lungs,
+      gaugeLeft: gauge(0.42, teal, 'gl'),
+      gaugeHealth: gauge(0.72, '#ef4444', 'gh'),
+      gaugeRight: gauge(0.34, teal, 'gr'),
+      chart,
+      showChat: this.props.showChat ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
