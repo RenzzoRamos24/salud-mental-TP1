@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="Sami — Salud Mental (UPC tesis)" id="sami-model" version="5.0.0">
+  <folder name="Strategy" id="f-strategy" type="strategy"/>
+  <folder name="Business" id="f-business" type="business">
+    <element xsi:type="archimate:BusinessActor" id="actor-estudiante" name="Estudiante"/>
+    <element xsi:type="archimate:BusinessActor" id="actor-psicologo" name="Psicólogo"/>
+    <element xsi:type="archimate:BusinessActor" id="actor-admin" name="Administrador"/>
+  </folder>
+  <folder name="Application" id="f-application" type="application">
+    <element xsi:type="archimate:ApplicationComponent" id="app-frontend" name="Frontend Vue.js 3"/>
+    <element xsi:type="archimate:ApplicationComponent" id="app-panel-alumno" name="Panel del Alumno"/>
+    <element xsi:type="archimate:ApplicationComponent" id="app-panel-clinico" name="Panel Clínico"/>
+    <element xsi:type="archimate:ApplicationComponent" id="app-panel-admin" name="Panel Admin"/>
+    <element xsi:type="archimate:ApplicationComponent" id="app-cuestionario-ui" name="Cuestionario UI"/>
+    <element xsi:type="archimate:ApplicationComponent" id="app-fastapi" name="FastAPI Backend"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-auth" name="Auth Service&#xA;(JWT + OAuth + bcrypt)"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-bank" name="Bank Service&#xA;(instrumentos validados)"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-plantilla" name="Plantilla Service"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-cuestionario" name="Cuestionario Service"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-evaluator" name="Evaluator Service&#xA;(4 capas, sin diagnóstico)"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-nlp" name="NLP Service&#xA;BETO zero-shot 8 cat."/>
+    <element xsi:type="archimate:ApplicationService" id="svc-cita" name="Cita Service"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-sos" name="SOS Service"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-notes" name="Notes Service&#xA;(notas clínicas privadas)"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-access" name="Access Log Middleware"/>
+    <element xsi:type="archimate:ApplicationService" id="svc-scheduler" name="Scheduler&#xA;(APScheduler)"/>
+    <element xsi:type="archimate:DataObject" id="data-usuario" name="Usuario"/>
+    <element xsi:type="archimate:DataObject" id="data-banco" name="Banco Instrumentos&#xA;(PHQ-A, GAD-7, SRQ-20,&#xA;RSES, WHO-5, UCLA-3)"/>
+    <element xsi:type="archimate:DataObject" id="data-frases" name="Frases SSCT (40)"/>
+    <element xsi:type="archimate:DataObject" id="data-bloque-custom" name="Bloque Custom"/>
+    <element xsi:type="archimate:DataObject" id="data-plantilla" name="Plantilla Cuestionario"/>
+    <element xsi:type="archimate:DataObject" id="data-aplicacion" name="Aplicación Cuestionario"/>
+    <element xsi:type="archimate:DataObject" id="data-respuesta" name="Respuesta"/>
+    <element xsi:type="archimate:DataObject" id="data-cita" name="Cita"/>
+    <element xsi:type="archimate:DataObject" id="data-nota" name="Nota Clínica"/>
+    <element xsi:type="archimate:DataObject" id="data-sos" name="SOS Event"/>
+    <element xsi:type="archimate:DataObject" id="data-access" name="Access Log"/>
+  </folder>
+  <folder name="Technology &amp; Physical" id="f-technology" type="technology">
+    <element xsi:type="archimate:Node" id="node-azure" name="Azure (Brazil South)"/>
+    <element xsi:type="archimate:Node" id="node-appservice" name="App Service Linux B2&#xA;HTTPS forzado · TLS 1.2"/>
+    <element xsi:type="archimate:Node" id="node-postgres" name="PostgreSQL Flexible B1ms&#xA;v16 · TLS obligatorio · backups 7d"/>
+    <element xsi:type="archimate:TechnologyService" id="tech-https" name="HTTPS / TLS 1.2"/>
+    <element xsi:type="archimate:TechnologyService" id="tech-jwt" name="JWT + OAuth (Google)"/>
+    <element xsi:type="archimate:TechnologyService" id="tech-bcrypt" name="bcrypt (hashing passwords)"/>
+    <element xsi:type="archimate:TechnologyService" id="tech-hf" name="HuggingFace Hub&#xA;(descarga BETO)"/>
+  </folder>
+  <folder name="Motivation" id="f-motivation" type="motivation"/>
+  <folder name="Implementation &amp; Migration" id="f-imp" type="implementation_migration"/>
+  <folder name="Other" id="f-other" type="other"/>
+  <folder name="Relations" id="f-relations" type="relations">
+    <element xsi:type="archimate:ServingRelationship" id="r-1" source="app-panel-alumno" target="actor-estudiante"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-2" source="app-panel-clinico" target="actor-psicologo"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-3" source="app-panel-admin" target="actor-admin"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-4" source="app-frontend" target="app-panel-alumno"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-5" source="app-frontend" target="app-panel-clinico"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-6" source="app-frontend" target="app-panel-admin"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-7" source="app-frontend" target="app-cuestionario-ui"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-8" source="app-fastapi" target="svc-auth"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-9" source="app-fastapi" target="svc-bank"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-10" source="app-fastapi" target="svc-plantilla"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-11" source="app-fastapi" target="svc-cuestionario"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-12" source="app-fastapi" target="svc-evaluator"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-13" source="app-fastapi" target="svc-nlp"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-14" source="app-fastapi" target="svc-cita"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-15" source="app-fastapi" target="svc-sos"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-16" source="app-fastapi" target="svc-notes"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-17" source="app-fastapi" target="svc-access"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-18" source="app-fastapi" target="svc-scheduler"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-20" source="app-fastapi" target="app-frontend" name="HTTPS / TLS 1.2 · JWT"/>
+    <element xsi:type="archimate:UsedByRelationship" id="r-20b" source="app-fastapi" target="node-postgres" name="TLS obligatorio · SQLAlchemy ORM"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-21" source="svc-auth" target="data-usuario" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-22" source="svc-bank" target="data-banco" accessType="1"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-23" source="svc-bank" target="data-frases" accessType="1"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-24" source="svc-bank" target="data-bloque-custom" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-25" source="svc-plantilla" target="data-plantilla" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-26" source="svc-cuestionario" target="data-aplicacion" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-27" source="svc-cuestionario" target="data-respuesta" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-28" source="svc-evaluator" target="data-respuesta" accessType="1"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-29" source="svc-evaluator" target="data-aplicacion" accessType="2"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-30" source="svc-nlp" target="svc-evaluator" name="clasifica frases SSCT"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-31" source="svc-cita" target="data-cita" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-32" source="svc-sos" target="data-sos" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-33" source="svc-notes" target="data-nota" accessType="3"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-34" source="svc-access" target="data-access" accessType="2"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-40" source="node-azure" target="node-appservice"/>
+    <element xsi:type="archimate:CompositionRelationship" id="r-41" source="node-azure" target="node-postgres"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-42" source="node-appservice" target="app-fastapi"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-43" source="node-appservice" target="app-frontend"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-44" source="node-postgres" target="data-usuario"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-45" source="node-postgres" target="data-banco"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-46" source="node-postgres" target="data-aplicacion"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-47" source="node-postgres" target="data-respuesta"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-48" source="node-postgres" target="data-cita"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-49" source="node-postgres" target="data-nota"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-50" source="node-postgres" target="data-sos"/>
+    <element xsi:type="archimate:AssignmentRelationship" id="r-51" source="node-postgres" target="data-access"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-60" source="tech-https" target="app-frontend"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-61" source="tech-jwt" target="svc-auth"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-62" source="tech-bcrypt" target="svc-auth"/>
+    <element xsi:type="archimate:ServingRelationship" id="r-63" source="tech-hf" target="svc-nlp" name="descarga BETO en cold start"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-34b" source="svc-access" target="data-respuesta" accessType="1" name="intercepta requests"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-35" source="svc-scheduler" target="data-aplicacion" accessType="3" name="cierra ciclos"/>
+    <element xsi:type="archimate:AccessRelationship" id="r-36" source="svc-evaluator" target="data-banco" accessType="1" name="cortes científicos"/>
+  </folder>
+  <folder name="Views" id="f-views" type="diagrams">
+    <element xsi:type="archimate:ArchimateDiagramModel" id="view-sami" name="Sami — Arquitectura General">
+      <child xsi:type="archimate:DiagramObject" id="d-actor-estudiante" archimateElement="actor-estudiante" textAlignment="2" targetConnections="conn-1">
+        <bounds x="60" y="20" w="140" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-actor-psicologo" archimateElement="actor-psicologo" textAlignment="2" targetConnections="conn-2">
+        <bounds x="240" y="20" w="140" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-actor-admin" archimateElement="actor-admin" textAlignment="2" targetConnections="conn-3">
+        <bounds x="420" y="20" w="140" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-frontend" archimateElement="app-frontend" textAlignment="2" targetConnections="conn-19 conn-41 conn-50">
+        <bounds x="60" y="120" w="780" h="40"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-4" source="d-frontend" target="d-panel-alumno" relationship="r-4"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-5" source="d-frontend" target="d-panel-clinico" relationship="r-5"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-6" source="d-frontend" target="d-panel-admin" relationship="r-6"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-7" source="d-frontend" target="d-cuestionario-ui" relationship="r-7"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-panel-alumno" archimateElement="app-panel-alumno" textAlignment="2" targetConnections="conn-4">
+        <bounds x="80" y="180" w="140" h="55"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-1" source="d-panel-alumno" target="d-actor-estudiante" relationship="r-1"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-panel-clinico" archimateElement="app-panel-clinico" textAlignment="2" targetConnections="conn-5">
+        <bounds x="240" y="180" w="140" h="55"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-2" source="d-panel-clinico" target="d-actor-psicologo" relationship="r-2"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-panel-admin" archimateElement="app-panel-admin" textAlignment="2" targetConnections="conn-6">
+        <bounds x="400" y="180" w="140" h="55"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-3" source="d-panel-admin" target="d-actor-admin" relationship="r-3"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-cuestionario-ui" archimateElement="app-cuestionario-ui" textAlignment="2" targetConnections="conn-7">
+        <bounds x="560" y="180" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-https" archimateElement="tech-https" textAlignment="2">
+        <bounds x="740" y="180" w="140" h="55"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-50" source="d-https" target="d-frontend" relationship="r-60"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-fastapi" archimateElement="app-fastapi" textAlignment="2" targetConnections="conn-40">
+        <bounds x="60" y="280" w="820" h="40"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-8"  source="d-fastapi" target="d-svc-auth" relationship="r-8"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-9"  source="d-fastapi" target="d-svc-bank" relationship="r-9"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-10" source="d-fastapi" target="d-svc-plantilla" relationship="r-10"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-11" source="d-fastapi" target="d-svc-cuestionario" relationship="r-11"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-12" source="d-fastapi" target="d-svc-evaluator" relationship="r-12"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-13" source="d-fastapi" target="d-svc-nlp" relationship="r-13"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-14" source="d-fastapi" target="d-svc-cita" relationship="r-14"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-15" source="d-fastapi" target="d-svc-sos" relationship="r-15"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-16" source="d-fastapi" target="d-svc-notes" relationship="r-16"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-17" source="d-fastapi" target="d-svc-access" relationship="r-17"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-18" source="d-fastapi" target="d-svc-scheduler" relationship="r-18"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-19" source="d-fastapi" target="d-frontend" relationship="r-20"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-20" source="d-fastapi" target="d-node-postgres" relationship="r-20b"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-auth" archimateElement="svc-auth" textAlignment="2" targetConnections="conn-8 conn-51 conn-52">
+        <bounds x="80" y="340" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-21" source="d-svc-auth" target="d-data-usuario" relationship="r-21"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-bank" archimateElement="svc-bank" textAlignment="2" targetConnections="conn-9">
+        <bounds x="260" y="340" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-22" source="d-svc-bank" target="d-data-banco" relationship="r-22"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-23" source="d-svc-bank" target="d-data-frases" relationship="r-23"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-24" source="d-svc-bank" target="d-data-bloque-custom" relationship="r-24"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-plantilla" archimateElement="svc-plantilla" textAlignment="2" targetConnections="conn-10">
+        <bounds x="440" y="340" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-25" source="d-svc-plantilla" target="d-data-plantilla" relationship="r-25"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-cuestionario" archimateElement="svc-cuestionario" textAlignment="2" targetConnections="conn-11">
+        <bounds x="620" y="340" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-26" source="d-svc-cuestionario" target="d-data-aplicacion" relationship="r-26"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-27" source="d-svc-cuestionario" target="d-data-respuesta" relationship="r-27"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-cita" archimateElement="svc-cita" textAlignment="2" targetConnections="conn-14">
+        <bounds x="80" y="420" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-32" source="d-svc-cita" target="d-data-cita" relationship="r-31"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-evaluator" archimateElement="svc-evaluator" textAlignment="2" targetConnections="conn-12 conn-31">
+        <bounds x="260" y="420" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-28" source="d-svc-evaluator" target="d-data-respuesta" relationship="r-28"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-29" source="d-svc-evaluator" target="d-data-aplicacion" relationship="r-29"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-30" source="d-svc-evaluator" target="d-data-banco" relationship="r-36"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-nlp" archimateElement="svc-nlp" textAlignment="2" targetConnections="conn-13 conn-53">
+        <bounds x="440" y="420" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-31" source="d-svc-nlp" target="d-svc-evaluator" relationship="r-30"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-sos" archimateElement="svc-sos" textAlignment="2" targetConnections="conn-15">
+        <bounds x="620" y="420" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-33" source="d-svc-sos" target="d-data-sos" relationship="r-32"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-notes" archimateElement="svc-notes" textAlignment="2" targetConnections="conn-16">
+        <bounds x="80" y="500" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-34" source="d-svc-notes" target="d-data-nota" relationship="r-33"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-access" archimateElement="svc-access" textAlignment="2" targetConnections="conn-17">
+        <bounds x="260" y="500" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-35" source="d-svc-access" target="d-data-access" relationship="r-34"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-36" source="d-svc-access" target="d-data-respuesta" relationship="r-34b"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-svc-scheduler" archimateElement="svc-scheduler" textAlignment="2" targetConnections="conn-18">
+        <bounds x="440" y="500" w="160" h="60"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-37" source="d-svc-scheduler" target="d-data-aplicacion" relationship="r-35"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-jwt" archimateElement="tech-jwt" textAlignment="2">
+        <bounds x="620" y="500" w="140" h="55"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-51" source="d-jwt" target="d-svc-auth" relationship="r-61"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-bcrypt" archimateElement="tech-bcrypt" textAlignment="2">
+        <bounds x="780" y="500" w="140" h="55"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-52" source="d-bcrypt" target="d-svc-auth" relationship="r-62"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-usuario" archimateElement="data-usuario" textAlignment="2" targetConnections="conn-21 conn-42">
+        <bounds x="940" y="120" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-banco" archimateElement="data-banco" textAlignment="2" targetConnections="conn-22 conn-30 conn-43">
+        <bounds x="940" y="190" w="160" h="70"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-frases" archimateElement="data-frases" textAlignment="2" targetConnections="conn-23">
+        <bounds x="940" y="275" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-bloque-custom" archimateElement="data-bloque-custom" textAlignment="2" targetConnections="conn-24">
+        <bounds x="940" y="345" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-plantilla" archimateElement="data-plantilla" textAlignment="2" targetConnections="conn-25">
+        <bounds x="940" y="415" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-aplicacion" archimateElement="data-aplicacion" textAlignment="2" targetConnections="conn-26 conn-29 conn-37 conn-44">
+        <bounds x="940" y="485" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-respuesta" archimateElement="data-respuesta" textAlignment="2" targetConnections="conn-27 conn-28 conn-36 conn-45">
+        <bounds x="940" y="555" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-cita" archimateElement="data-cita" textAlignment="2" targetConnections="conn-32 conn-46">
+        <bounds x="1120" y="120" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-nota" archimateElement="data-nota" textAlignment="2" targetConnections="conn-34 conn-47">
+        <bounds x="1120" y="190" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-sos" archimateElement="data-sos" textAlignment="2" targetConnections="conn-33 conn-48">
+        <bounds x="1120" y="260" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-data-access" archimateElement="data-access" textAlignment="2" targetConnections="conn-35 conn-49">
+        <bounds x="1120" y="330" w="160" h="55"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-node-azure" archimateElement="node-azure" textAlignment="2">
+        <bounds x="60" y="640" w="1220" h="40"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-38" source="d-node-azure" target="d-node-appservice" relationship="r-40"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-39" source="d-node-azure" target="d-node-postgres" relationship="r-41"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-node-appservice" archimateElement="node-appservice" textAlignment="2" targetConnections="conn-38">
+        <bounds x="80" y="700" w="380" h="70"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-40" source="d-node-appservice" target="d-fastapi" relationship="r-42"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-41" source="d-node-appservice" target="d-frontend" relationship="r-43"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-node-postgres" archimateElement="node-postgres" textAlignment="2" targetConnections="conn-20 conn-39">
+        <bounds x="500" y="700" w="380" h="70"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-42" source="d-node-postgres" target="d-data-usuario" relationship="r-44"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-43" source="d-node-postgres" target="d-data-banco" relationship="r-45"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-44" source="d-node-postgres" target="d-data-aplicacion" relationship="r-46"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-45" source="d-node-postgres" target="d-data-respuesta" relationship="r-47"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-46" source="d-node-postgres" target="d-data-cita" relationship="r-48"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-47" source="d-node-postgres" target="d-data-nota" relationship="r-49"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-48" source="d-node-postgres" target="d-data-sos" relationship="r-50"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-49" source="d-node-postgres" target="d-data-access" relationship="r-51"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="d-hf" archimateElement="tech-hf" textAlignment="2">
+        <bounds x="920" y="700" w="200" h="70"/>
+        <sourceConnection xsi:type="archimate:Connection" id="conn-53" source="d-hf" target="d-svc-nlp" relationship="r-63"/>
+      </child>
+    </element>
+  </folder>
+</archimate:model>

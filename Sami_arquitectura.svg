@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1080" font-family="Work Sans, Arial, sans-serif" font-size="11">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+    </marker>
+    <marker id="arrowOpen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 12 6 L 0 12" fill="none" stroke="#444" stroke-width="1.4"/>
+    </marker>
+    <marker id="diamond" viewBox="0 0 12 12" refX="1" refY="6" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M 1 6 L 6 1 L 11 6 L 6 11 z" fill="#444"/>
+    </marker>
+    <style>
+      .actor   { fill:#FFF6CC; stroke:#C9A227; }
+      .biz     { fill:#FFE9A8; stroke:#C9A227; }
+      .app     { fill:#CDE8FF; stroke:#3E7CB1; }
+      .svc     { fill:#E6F2FF; stroke:#3E7CB1; }
+      .data    { fill:#EAF5FF; stroke:#3E7CB1; stroke-dasharray:0; }
+      .tech    { fill:#D6EBC4; stroke:#5C8A3A; }
+      .node    { fill:#EEF8E0; stroke:#5C8A3A; }
+      .external{ fill:#F0E6F8; stroke:#7A4FA0; }
+      .layer-biz   { fill:#FFFBE9; stroke:#C9A227; stroke-dasharray:6,3; }
+      .layer-app   { fill:#F4FAFF; stroke:#3E7CB1; stroke-dasharray:6,3; }
+      .layer-tech  { fill:#F3F9EA; stroke:#5C8A3A; stroke-dasharray:6,3; }
+      .layer-label { font-size:13px; font-weight:700; fill:#555; }
+      .title       { font-size:18px; font-weight:700; fill:#222; }
+      .subtitle    { font-size:11px; fill:#555; }
+      .box-title   { font-weight:700; font-size:12px; }
+      .small       { font-size:10px; fill:#444; }
+      .edge        { stroke:#444; stroke-width:1.2; fill:none; }
+      .edge-dash   { stroke:#444; stroke-width:1.2; fill:none; stroke-dasharray:5,3; }
+      .edge-label  { font-size:10px; fill:#222; font-weight:600; }
+      .edge-bg     { fill:white; }
+    </style>
+  </defs>
+
+  <text x="24" y="28" class="title">Sami — Arquitectura (ArchiMate)</text>
+  <text x="24" y="46" class="subtitle">Plataforma web de evaluación de salud mental para secundaria · NO diagnostica · cortes clínicos validados + BETO sobre frases SSCT</text>
+
+  <!-- ============================== CAPA NEGOCIO ============================== -->
+  <rect x="20" y="64" width="1360" height="90" rx="6" class="layer-biz"/>
+  <text x="30" y="80" class="layer-label">Capa de Negocio · Actores</text>
+
+  <!-- Actores -->
+  <g>
+    <rect x="180" y="92" width="180" height="50" rx="4" class="actor"/>
+    <text x="270" y="115" text-anchor="middle" class="box-title">Estudiante</text>
+    <text x="270" y="132" text-anchor="middle" class="small">responde · agenda · SOS</text>
+
+    <rect x="610" y="92" width="180" height="50" rx="4" class="actor"/>
+    <text x="700" y="115" text-anchor="middle" class="box-title">Psicólogo</text>
+    <text x="700" y="132" text-anchor="middle" class="small">asigna · interpreta · notas</text>
+
+    <rect x="1040" y="92" width="180" height="50" rx="4" class="actor"/>
+    <text x="1130" y="115" text-anchor="middle" class="box-title">Administrador</text>
+    <text x="1130" y="132" text-anchor="middle" class="small">usuarios · config · auditoría</text>
+  </g>
+
+  <!-- ============================== CAPA APLICACION ============================== -->
+  <rect x="20" y="170" width="1360" height="580" rx="6" class="layer-app"/>
+  <text x="30" y="187" class="layer-label">Capa de Aplicación</text>
+
+  <!-- FRONTEND VUE -->
+  <rect x="40" y="200" width="1320" height="100" rx="6" fill="#E1F0FF" stroke="#3E7CB1"/>
+  <text x="55" y="218" class="box-title" fill="#1A4F7A">Frontend Vue.js 3 + Vite + Tailwind</text>
+
+  <g>
+    <rect x="55"  y="230" width="200" height="55" rx="4" class="app"/>
+    <text x="155" y="248" text-anchor="middle" class="box-title">Panel del Alumno</text>
+    <text x="155" y="263" text-anchor="middle" class="small">Inicio · Cuestionario · Reuniones</text>
+    <text x="155" y="276" text-anchor="middle" class="small">Recursos · Mi bienestar · Perfil</text>
+
+    <rect x="275" y="230" width="240" height="55" rx="4" class="app"/>
+    <text x="395" y="248" text-anchor="middle" class="box-title">Panel Clínico</text>
+    <text x="395" y="263" text-anchor="middle" class="small">Estudiantes · Alertas · SOS · Citas</text>
+    <text x="395" y="276" text-anchor="middle" class="small">Banco · Plantillas · Asignar</text>
+
+    <rect x="535" y="230" width="200" height="55" rx="4" class="app"/>
+    <text x="635" y="248" text-anchor="middle" class="box-title">Panel Admin</text>
+    <text x="635" y="263" text-anchor="middle" class="small">Usuarios · Configuración</text>
+    <text x="635" y="276" text-anchor="middle" class="small">Reportes · Auditoría</text>
+
+    <rect x="755" y="230" width="200" height="55" rx="4" class="app"/>
+    <text x="855" y="248" text-anchor="middle" class="box-title">Pantalla de Cuestionario</text>
+    <text x="855" y="263" text-anchor="middle" class="small">render unificado de bloques</text>
+    <text x="855" y="276" text-anchor="middle" class="small">y frases SSCT</text>
+
+    <rect x="975" y="230" width="365" height="55" rx="4" class="app" fill="#F4FAFF"/>
+    <text x="1158" y="248" text-anchor="middle" class="box-title">Auth UI · OAuth callback · Consent · Recursos</text>
+    <text x="1158" y="263" text-anchor="middle" class="small">Login · Registro · Recuperación · Consentimiento</text>
+    <text x="1158" y="276" text-anchor="middle" class="small">Encuesta de ciclo · Perfil</text>
+  </g>
+
+  <!-- FASTAPI -->
+  <rect x="40" y="320" width="960" height="420" rx="6" fill="#DCEBFA" stroke="#3E7CB1"/>
+  <text x="55" y="338" class="box-title" fill="#1A4F7A">FastAPI Backend (Python 3.12 + SQLAlchemy)</text>
+
+  <!-- Servicios -->
+  <g>
+    <rect x="55" y="350" width="200" height="60" rx="4" class="svc"/>
+    <text x="155" y="368" text-anchor="middle" class="box-title">Auth Service</text>
+    <text x="155" y="383" text-anchor="middle" class="small">JWT · OAuth Google · bcrypt</text>
+    <text x="155" y="397" text-anchor="middle" class="small">guards por rol</text>
+
+    <rect x="265" y="350" width="200" height="60" rx="4" class="svc"/>
+    <text x="365" y="368" text-anchor="middle" class="box-title">Bank Service</text>
+    <text x="365" y="383" text-anchor="middle" class="small">6 instrumentos validados</text>
+    <text x="365" y="397" text-anchor="middle" class="small">+ 40 frases SSCT</text>
+
+    <rect x="475" y="350" width="200" height="60" rx="4" class="svc"/>
+    <text x="575" y="368" text-anchor="middle" class="box-title">Plantilla Service</text>
+    <text x="575" y="383" text-anchor="middle" class="small">arma cuestionarios</text>
+    <text x="575" y="397" text-anchor="middle" class="small">desde el banco</text>
+
+    <rect x="685" y="350" width="200" height="60" rx="4" class="svc"/>
+    <text x="785" y="368" text-anchor="middle" class="box-title">Cuestionario Service</text>
+    <text x="785" y="383" text-anchor="middle" class="small">asignar · responder</text>
+    <text x="785" y="397" text-anchor="middle" class="small">cerrar · revisar</text>
+
+    <!-- Evaluator (resaltado) -->
+    <rect x="55" y="420" width="430" height="95" rx="4" class="svc" fill="#D6EAFB" stroke="#1A4F7A" stroke-width="1.6"/>
+    <text x="270" y="438" text-anchor="middle" class="box-title">Evaluator Service · 4 capas (sin diagnóstico)</text>
+    <text x="270" y="455" text-anchor="middle" class="small">Capa 1 — Puntaje por bloque con cortes científicos</text>
+    <text x="270" y="469" text-anchor="middle" class="small">Capa 2 — Banderas de crisis (PHQ-A #9 ≥1 · SRQ-20 #17=1 · BETO ideación ≥0.40)</text>
+    <text x="270" y="483" text-anchor="middle" class="small">Capa 3 — Riesgo compuesto</text>
+    <text x="270" y="497" text-anchor="middle" class="small">Capa 4 — BETO clasifica frases en 8 categorías emocionales</text>
+
+    <rect x="495" y="420" width="200" height="60" rx="4" class="svc"/>
+    <text x="595" y="438" text-anchor="middle" class="box-title">NLP Service</text>
+    <text x="595" y="453" text-anchor="middle" class="small">BETO zero-shot multi-label</text>
+    <text x="595" y="467" text-anchor="middle" class="small">8 categorías emocionales</text>
+
+    <rect x="705" y="420" width="180" height="60" rx="4" class="svc"/>
+    <text x="795" y="438" text-anchor="middle" class="box-title">Cita Service</text>
+    <text x="795" y="453" text-anchor="middle" class="small">agenda psicóloga ↔</text>
+    <text x="795" y="467" text-anchor="middle" class="small">estudiante</text>
+
+    <rect x="55"  y="525" width="200" height="60" rx="4" class="svc"/>
+    <text x="155" y="543" text-anchor="middle" class="box-title">SOS Service</text>
+    <text x="155" y="558" text-anchor="middle" class="small">botón rojo de emergencia</text>
+    <text x="155" y="572" text-anchor="middle" class="small">notifica psicóloga</text>
+
+    <rect x="265" y="525" width="200" height="60" rx="4" class="svc"/>
+    <text x="365" y="543" text-anchor="middle" class="box-title">Notes Service</text>
+    <text x="365" y="558" text-anchor="middle" class="small">notas clínicas privadas</text>
+    <text x="365" y="572" text-anchor="middle" class="small">solo psicóloga las ve</text>
+
+    <rect x="475" y="525" width="200" height="60" rx="4" class="svc"/>
+    <text x="575" y="543" text-anchor="middle" class="box-title">Access Log Middleware</text>
+    <text x="575" y="558" text-anchor="middle" class="small">intercepta TODO request</text>
+    <text x="575" y="572" text-anchor="middle" class="small">auditoría completa</text>
+
+    <rect x="685" y="525" width="200" height="60" rx="4" class="svc"/>
+    <text x="785" y="543" text-anchor="middle" class="box-title">Scheduler (APScheduler)</text>
+    <text x="785" y="558" text-anchor="middle" class="small">cierre de ciclos · 14 días</text>
+    <text x="785" y="572" text-anchor="middle" class="small">backup diario</text>
+  </g>
+
+  <!-- DATOS (PostgreSQL) -->
+  <rect x="1020" y="320" width="320" height="420" rx="6" fill="#E8EFF7" stroke="#3E7CB1"/>
+  <text x="1035" y="338" class="box-title" fill="#1A4F7A">PostgreSQL 16 · Datos persistentes</text>
+
+  <g>
+    <rect x="1035" y="350" width="290" height="30" rx="3" class="data"/>
+    <text x="1180" y="370" text-anchor="middle" class="small">Usuario</text>
+
+    <rect x="1035" y="385" width="290" height="40" rx="3" class="data"/>
+    <text x="1180" y="400" text-anchor="middle" class="small box-title">Banco Instrumentos (6 validados)</text>
+    <text x="1180" y="416" text-anchor="middle" class="small">PHQ-A · GAD-7 · SRQ-20 · RSES · WHO-5 · UCLA-3</text>
+
+    <rect x="1035" y="430" width="290" height="30" rx="3" class="data"/>
+    <text x="1180" y="450" text-anchor="middle" class="small">Frases SSCT (40)</text>
+
+    <rect x="1035" y="465" width="290" height="30" rx="3" class="data"/>
+    <text x="1180" y="485" text-anchor="middle" class="small">Bloque Custom</text>
+
+    <rect x="1035" y="500" width="290" height="30" rx="3" class="data"/>
+    <text x="1180" y="520" text-anchor="middle" class="small">Plantilla Cuestionario</text>
+
+    <rect x="1035" y="535" width="290" height="40" rx="3" class="data"/>
+    <text x="1180" y="551" text-anchor="middle" class="small box-title">Aplicación Cuestionario</text>
+    <text x="1180" y="566" text-anchor="middle" class="small">pendiente → en_progreso → completado → revisado</text>
+
+    <rect x="1035" y="580" width="290" height="30" rx="3" class="data"/>
+    <text x="1180" y="600" text-anchor="middle" class="small">Respuesta</text>
+
+    <rect x="1035" y="615" width="290" height="30" rx="3" class="data"/>
+    <text x="1180" y="635" text-anchor="middle" class="small">Cita</text>
+
+    <rect x="1035" y="650" width="290" height="30" rx="3" class="data"/>
+    <text x="1180" y="670" text-anchor="middle" class="small">Nota Clínica</text>
+
+    <rect x="1035" y="685" width="140" height="30" rx="3" class="data"/>
+    <text x="1105" y="705" text-anchor="middle" class="small">SOS Event</text>
+
+    <rect x="1185" y="685" width="140" height="30" rx="3" class="data"/>
+    <text x="1255" y="705" text-anchor="middle" class="small">Access Log</text>
+  </g>
+
+  <!-- ============================== CAPA TECNOLOGIA ============================== -->
+  <rect x="20" y="770" width="1360" height="290" rx="6" class="layer-tech"/>
+  <text x="30" y="788" class="layer-label">Capa de Tecnología</text>
+
+  <!-- Azure Region -->
+  <rect x="40" y="800" width="900" height="240" rx="6" fill="#E4F2D1" stroke="#5C8A3A"/>
+  <text x="55" y="818" class="box-title" fill="#3E6022">Azure · Región Brazil South</text>
+
+  <rect x="55" y="830" width="420" height="190" rx="4" class="node"/>
+  <text x="265" y="850" text-anchor="middle" class="box-title">Azure App Service Linux B2</text>
+  <text x="265" y="866" text-anchor="middle" class="small">HTTPS forzado · TLS 1.2 · always-on</text>
+  <text x="265" y="884" text-anchor="middle" class="small">Hospeda Frontend Vue + FastAPI Backend</text>
+  <text x="265" y="908" text-anchor="middle" class="small box-title">Servicios técnicos transversales:</text>
+  <rect x="75"  y="918" width="180" height="30" rx="3" class="tech"/>
+  <text x="165" y="938" text-anchor="middle" class="small">HTTPS · TLS 1.2</text>
+  <rect x="270" y="918" width="190" height="30" rx="3" class="tech"/>
+  <text x="365" y="938" text-anchor="middle" class="small">JWT + OAuth Google</text>
+  <rect x="75"  y="955" width="180" height="30" rx="3" class="tech"/>
+  <text x="165" y="975" text-anchor="middle" class="small">bcrypt (hash de passwords)</text>
+  <rect x="270" y="955" width="190" height="30" rx="3" class="tech"/>
+  <text x="365" y="975" text-anchor="middle" class="small">Backups 7 días · access_log</text>
+
+  <rect x="495" y="830" width="430" height="190" rx="4" class="node"/>
+  <text x="710" y="850" text-anchor="middle" class="box-title">Azure PostgreSQL Flexible B1ms</text>
+  <text x="710" y="866" text-anchor="middle" class="small">PostgreSQL 16 · TLS obligatorio</text>
+  <text x="710" y="884" text-anchor="middle" class="small">backups automáticos 7 días</text>
+  <text x="710" y="908" text-anchor="middle" class="small">Hospeda todas las tablas del modelo de datos</text>
+  <text x="710" y="930" text-anchor="middle" class="small">(Usuario · Banco · Aplicación · Respuesta · …)</text>
+
+  <!-- Servicio externo: HuggingFace Hub -->
+  <rect x="960" y="800" width="380" height="240" rx="6" fill="#F4ECF9" stroke="#7A4FA0"/>
+  <text x="975" y="818" class="box-title" fill="#5A3784">Servicios externos</text>
+
+  <rect x="975" y="830" width="350" height="100" rx="4" class="external"/>
+  <text x="1150" y="852" text-anchor="middle" class="box-title">HuggingFace Hub</text>
+  <text x="1150" y="870" text-anchor="middle" class="small">Recognai/bert-base-spanish-wwm-cased-xnli</text>
+  <text x="1150" y="888" text-anchor="middle" class="small">BETO zero-shot multi-label</text>
+  <text x="1150" y="906" text-anchor="middle" class="small">descarga en cold start del App Service</text>
+  <text x="1150" y="924" text-anchor="middle" class="small">(NO es modelo de diagnóstico — solo clasifica frases)</text>
+
+  <rect x="975" y="945" width="350" height="80" rx="4" fill="#FFF4E0" stroke="#C9A227"/>
+  <text x="1150" y="965" text-anchor="middle" class="box-title">Google OAuth 2.0</text>
+  <text x="1150" y="983" text-anchor="middle" class="small">login federado para estudiantes y psicólogas</text>
+  <text x="1150" y="1001" text-anchor="middle" class="small">callback retorna a Frontend Vue</text>
+  <text x="1150" y="1018" text-anchor="middle" class="small">Auth Service emite el JWT propio</text>
+
+  <!-- ============================== RELACIONES ============================== -->
+  <!-- Actores → Paneles -->
+  <line x1="270" y1="142" x2="155" y2="230" class="edge" marker-end="url(#arrowOpen)"/>
+  <rect x="180" y="180" width="44" height="14" class="edge-bg"/>
+  <text x="202" y="190" text-anchor="middle" class="edge-label">usa</text>
+
+  <line x1="700" y1="142" x2="395" y2="230" class="edge" marker-end="url(#arrowOpen)"/>
+  <rect x="530" y="178" width="44" height="14" class="edge-bg"/>
+  <text x="552" y="188" text-anchor="middle" class="edge-label">usa</text>
+
+  <line x1="1130" y1="142" x2="635" y2="230" class="edge" marker-end="url(#arrowOpen)"/>
+  <rect x="890" y="180" width="44" height="14" class="edge-bg"/>
+  <text x="912" y="190" text-anchor="middle" class="edge-label">usa</text>
+
+  <!-- Frontend ↔ FastAPI -->
+  <line x1="500" y1="300" x2="500" y2="320" class="edge" marker-start="url(#arrowOpen)" marker-end="url(#arrowOpen)"/>
+  <rect x="510" y="302" width="220" height="14" class="edge-bg"/>
+  <text x="620" y="313" text-anchor="middle" class="edge-label">HTTPS / TLS 1.2 · JWT</text>
+
+  <!-- FastAPI ↔ PostgreSQL (servicios → DB) -->
+  <line x1="1000" y1="520" x2="1020" y2="520" class="edge" marker-end="url(#arrowOpen)"/>
+  <rect x="855" y="492" width="280" height="14" class="edge-bg"/>
+  <text x="995" y="503" text-anchor="middle" class="edge-label">TLS obligatorio · SQLAlchemy ORM</text>
+
+  <!-- Evaluator ↔ NLP Service -->
+  <line x1="485" y1="465" x2="495" y2="450" class="edge" marker-end="url(#arrowOpen)"/>
+  <rect x="365" y="408" width="160" height="14" class="edge-bg"/>
+  <text x="445" y="418" text-anchor="middle" class="edge-label">clasifica frases SSCT</text>
+
+  <!-- NLP → HuggingFace -->
+  <path d="M 695 450 C 880 450 920 870 975 870" class="edge-dash" marker-end="url(#arrowOpen)"/>
+  <rect x="820" y="650" width="170" height="14" class="edge-bg"/>
+  <text x="905" y="660" text-anchor="middle" class="edge-label">descarga BETO (HTTPS)</text>
+
+  <!-- Access Log → todas las requests (rebote) -->
+  <path d="M 575 525 C 575 350 800 320 850 320" class="edge-dash" marker-end="url(#arrowOpen)"/>
+  <rect x="585" y="360" width="180" height="14" class="edge-bg"/>
+  <text x="675" y="370" text-anchor="middle" class="edge-label">intercepta TODA request</text>
+
+  <!-- Notas: caja con leyenda -->
+  <rect x="40" y="772" width="900" height="22" fill="white" stroke="#aaa" stroke-dasharray="3,2"/>
+  <text x="50" y="787" class="small">
+    <tspan font-weight="700">Leyenda:</tspan>
+    amarillo = Negocio (actores) ·
+    azul = Aplicación (Frontend, Backend, Servicios, Datos) ·
+    verde = Tecnología (Azure) ·
+    violeta = Servicios externos
+  </text>
+</svg>

@@ -12,6 +12,8 @@ from app.schemas.psychologist import EstudianteResumen
 from app.schemas.cita import CitaCreate, CitaUpdate, CitaOut
 from app.services.psychologist_service import PsychologistService
 from app.services.cita_service import CitaService
+from app.services import report_service
+from fastapi.responses import Response
 from app.services.notes_service import NotesService
 from app.core.deps import require_role
 from app.models.user import User
@@ -168,3 +170,47 @@ async def cambiar_estado_caso(
         return PsychologistService.cambiar_estado_caso(db, student_id, payload.estado)
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+
+# ── HU-34 / HU-18: reportes en PDF ─────────────────────────────────────────
+
+@router.get("/students/{student_id}/report.pdf")
+async def descargar_reporte_individual(
+    student_id: str,
+    _: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """HU-34: descarga el reporte clínico individual del estudiante en PDF."""
+    try:
+        pdf = report_service.reporte_individual_pdf(db, student_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.exception("Falló reporte individual PDF")
+        raise HTTPException(500, f"Error generando PDF: {e}")
+    headers = {
+        "Content-Disposition": f'attachment; filename="reporte_{student_id[:8]}.pdf"'
+    }
+    return Response(content=pdf, media_type="application/pdf", headers=headers)
+
+
+@router.get("/reports/monthly.pdf")
+async def descargar_reporte_mensual(
+    anio: int,
+    mes: int,
+    _: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """HU-18: reporte mensual agregado para autoridades del colegio."""
+    if not (1 <= mes <= 12):
+        raise HTTPException(400, "Mes inválido (1-12).")
+    try:
+        pdf = report_service.reporte_mensual_pdf(db, anio, mes)
+    except Exception as e:
+        logger.exception("Falló reporte mensual PDF")
+        raise HTTPException(500, f"Error generando PDF: {e}")
+    headers = {
+        "Content-Disposition": f'attachment; filename="reporte_{anio}_{mes:02d}.pdf"'
+    }
+    return Response(content=pdf, media_type="application/pdf", headers=headers)

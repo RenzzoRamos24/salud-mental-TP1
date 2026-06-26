@@ -7,6 +7,9 @@ Capas:
   2. Banderas de crisis (PHQ-A #9 ≥ 1, SRQ-20 #17 = 1, BETO ideación ≥ 0.4).
   3. Riesgo compuesto a partir del número de señales en zona de alerta.
   4. BETO sobre frases incompletas — categorías emocionales por respuesta.
+  5. SVM (segunda opinión) — solo cuando la plantilla incluye DASS-21.
+     Entrenado con datos reales de adolescentes 13-17 años (Open Psychometrics).
+     Si discrepa con las reglas → bandera "discrepancia: revisar".
 """
 import logging
 from sqlalchemy.orm import Session
@@ -135,6 +138,11 @@ class EvaluatorService:
             crisis_activada, senales_alerta, len(bloques_resultado)
         )
 
+        # ── Capa 5: SVM segunda opinión (solo si hay DASS-21) ────────────
+        svm_resultado = EvaluatorService._segunda_opinion_svm(
+            resp_por_origen, bloques_resultado, riesgo_global, crisis_activada
+        )
+
         return {
             "riesgo_global": riesgo_global,
             "crisis_activada": crisis_activada,
@@ -142,6 +150,54 @@ class EvaluatorService:
             "n_bloques": len(bloques_resultado),
             "bloques": bloques_resultado,
             "frases": frases_analisis,
+            "svm_segunda_opinion": svm_resultado,
+        }
+
+    # ── Capa 5: SVM segunda opinión sobre DASS-21 ──────────────────────────
+    @staticmethod
+    def _segunda_opinion_svm(
+        resp_por_origen: dict,
+        bloques_resultado: list,
+        riesgo_global: str,
+        crisis_activada: bool,
+    ) -> dict | None:
+        """
+        Si la aplicación incluye DASS-21, ejecuta el SVM con las 21 respuestas
+        y devuelve su predicción + flag de discrepancia con las reglas.
+        Si no hay DASS-21 o el SVM no está disponible, devuelve None.
+        """
+        # Verifica que la plantilla incluyó DASS-21 — su código aparece en los
+        # bloques evaluados.
+        if not any(b.get("codigo") == "DASS-21" for b in bloques_resultado):
+            return None
+
+        # Construye dict { numero (1..21): valor (0..3) } leyendo respuestas.
+        respuestas = {}
+        for i in range(1, 22):
+            r = resp_por_origen.get(f"INSTR:DASS-21:{i}")
+            if r is None or r.valor_num is None:
+                return None  # Falta alguna respuesta — no opina.
+            respuestas[i] = int(r.valor_num)
+
+        from app.services.svm_service import SVMService
+        pred = SVMService.predecir(respuestas)
+        if pred is None:
+            return None
+
+        reglas_marcan_riesgo = (
+            crisis_activada or riesgo_global not in ("SIN_RIESGO", "BAJO")
+        )
+        svm_marca_riesgo = (pred["clase"] == "en_riesgo")
+        discrepancia = reglas_marcan_riesgo != svm_marca_riesgo
+
+        return {
+            "clase": pred["clase"],
+            "probabilidad": pred["probabilidad"],
+            "confianza": pred["confianza"],
+            "discrepancia_con_reglas": discrepancia,
+            "reglas_marcan_riesgo": reglas_marcan_riesgo,
+            "dataset": "DASS-21 / Open Psychometrics — adolescentes 13-17",
+            "modelo": "SVC RBF + StandardScaler",
         }
 
     # ── Bloque instrumento ─────────────────────────────────────────────────

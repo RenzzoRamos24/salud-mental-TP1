@@ -1,13 +1,16 @@
 """
-HU-23: scheduler de respaldos automáticos.
+Schedulers automáticos del sistema.
 
-Usa APScheduler con un AsyncIOScheduler integrado al loop de FastAPI.
-Hace backup diario a las 02:00 (servidor) y limpia respaldos viejos
-para no llenar el disco.
+- HU-23: backup diario de la BD a las 02:00 + purga de viejos.
+- HU-41: cierre de ciclos cada noche a las 03:00 — marca las aplicaciones
+  de cuestionario pendientes / en_progreso con más de 14 días como
+  `expirada` para mantener el seguimiento longitudinal coherente.
 
 Configurable vía settings:
-  - BACKUP_HORA_DIARIA   (default 2)
-  - BACKUP_RETENCION_DIAS (default 14)
+  - BACKUP_HORA_DIARIA       (default 2)
+  - BACKUP_RETENCION_DIAS    (default 14)
+  - CICLO_HORA_DIARIA        (default 3)
+  - CICLO_DIAS_VENTANA       (default 14)
 """
 import logging
 import os
@@ -15,6 +18,8 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from app.database import SessionLocal
+from app.models.bank import AplicacionCuestionario
 from app.services.admin_service import AdminService, BACKUPS_DIR
 from app.config import settings
 
@@ -57,23 +62,67 @@ def _purgar_viejos():
         logger.info(f"🧹 [scheduler] Purgados {eliminados} backups > {retencion} días")
 
 
+def _cierre_ciclos_job():
+    """HU-41: marca como `expirada` cada aplicación pendiente/en_progreso
+    cuyo plazo de 14 días (configurable) haya pasado desde la asignación.
+    Esto cierra el ciclo del estudiante para que pueda abrirse uno nuevo.
+    """
+    ventana = int(getattr(settings, "CICLO_DIAS_VENTANA", 14))
+    limite = datetime.utcnow() - timedelta(days=ventana)
+    db = SessionLocal()
+    try:
+        q = (
+            db.query(AplicacionCuestionario)
+            .filter(
+                AplicacionCuestionario.estado.in_(("pendiente", "en_progreso")),
+                AplicacionCuestionario.asignada_at <= limite,
+            )
+        )
+        afectadas = q.count()
+        if afectadas:
+            q.update({"estado": "expirada"}, synchronize_session=False)
+            db.commit()
+            logger.info(
+                f"♻️  [scheduler] Cierre de ciclo: {afectadas} aplicaciones "
+                f"marcadas como expiradas (> {ventana} días)."
+            )
+        else:
+            logger.info("♻️  [scheduler] Cierre de ciclo: sin aplicaciones vencidas.")
+    except Exception as e:
+        logger.error(f"❌ [scheduler] Falló el cierre de ciclos: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def iniciar_scheduler() -> AsyncIOScheduler:
     """Llamar UNA vez al startup de la app."""
     global _scheduler
     if _scheduler is not None:
         return _scheduler
 
-    hora = int(getattr(settings, "BACKUP_HORA_DIARIA", 2))
+    hora_backup = int(getattr(settings, "BACKUP_HORA_DIARIA", 2))
+    hora_ciclo = int(getattr(settings, "CICLO_HORA_DIARIA", 3))
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(
         _backup_job,
-        CronTrigger(hour=hora, minute=0),
+        CronTrigger(hour=hora_backup, minute=0),
         id="backup_diario",
         replace_existing=True,
         name="Respaldo diario de la BD",
     )
+    _scheduler.add_job(
+        _cierre_ciclos_job,
+        CronTrigger(hour=hora_ciclo, minute=0),
+        id="cierre_ciclos",
+        replace_existing=True,
+        name="Cierre de ciclos > 14 días",
+    )
     _scheduler.start()
-    logger.info(f"⏰ Scheduler iniciado · backup diario a las {hora:02d}:00")
+    logger.info(
+        f"⏰ Scheduler iniciado · backup {hora_backup:02d}:00 · "
+        f"cierre de ciclos {hora_ciclo:02d}:00"
+    )
     return _scheduler
 
 

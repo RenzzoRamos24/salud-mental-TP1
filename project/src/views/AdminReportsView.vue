@@ -6,6 +6,11 @@ const stats = ref(null);
 const cargando = ref(true);
 const error = ref("");
 
+const ahora = new Date();
+const anio = ref(ahora.getFullYear());
+const mes = ref(ahora.getMonth() + 1);
+const exportando = ref(false);
+
 async function cargar() {
   cargando.value = true;
   try {
@@ -14,6 +19,26 @@ async function cargar() {
     error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
     cargando.value = false;
+  }
+}
+
+async function exportarMensual() {
+  if (exportando.value) return;
+  exportando.value = true;
+  try {
+    const blob = await api.descargarReporteMensual(anio.value, mes.value);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_${anio.value}_${String(mes.value).padStart(2, "0")}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e?.response?.data?.detail || "No se pudo generar el reporte.");
+  } finally {
+    exportando.value = false;
   }
 }
 
@@ -49,6 +74,26 @@ onMounted(cargar);
         <div class="card p-4">
           <p class="text-xs text-ink-400">Completitud</p>
           <p class="text-2xl font-semibold">{{ stats?.tasa_completitud_pct || 0 }}%</p>
+        </div>
+      </div>
+
+      <div class="card p-5 mb-6">
+        <h2 class="text-lg font-semibold mb-3">Reporte mensual para autoridades (HU-18)</h2>
+        <p class="text-sm text-ink-500 mb-3">
+          Descarga un PDF agregado y anonimizado con totales del mes elegido.
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="text-sm text-ink-600">Año
+            <input v-model.number="anio" type="number" min="2024" max="2099"
+              class="border rounded-md px-2 py-1 w-24 ml-1" />
+          </label>
+          <label class="text-sm text-ink-600">Mes
+            <input v-model.number="mes" type="number" min="1" max="12"
+              class="border rounded-md px-2 py-1 w-16 ml-1" />
+          </label>
+          <button class="btn-mint" :disabled="exportando" @click="exportarMensual">
+            {{ exportando ? "Generando…" : "Descargar PDF" }}
+          </button>
         </div>
       </div>
 

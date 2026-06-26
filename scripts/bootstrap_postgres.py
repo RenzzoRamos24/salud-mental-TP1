@@ -172,6 +172,47 @@ INSTRUMENTOS = [
 ]
 
 
+INSTRUMENTOS.append({
+    "codigo": "DASS-21",
+    "nombre": "Depression Anxiety Stress Scales — 21 ítems",
+    "autor": "Lovibond & Lovibond / adaptación al español Daza et al.",
+    "anio": 2002,
+    "dominio": "depresion_ansiedad_estres",
+    "tipo_escala": "likert",
+    "likert_min": 0,
+    "likert_max": 3,
+    "n_items": 21,
+    "tiempo_min": 5,
+    "instruccion": "Por favor lee cada frase y marca cuánto te aplicó esta semana. 0 = no me aplicó, 1 = me aplicó un poco, 2 = me aplicó bastante, 3 = me aplicó mucho. No hay respuestas buenas o malas.",
+    "citacion": "Lovibond SH, Lovibond PF. Manual for the Depression Anxiety Stress Scales (2nd ed.). Psychology Foundation; 1995.",
+    "items": [
+        # 7 ítems × 3 subescalas (D=Depresión, A=Ansiedad, S=Estrés). Bandera de
+        # crisis activa para el ítem 21 (D) — "la vida no tenía sentido".
+        (1,  "Me costó mucho relajarme.",                                       "Estrés", 0, 0),
+        (2,  "Me di cuenta que tenía la boca seca.",                            "Ansiedad", 0, 0),
+        (3,  "No podía sentir ningún sentimiento positivo.",                    "Anhedonia (depresión)", 0, 0),
+        (4,  "Se me hizo difícil respirar.",                                    "Ansiedad somática", 0, 0),
+        (5,  "Se me hizo difícil tomar la iniciativa para hacer cosas.",        "Inhibición (depresión)", 0, 0),
+        (6,  "Reaccioné exageradamente en ciertas situaciones.",                "Reactividad (estrés)", 0, 0),
+        (7,  "Sentí que mis manos temblaban.",                                  "Ansiedad somática", 0, 0),
+        (8,  "Sentí que tenía muchos nervios.",                                 "Tensión nerviosa (estrés)", 0, 0),
+        (9,  "Estaba preocupado por situaciones en las que podría tener pánico.","Anticipación ansiosa", 0, 0),
+        (10, "Sentí que no tenía nada por que esperar.",                        "Desesperanza (depresión)", 0, 0),
+        (11, "Noté que me agitaba.",                                            "Agitación (estrés)", 0, 0),
+        (12, "Se me hizo difícil relajarme.",                                   "Estrés", 0, 0),
+        (13, "Me sentí triste y deprimido.",                                    "Estado de ánimo deprimido", 0, 0),
+        (14, "No toleré nada que no me permitiera continuar con lo que hacía.", "Intolerancia (estrés)", 0, 0),
+        (15, "Sentí que estaba al punto del pánico.",                           "Pánico (ansiedad)", 0, 0),
+        (16, "No me pude entusiasmar por nada.",                                "Anhedonia (depresión)", 0, 0),
+        (17, "Sentí que valía muy poco como persona.",                          "Autoconcepto (depresión)", 0, 0),
+        (18, "Sentí que estaba muy irritable.",                                 "Irritabilidad (estrés)", 0, 0),
+        (19, "Sentí los latidos de mi corazón sin haber hecho esfuerzo físico.","Ansiedad somática", 0, 0),
+        (20, "Tuve miedo sin razón.",                                           "Miedo (ansiedad)", 0, 0),
+        (21, "Sentí que la vida no tenía ningún sentido.",                      "Desesperanza vital (depresión)", 0, 1),
+    ],
+})
+
+
 FRASES = [
     # familia (1-5)
     (1, "familia", "En mi casa yo…"),
@@ -227,16 +268,19 @@ FRASES = [
 def main() -> None:
     db = SessionLocal()
     try:
-        if db.query(BankInstrumento).count() > 0:
-            print("Banco ya sembrado, salteando.")
-            return
-
+        # Inserción por instrumento (idempotente por código).
         for instr in INSTRUMENTOS:
-            items = instr.pop("items")
-            i = BankInstrumento(**instr)
+            codigo = instr["codigo"]
+            existente = db.query(BankInstrumento).filter(
+                BankInstrumento.codigo == codigo
+            ).first()
+            if existente:
+                continue
+            datos = {k: v for k, v in instr.items() if k != "items"}
+            i = BankInstrumento(**datos)
             db.add(i)
             db.flush()
-            for numero, texto, criterio, inverso, crisis in items:
+            for numero, texto, criterio, inverso, crisis in instr["items"]:
                 db.add(
                     BankItem(
                         instrumento_id=i.id,
@@ -248,10 +292,11 @@ def main() -> None:
                     )
                 )
 
-        for numero, area, texto in FRASES:
-            db.add(
-                BankFraseIncompleta(numero=numero, area=area, texto=texto)
-            )
+        if db.query(BankFraseIncompleta).count() == 0:
+            for numero, area, texto in FRASES:
+                db.add(
+                    BankFraseIncompleta(numero=numero, area=area, texto=texto)
+                )
 
         db.commit()
         print(

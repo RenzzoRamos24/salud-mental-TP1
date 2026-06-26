@@ -73,6 +73,27 @@ function asignar() {
   router.push({ name: "asignar-cuestionario", query: { estudiante: id.value } });
 }
 
+const exportando = ref(false);
+async function exportarPDF() {
+  if (exportando.value) return;
+  exportando.value = true;
+  try {
+    const blob = await api.descargarReporteIndividual(id.value);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_${(data.value?.estudiante?.nombre || "alumno").toLowerCase()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e?.response?.data?.detail || "No se pudo generar el reporte.");
+  } finally {
+    exportando.value = false;
+  }
+}
+
 function fmt(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("es-PE");
@@ -110,6 +131,9 @@ function colorRiesgo(r) {
         </div>
         <div class="flex gap-2">
           <button class="btn-ghost" @click="agendarCita">+ Cita</button>
+          <button class="btn-ghost" @click="exportarPDF" :disabled="exportando">
+            {{ exportando ? "Generando…" : "Exportar PDF" }}
+          </button>
           <button class="btn-mint" @click="asignar">+ Asignar cuestionario</button>
         </div>
       </header>

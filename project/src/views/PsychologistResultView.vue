@@ -112,6 +112,43 @@ function fmtFecha(iso) {
         </div>
       </div>
 
+      <!-- Capa 5: SVM segunda opinión sobre DASS-21 -->
+      <div
+        v-if="resultado?.svm_segunda_opinion"
+        class="card p-5 mb-6"
+        :class="resultado.svm_segunda_opinion.discrepancia_con_reglas ? 'border-amber-300 bg-amber-50' : 'border-green-200 bg-green-50/60'"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-ink-500 font-semibold">
+              Segunda opinión · SVM sobre DASS-21
+            </p>
+            <p class="text-lg font-semibold mt-1">
+              {{ resultado.svm_segunda_opinion.clase === 'en_riesgo' ? 'En riesgo' : 'Sin riesgo' }}
+              <span class="text-sm font-normal text-ink-500 ml-2">
+                · confianza {{ resultado.svm_segunda_opinion.confianza }}
+              </span>
+            </p>
+            <p class="text-xs text-ink-500 mt-2">
+              Probabilidad estimada: {{ (resultado.svm_segunda_opinion.probabilidad * 100).toFixed(1) }} %
+              · Dataset: {{ resultado.svm_segunda_opinion.dataset }}
+            </p>
+          </div>
+          <span
+            v-if="resultado.svm_segunda_opinion.discrepancia_con_reglas"
+            class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-300"
+          >
+            ⚠ Discrepa con las reglas — revisar
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold border border-green-300"
+          >
+            ✓ Coincide con las reglas
+          </span>
+        </div>
+      </div>
+
       <!-- Bloques por instrumento / custom -->
       <h2 class="text-lg font-semibold mb-3">Termómetros por bloque</h2>
       <div class="grid sm:grid-cols-2 gap-3 mb-6">

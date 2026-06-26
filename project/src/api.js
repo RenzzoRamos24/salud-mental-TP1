@@ -281,6 +281,22 @@ export const api = {
     await client.delete(`/psychologist/citas/${cita_id}`);
   },
 
+  // ─── HU-34 / HU-18: reportes PDF ───
+  async descargarReporteIndividual(studentId) {
+    const resp = await client.get(
+      `/psychologist/students/${studentId}/report.pdf`,
+      { responseType: "blob" },
+    );
+    return resp.data;
+  },
+  async descargarReporteMensual(anio, mes) {
+    const resp = await client.get(
+      `/psychologist/reports/monthly.pdf`,
+      { params: { anio, mes }, responseType: "blob" },
+    );
+    return resp.data;
+  },
+
   // ─── NOTAS CLÍNICAS ───
   async listarNotas(student_id) {
     const { data } = await client.get(
