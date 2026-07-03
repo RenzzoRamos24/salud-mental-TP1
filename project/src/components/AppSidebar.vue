@@ -57,7 +57,7 @@ async function refrescarBadges() {
 onMounted(refrescarBadges);
 watch(() => route.path, refrescarBadges);
 
-const items = computed(() => [
+const itemsPsicologo = computed(() => [
   { to: "/psicologo", label: "Panel clínico", icon: iconHome() },
   { to: "/psicologo/estudiantes", label: "Estudiantes", icon: iconStudents() },
   {
@@ -76,13 +76,29 @@ const items = computed(() => [
   { to: "/psicologo/banco", label: "Banco", icon: iconBook() },
   { to: "/psicologo/plantillas", label: "Plantillas", icon: iconLayers() },
   { to: "/psicologo/asignar", label: "Asignar", icon: iconSend() },
+  { to: "/psicologo/firma", label: "Mi firma", icon: iconUser() },
   { to: "/recursos", label: "Recursos", icon: iconLifebuoy() },
   { to: "/perfil", label: "Mi cuenta", icon: iconUser() },
 ]);
 
+const itemsAdmin = computed(() => [
+  { to: "/admin", label: "Panel de administración", icon: iconHome() },
+  { to: "/admin/sistema", label: "Configuración del sistema", icon: iconLayers() },
+  { to: "/admin/contenidos", label: "Contenidos psicoeducativos", icon: iconBook() },
+  { to: "/admin/reportes", label: "Reportes", icon: iconSend() },
+  { to: "/admin/logs", label: "Auditoría y logs", icon: iconBell() },
+  { to: "/recursos", label: "Recursos", icon: iconLifebuoy() },
+  { to: "/perfil", label: "Mi cuenta", icon: iconUser() },
+]);
+
+const items = computed(() =>
+  rol.value === "admin" ? itemsAdmin.value : itemsPsicologo.value,
+);
+
 function esActivo(to) {
   const p = route.path;
   if (to === "/psicologo") return p === "/psicologo";
+  if (to === "/admin") return p === "/admin";
   if (to === "/recursos") return p.startsWith("/recursos");
   if (to === "/perfil") return p.startsWith("/perfil");
   return p.startsWith(to);

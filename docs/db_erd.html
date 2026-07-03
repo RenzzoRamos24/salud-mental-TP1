@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>ERD · Sami</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #e8eced; font-family: Inter, Arial, sans-serif; }
+    .frame { max-width: 1080px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+    svg { display: block; max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 2350" font-family="Inter, Arial, sans-serif" font-size="11">
+
+<defs>
+  <marker id="fk" viewBox="0 0 12 12" refX="11" refY="6"
+          markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 12 6 L 0 12 Z" fill="#5a6a70"/>
+  </marker>
+  <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.08"/>
+  </filter>
+</defs>
+
+<rect width="1040" height="2350" fill="#f5f7f8"/>
+<text x="40" y="28" font-size="20" font-weight="700" fill="#243239">Diagrama Entidad–Relación · Sami</text>
+<text x="40" y="46" font-size="11" fill="#8b999e">PostgreSQL 16 · 19 tablas · 22 claves foráneas · 6 dominios funcionales</text>
+<g filter="url(#shadow)"><rect x="40" y="70" width="280" height="256" rx="8" ry="8" fill="#ffffff" stroke="#c64545" stroke-width="1.5"/><rect x="40" y="70" width="280" height="32" rx="8" ry="8" fill="#fde2e4" stroke="none"/><rect x="40" y="86" width="280" height="16" fill="#fde2e4" stroke="none"/></g>
+<text x="54" y="91" font-size="13" font-weight="700" fill="#c64545">users</text>
+<text x="54" y="116" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="306" y="116" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="134" fill="#33424a" font-weight="400">email ●</text>
+<text x="306" y="134" text-anchor="end" fill="#8b999e" font-size="10">VC255</text>
+<text x="54" y="152" fill="#33424a" font-weight="400">hashed_password ●</text>
+<text x="306" y="152" text-anchor="end" fill="#8b999e" font-size="10">VC255</text>
+<text x="54" y="170" fill="#33424a" font-weight="400">nombre ●</text>
+<text x="306" y="170" text-anchor="end" fill="#8b999e" font-size="10">VC100</text>
+<text x="54" y="188" fill="#33424a" font-weight="400">apellido ●</text>
+<text x="306" y="188" text-anchor="end" fill="#8b999e" font-size="10">VC100</text>
+<text x="54" y="206" fill="#33424a" font-weight="400">role ●</text>
+<text x="306" y="206" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="224" fill="#33424a" font-weight="400">activo ●</text>
+<text x="306" y="224" text-anchor="end" fill="#8b999e" font-size="10">BOOLEAN</text>
+<text x="54" y="242" fill="#33424a" font-weight="400">estado_caso</text>
+<text x="306" y="242" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="260" fill="#33424a" font-weight="400">psicologo_id</text>
+<text x="306" y="260" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="278" fill="#33424a" font-weight="400">grado</text>
+<text x="306" y="278" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="296" fill="#33424a" font-weight="400">created_at ●</text>
+<text x="306" y="296" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="54" y="314" fill="#33424a" font-weight="400">updated_at ●</text>
+<text x="306" y="314" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="380" y="70" width="280" height="130" rx="8" ry="8" fill="#ffffff" stroke="#c64545" stroke-width="1.5"/><rect x="380" y="70" width="280" height="32" rx="8" ry="8" fill="#fde2e4" stroke="none"/><rect x="380" y="86" width="280" height="16" fill="#fde2e4" stroke="none"/></g>
+<text x="394" y="91" font-size="13" font-weight="700" fill="#c64545">consents</text>
+<text x="394" y="116" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="646" y="116" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="134" fill="#3a78b3" font-weight="400">🔗 user_id ●</text>
+<text x="646" y="134" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="394" y="152" fill="#33424a" font-weight="400">version ●</text>
+<text x="646" y="152" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="394" y="170" fill="#33424a" font-weight="400">aceptado_en ●</text>
+<text x="646" y="170" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="394" y="188" fill="#33424a" font-weight="400">ip_address</text>
+<text x="646" y="188" text-anchor="end" fill="#8b999e" font-size="10">VC45</text>
+<g filter="url(#shadow)"><rect x="720" y="70" width="280" height="148" rx="8" ry="8" fill="#ffffff" stroke="#c64545" stroke-width="1.5"/><rect x="720" y="70" width="280" height="32" rx="8" ry="8" fill="#fde2e4" stroke="none"/><rect x="720" y="86" width="280" height="16" fill="#fde2e4" stroke="none"/></g>
+<text x="734" y="91" font-size="13" font-weight="700" fill="#c64545">password_reset_tokens</text>
+<text x="734" y="116" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="986" y="116" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="134" fill="#3a78b3" font-weight="400">🔗 user_id ●</text>
+<text x="986" y="134" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="734" y="152" fill="#33424a" font-weight="400">token ●</text>
+<text x="986" y="152" text-anchor="end" fill="#8b999e" font-size="10">VC10</text>
+<text x="734" y="170" fill="#33424a" font-weight="400">expira_en ●</text>
+<text x="986" y="170" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="734" y="188" fill="#33424a" font-weight="400">usado ●</text>
+<text x="986" y="188" text-anchor="end" fill="#8b999e" font-size="10">BOOLEAN</text>
+<text x="734" y="206" fill="#33424a" font-weight="400">creado_en ●</text>
+<text x="986" y="206" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="40" y="366" width="280" height="202" rx="8" ry="8" fill="#ffffff" stroke="#c64545" stroke-width="1.5"/><rect x="40" y="366" width="280" height="32" rx="8" ry="8" fill="#fde2e4" stroke="none"/><rect x="40" y="382" width="280" height="16" fill="#fde2e4" stroke="none"/></g>
+<text x="54" y="387" font-size="13" font-weight="700" fill="#c64545">access_logs</text>
+<text x="54" y="412" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="306" y="412" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="430" fill="#33424a" font-weight="400">user_id</text>
+<text x="306" y="430" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="448" fill="#33424a" font-weight="400">email</text>
+<text x="306" y="448" text-anchor="end" fill="#8b999e" font-size="10">VC255</text>
+<text x="54" y="466" fill="#33424a" font-weight="400">role</text>
+<text x="306" y="466" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="484" fill="#33424a" font-weight="400">method ●</text>
+<text x="306" y="484" text-anchor="end" fill="#8b999e" font-size="10">VC10</text>
+<text x="54" y="502" fill="#33424a" font-weight="400">endpoint ●</text>
+<text x="306" y="502" text-anchor="end" fill="#8b999e" font-size="10">VC255</text>
+<text x="54" y="520" fill="#33424a" font-weight="400">status_code</text>
+<text x="306" y="520" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="538" fill="#33424a" font-weight="400">ip</text>
+<text x="306" y="538" text-anchor="end" fill="#8b999e" font-size="10">VC50</text>
+<text x="54" y="556" fill="#33424a" font-weight="400">timestamp</text>
+<text x="306" y="556" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="40" y="608" width="280" height="310" rx="8" ry="8" fill="#ffffff" stroke="#0e8d7e" stroke-width="1.5"/><rect x="40" y="608" width="280" height="32" rx="8" ry="8" fill="#e1f3ef" stroke="none"/><rect x="40" y="624" width="280" height="16" fill="#e1f3ef" stroke="none"/></g>
+<text x="54" y="629" font-size="13" font-weight="700" fill="#0e8d7e">bank_instrumento</text>
+<text x="54" y="654" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="306" y="654" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="672" fill="#33424a" font-weight="400">codigo ●</text>
+<text x="306" y="672" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="690" fill="#33424a" font-weight="400">nombre ●</text>
+<text x="306" y="690" text-anchor="end" fill="#8b999e" font-size="10">VC200</text>
+<text x="54" y="708" fill="#33424a" font-weight="400">autor ●</text>
+<text x="306" y="708" text-anchor="end" fill="#8b999e" font-size="10">VC200</text>
+<text x="54" y="726" fill="#33424a" font-weight="400">anio ●</text>
+<text x="306" y="726" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="744" fill="#33424a" font-weight="400">dominio ●</text>
+<text x="306" y="744" text-anchor="end" fill="#8b999e" font-size="10">VC80</text>
+<text x="54" y="762" fill="#33424a" font-weight="400">tipo_escala ●</text>
+<text x="306" y="762" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="780" fill="#33424a" font-weight="400">likert_min</text>
+<text x="306" y="780" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="798" fill="#33424a" font-weight="400">likert_max</text>
+<text x="306" y="798" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="816" fill="#33424a" font-weight="400">n_items ●</text>
+<text x="306" y="816" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="834" fill="#33424a" font-weight="400">tiempo_min</text>
+<text x="306" y="834" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="852" fill="#33424a" font-weight="400">instruccion</text>
+<text x="306" y="852" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="54" y="870" fill="#33424a" font-weight="400">citacion ●</text>
+<text x="306" y="870" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="54" y="888" fill="#33424a" font-weight="400">validacion_es</text>
+<text x="306" y="888" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="54" y="906" fill="#33424a" font-weight="400">activo ●</text>
+<text x="306" y="906" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<g filter="url(#shadow)"><rect x="380" y="608" width="280" height="166" rx="8" ry="8" fill="#ffffff" stroke="#0e8d7e" stroke-width="1.5"/><rect x="380" y="608" width="280" height="32" rx="8" ry="8" fill="#e1f3ef" stroke="none"/><rect x="380" y="624" width="280" height="16" fill="#e1f3ef" stroke="none"/></g>
+<text x="394" y="629" font-size="13" font-weight="700" fill="#0e8d7e">bank_item</text>
+<text x="394" y="654" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="646" y="654" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="672" fill="#3a78b3" font-weight="400">🔗 instrumento_id ●</text>
+<text x="646" y="672" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="690" fill="#33424a" font-weight="400">numero ●</text>
+<text x="646" y="690" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="708" fill="#33424a" font-weight="400">texto ●</text>
+<text x="646" y="708" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="394" y="726" fill="#33424a" font-weight="400">inverso ●</text>
+<text x="646" y="726" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="744" fill="#33424a" font-weight="400">criterio_dsm5</text>
+<text x="646" y="744" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="394" y="762" fill="#33424a" font-weight="400">bandera_crisis ●</text>
+<text x="646" y="762" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<g filter="url(#shadow)"><rect x="720" y="608" width="280" height="130" rx="8" ry="8" fill="#ffffff" stroke="#0e8d7e" stroke-width="1.5"/><rect x="720" y="608" width="280" height="32" rx="8" ry="8" fill="#e1f3ef" stroke="none"/><rect x="720" y="624" width="280" height="16" fill="#e1f3ef" stroke="none"/></g>
+<text x="734" y="629" font-size="13" font-weight="700" fill="#0e8d7e">bank_frase_incompleta</text>
+<text x="734" y="654" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="986" y="654" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="672" fill="#33424a" font-weight="400">area ●</text>
+<text x="986" y="672" text-anchor="end" fill="#8b999e" font-size="10">VC40</text>
+<text x="734" y="690" fill="#33424a" font-weight="400">numero ●</text>
+<text x="986" y="690" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="708" fill="#33424a" font-weight="400">texto ●</text>
+<text x="986" y="708" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="734" y="726" fill="#33424a" font-weight="400">activo ●</text>
+<text x="986" y="726" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<g filter="url(#shadow)"><rect x="40" y="958" width="280" height="274" rx="8" ry="8" fill="#ffffff" stroke="#0e8d7e" stroke-width="1.5"/><rect x="40" y="958" width="280" height="32" rx="8" ry="8" fill="#e1f3ef" stroke="none"/><rect x="40" y="974" width="280" height="16" fill="#e1f3ef" stroke="none"/></g>
+<text x="54" y="979" font-size="13" font-weight="700" fill="#0e8d7e">bloque_custom</text>
+<text x="54" y="1004" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="306" y="1004" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1022" fill="#3a78b3" font-weight="400">🔗 psicologo_id ●</text>
+<text x="306" y="1022" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="1040" fill="#33424a" font-weight="400">nombre ●</text>
+<text x="306" y="1040" text-anchor="end" fill="#8b999e" font-size="10">VC200</text>
+<text x="54" y="1058" fill="#33424a" font-weight="400">dominio</text>
+<text x="306" y="1058" text-anchor="end" fill="#8b999e" font-size="10">VC80</text>
+<text x="54" y="1076" fill="#33424a" font-weight="400">tipo_escala ●</text>
+<text x="306" y="1076" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="1094" fill="#33424a" font-weight="400">likert_min ●</text>
+<text x="306" y="1094" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1112" fill="#33424a" font-weight="400">likert_max ●</text>
+<text x="306" y="1112" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1130" fill="#33424a" font-weight="400">instruccion</text>
+<text x="306" y="1130" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="54" y="1148" fill="#33424a" font-weight="400">corte_sin_alerta_max ●</text>
+<text x="306" y="1148" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1166" fill="#33424a" font-weight="400">corte_posible_max ●</text>
+<text x="306" y="1166" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1184" fill="#33424a" font-weight="400">corte_alto_max ●</text>
+<text x="306" y="1184" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1202" fill="#33424a" font-weight="400">activo ●</text>
+<text x="306" y="1202" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1220" fill="#33424a" font-weight="400">created_at ●</text>
+<text x="306" y="1220" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="380" y="958" width="280" height="130" rx="8" ry="8" fill="#ffffff" stroke="#0e8d7e" stroke-width="1.5"/><rect x="380" y="958" width="280" height="32" rx="8" ry="8" fill="#e1f3ef" stroke="none"/><rect x="380" y="974" width="280" height="16" fill="#e1f3ef" stroke="none"/></g>
+<text x="394" y="979" font-size="13" font-weight="700" fill="#0e8d7e">bloque_custom_item</text>
+<text x="394" y="1004" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="646" y="1004" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="1022" fill="#3a78b3" font-weight="400">🔗 bloque_id ●</text>
+<text x="646" y="1022" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="1040" fill="#33424a" font-weight="400">numero ●</text>
+<text x="646" y="1040" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="1058" fill="#33424a" font-weight="400">texto ●</text>
+<text x="646" y="1058" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="394" y="1076" fill="#33424a" font-weight="400">inverso ●</text>
+<text x="646" y="1076" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<g filter="url(#shadow)"><rect x="720" y="958" width="280" height="148" rx="8" ry="8" fill="#ffffff" stroke="#d98a1f" stroke-width="1.5"/><rect x="720" y="958" width="280" height="32" rx="8" ry="8" fill="#fef3e2" stroke="none"/><rect x="720" y="974" width="280" height="16" fill="#fef3e2" stroke="none"/></g>
+<text x="734" y="979" font-size="13" font-weight="700" fill="#d98a1f">plantilla_cuestionario</text>
+<text x="734" y="1004" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="986" y="1004" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1022" fill="#3a78b3" font-weight="400">🔗 psicologo_id ●</text>
+<text x="986" y="1022" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="734" y="1040" fill="#33424a" font-weight="400">nombre ●</text>
+<text x="986" y="1040" text-anchor="end" fill="#8b999e" font-size="10">VC200</text>
+<text x="734" y="1058" fill="#33424a" font-weight="400">descripcion</text>
+<text x="986" y="1058" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="734" y="1076" fill="#33424a" font-weight="400">activa ●</text>
+<text x="986" y="1076" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1094" fill="#33424a" font-weight="400">created_at ●</text>
+<text x="986" y="1094" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="40" y="1272" width="280" height="166" rx="8" ry="8" fill="#ffffff" stroke="#d98a1f" stroke-width="1.5"/><rect x="40" y="1272" width="280" height="32" rx="8" ry="8" fill="#fef3e2" stroke="none"/><rect x="40" y="1288" width="280" height="16" fill="#fef3e2" stroke="none"/></g>
+<text x="54" y="1293" font-size="13" font-weight="700" fill="#d98a1f">plantilla_bloque</text>
+<text x="54" y="1318" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="306" y="1318" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1336" fill="#3a78b3" font-weight="400">🔗 plantilla_id ●</text>
+<text x="306" y="1336" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1354" fill="#33424a" font-weight="400">orden ●</text>
+<text x="306" y="1354" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1372" fill="#33424a" font-weight="400">tipo ●</text>
+<text x="306" y="1372" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="1390" fill="#3a78b3" font-weight="400">🔗 instrumento_id</text>
+<text x="306" y="1390" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1408" fill="#3a78b3" font-weight="400">🔗 bloque_custom_id</text>
+<text x="306" y="1408" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1426" fill="#33424a" font-weight="400">frases_areas</text>
+<text x="306" y="1426" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<g filter="url(#shadow)"><rect x="380" y="1272" width="280" height="256" rx="8" ry="8" fill="#ffffff" stroke="#d98a1f" stroke-width="1.5"/><rect x="380" y="1272" width="280" height="32" rx="8" ry="8" fill="#fef3e2" stroke="none"/><rect x="380" y="1288" width="280" height="16" fill="#fef3e2" stroke="none"/></g>
+<text x="394" y="1293" font-size="13" font-weight="700" fill="#d98a1f">aplicacion_cuestionario</text>
+<text x="394" y="1318" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="646" y="1318" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="1336" fill="#3a78b3" font-weight="400">🔗 plantilla_id ●</text>
+<text x="646" y="1336" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="1354" fill="#3a78b3" font-weight="400">🔗 estudiante_id ●</text>
+<text x="646" y="1354" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="394" y="1372" fill="#3a78b3" font-weight="400">🔗 psicologo_id ●</text>
+<text x="646" y="1372" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="394" y="1390" fill="#33424a" font-weight="400">estado ●</text>
+<text x="646" y="1390" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="394" y="1408" fill="#33424a" font-weight="400">asignada_at ●</text>
+<text x="646" y="1408" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="394" y="1426" fill="#33424a" font-weight="400">iniciada_at</text>
+<text x="646" y="1426" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="394" y="1444" fill="#33424a" font-weight="400">completada_at</text>
+<text x="646" y="1444" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="394" y="1462" fill="#33424a" font-weight="400">revisada_at</text>
+<text x="646" y="1462" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="394" y="1480" fill="#33424a" font-weight="400">resultado_json</text>
+<text x="646" y="1480" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="394" y="1498" fill="#33424a" font-weight="400">riesgo_global</text>
+<text x="646" y="1498" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="394" y="1516" fill="#33424a" font-weight="400">crisis_activada ●</text>
+<text x="646" y="1516" text-anchor="end" fill="#8b999e" font-size="10">BOOLEAN</text>
+<g filter="url(#shadow)"><rect x="720" y="1272" width="280" height="148" rx="8" ry="8" fill="#ffffff" stroke="#d98a1f" stroke-width="1.5"/><rect x="720" y="1272" width="280" height="32" rx="8" ry="8" fill="#fef3e2" stroke="none"/><rect x="720" y="1288" width="280" height="16" fill="#fef3e2" stroke="none"/></g>
+<text x="734" y="1293" font-size="13" font-weight="700" fill="#d98a1f">respuesta_aplicacion</text>
+<text x="734" y="1318" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="986" y="1318" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1336" fill="#3a78b3" font-weight="400">🔗 aplicacion_id ●</text>
+<text x="986" y="1336" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1354" fill="#33424a" font-weight="400">origen ●</text>
+<text x="986" y="1354" text-anchor="end" fill="#8b999e" font-size="10">VC80</text>
+<text x="734" y="1372" fill="#33424a" font-weight="400">valor_num</text>
+<text x="986" y="1372" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1390" fill="#33424a" font-weight="400">valor_texto</text>
+<text x="986" y="1390" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="734" y="1408" fill="#33424a" font-weight="400">respondida_at ●</text>
+<text x="986" y="1408" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="40" y="1568" width="280" height="256" rx="8" ry="8" fill="#ffffff" stroke="#3a78b3" stroke-width="1.5"/><rect x="40" y="1568" width="280" height="32" rx="8" ry="8" fill="#eaf0fb" stroke="none"/><rect x="40" y="1584" width="280" height="16" fill="#eaf0fb" stroke="none"/></g>
+<text x="54" y="1589" font-size="13" font-weight="700" fill="#3a78b3">citas</text>
+<text x="54" y="1614" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="306" y="1614" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1632" fill="#3a78b3" font-weight="400">🔗 psicologo_id ●</text>
+<text x="306" y="1632" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="1650" fill="#3a78b3" font-weight="400">🔗 estudiante_id ●</text>
+<text x="306" y="1650" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="1668" fill="#33424a" font-weight="400">fecha ●</text>
+<text x="306" y="1668" text-anchor="end" fill="#8b999e" font-size="10">VC10</text>
+<text x="54" y="1686" fill="#33424a" font-weight="400">hora ●</text>
+<text x="306" y="1686" text-anchor="end" fill="#8b999e" font-size="10">VC5</text>
+<text x="54" y="1704" fill="#33424a" font-weight="400">modalidad ●</text>
+<text x="306" y="1704" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="1722" fill="#33424a" font-weight="400">estado ●</text>
+<text x="306" y="1722" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="1740" fill="#33424a" font-weight="400">notas</text>
+<text x="306" y="1740" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="54" y="1758" fill="#33424a" font-weight="400">resumen_para_estudiante</text>
+<text x="306" y="1758" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="54" y="1776" fill="#33424a" font-weight="400">completada_at</text>
+<text x="306" y="1776" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="54" y="1794" fill="#33424a" font-weight="400">created_at</text>
+<text x="306" y="1794" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="54" y="1812" fill="#33424a" font-weight="400">es_crisis ●</text>
+<text x="306" y="1812" text-anchor="end" fill="#8b999e" font-size="10">BOOLEAN</text>
+<g filter="url(#shadow)"><rect x="380" y="1568" width="280" height="148" rx="8" ry="8" fill="#ffffff" stroke="#3a78b3" stroke-width="1.5"/><rect x="380" y="1568" width="280" height="32" rx="8" ry="8" fill="#eaf0fb" stroke="none"/><rect x="380" y="1584" width="280" height="16" fill="#eaf0fb" stroke="none"/></g>
+<text x="394" y="1589" font-size="13" font-weight="700" fill="#3a78b3">clinical_notes</text>
+<text x="394" y="1614" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="646" y="1614" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="1632" fill="#3a78b3" font-weight="400">🔗 estudiante_id ●</text>
+<text x="646" y="1632" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="394" y="1650" fill="#3a78b3" font-weight="400">🔗 psicologo_id ●</text>
+<text x="646" y="1650" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="394" y="1668" fill="#33424a" font-weight="400">texto ●</text>
+<text x="646" y="1668" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="394" y="1686" fill="#33424a" font-weight="400">etiqueta</text>
+<text x="646" y="1686" text-anchor="end" fill="#8b999e" font-size="10">VC50</text>
+<text x="394" y="1704" fill="#33424a" font-weight="400">timestamp ●</text>
+<text x="646" y="1704" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="40" y="1864" width="280" height="184" rx="8" ry="8" fill="#ffffff" stroke="#7a5cc4" stroke-width="1.5"/><rect x="40" y="1864" width="280" height="32" rx="8" ry="8" fill="#efeafa" stroke="none"/><rect x="40" y="1880" width="280" height="16" fill="#efeafa" stroke="none"/></g>
+<text x="54" y="1885" font-size="13" font-weight="700" fill="#7a5cc4">sos_events</text>
+<text x="54" y="1910" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="306" y="1910" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="54" y="1928" fill="#3a78b3" font-weight="400">🔗 user_id ●</text>
+<text x="306" y="1928" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="1946" fill="#33424a" font-weight="400">origen</text>
+<text x="306" y="1946" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="1964" fill="#33424a" font-weight="400">mensaje</text>
+<text x="306" y="1964" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="54" y="1982" fill="#33424a" font-weight="400">estado ●</text>
+<text x="306" y="1982" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="54" y="2000" fill="#33424a" font-weight="400">timestamp ●</text>
+<text x="306" y="2000" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="54" y="2018" fill="#33424a" font-weight="400">atendido_por</text>
+<text x="306" y="2018" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="54" y="2036" fill="#33424a" font-weight="400">atendido_en</text>
+<text x="306" y="2036" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="380" y="1864" width="280" height="256" rx="8" ry="8" fill="#ffffff" stroke="#7a5cc4" stroke-width="1.5"/><rect x="380" y="1864" width="280" height="32" rx="8" ry="8" fill="#efeafa" stroke="none"/><rect x="380" y="1880" width="280" height="16" fill="#efeafa" stroke="none"/></g>
+<text x="394" y="1885" font-size="13" font-weight="700" fill="#7a5cc4">educational_content</text>
+<text x="394" y="1910" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="646" y="1910" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="394" y="1928" fill="#33424a" font-weight="400">titulo ●</text>
+<text x="646" y="1928" text-anchor="end" fill="#8b999e" font-size="10">VC200</text>
+<text x="394" y="1946" fill="#33424a" font-weight="400">descripcion ●</text>
+<text x="646" y="1946" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="394" y="1964" fill="#33424a" font-weight="400">tipo ●</text>
+<text x="646" y="1964" text-anchor="end" fill="#8b999e" font-size="10">VC20</text>
+<text x="394" y="1982" fill="#33424a" font-weight="400">categoria</text>
+<text x="646" y="1982" text-anchor="end" fill="#8b999e" font-size="10">VC30</text>
+<text x="394" y="2000" fill="#33424a" font-weight="400">url</text>
+<text x="646" y="2000" text-anchor="end" fill="#8b999e" font-size="10">VC500</text>
+<text x="394" y="2018" fill="#33424a" font-weight="400">contenido</text>
+<text x="646" y="2018" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="394" y="2036" fill="#33424a" font-weight="400">autor</text>
+<text x="646" y="2036" text-anchor="end" fill="#8b999e" font-size="10">VC120</text>
+<text x="394" y="2054" fill="#33424a" font-weight="400">icono</text>
+<text x="646" y="2054" text-anchor="end" fill="#8b999e" font-size="10">VC10</text>
+<text x="394" y="2072" fill="#33424a" font-weight="400">activo ●</text>
+<text x="646" y="2072" text-anchor="end" fill="#8b999e" font-size="10">BOOLEAN</text>
+<text x="394" y="2090" fill="#33424a" font-weight="400">created_at ●</text>
+<text x="646" y="2090" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<text x="394" y="2108" fill="#33424a" font-weight="400">updated_at ●</text>
+<text x="646" y="2108" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="720" y="1864" width="280" height="202" rx="8" ry="8" fill="#ffffff" stroke="#7a5cc4" stroke-width="1.5"/><rect x="720" y="1864" width="280" height="32" rx="8" ry="8" fill="#efeafa" stroke="none"/><rect x="720" y="1880" width="280" height="16" fill="#efeafa" stroke="none"/></g>
+<text x="734" y="1885" font-size="13" font-weight="700" fill="#7a5cc4">satisfaction_surveys</text>
+<text x="734" y="1910" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="986" y="1910" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1928" fill="#3a78b3" font-weight="400">🔗 user_id ●</text>
+<text x="986" y="1928" text-anchor="end" fill="#8b999e" font-size="10">VC36</text>
+<text x="734" y="1946" fill="#33424a" font-weight="400">facilidad_uso ●</text>
+<text x="986" y="1946" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1964" fill="#33424a" font-weight="400">utilidad ●</text>
+<text x="986" y="1964" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1982" fill="#33424a" font-weight="400">confianza ●</text>
+<text x="986" y="1982" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="2000" fill="#33424a" font-weight="400">recomendaria ●</text>
+<text x="986" y="2000" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="2018" fill="#33424a" font-weight="400">nivel_animo_post</text>
+<text x="986" y="2018" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="2036" fill="#33424a" font-weight="400">comentario</text>
+<text x="986" y="2036" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="734" y="2054" fill="#33424a" font-weight="400">timestamp ●</text>
+<text x="986" y="2054" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<g filter="url(#shadow)"><rect x="720" y="1568" width="280" height="112" rx="8" ry="8" fill="#ffffff" stroke="#5a6a70" stroke-width="1.5"/><rect x="720" y="1568" width="280" height="32" rx="8" ry="8" fill="#f4f5f6" stroke="none"/><rect x="720" y="1584" width="280" height="16" fill="#f4f5f6" stroke="none"/></g>
+<text x="734" y="1589" font-size="13" font-weight="700" fill="#5a6a70">configuraciones</text>
+<text x="734" y="1614" fill="#0e8d7e" font-weight="700">🔑 id</text>
+<text x="986" y="1614" text-anchor="end" fill="#8b999e" font-size="10">INTEGER</text>
+<text x="734" y="1632" fill="#33424a" font-weight="400">clave ●</text>
+<text x="986" y="1632" text-anchor="end" fill="#8b999e" font-size="10">VC100</text>
+<text x="734" y="1650" fill="#33424a" font-weight="400">valor ●</text>
+<text x="986" y="1650" text-anchor="end" fill="#8b999e" font-size="10">TEXT</text>
+<text x="734" y="1668" fill="#33424a" font-weight="400">updated_at</text>
+<text x="986" y="1668" text-anchor="end" fill="#8b999e" font-size="10">DATETIME</text>
+<line x1="380" y1="135" x2="320" y2="198" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="720" y1="144" x2="320" y2="198" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="180" y1="1568" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="180" y1="1568" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="520" y1="1568" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="520" y1="1568" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="860" y1="1864" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="180" y1="1864" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="380" y1="691" x2="320" y2="763" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="180" y1="958" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="380" y1="1023" x2="320" y2="1095" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="860" y1="958" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="320" y1="1355" x2="720" y2="1032" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="180" y1="1272" x2="180" y2="918" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="180" y1="1272" x2="180" y2="1232" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="520" y1="1272" x2="860" y2="1106" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="520" y1="1272" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="520" y1="1272" x2="180" y2="326" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<line x1="720" y1="1346" x2="660" y2="1400" stroke="#5a6a70" stroke-width="1.2" stroke-dasharray="0" opacity="0.55" marker-end="url(#fk)"/>
+<text x="40" y="2300" font-size="12" font-weight="700" fill="#243239">Dominios funcionales</text>
+<rect x="40" y="2312" width="14" height="14" rx="3" fill="#fde2e4" stroke="#c64545" stroke-width="1.5"/>
+<text x="62" y="2323" font-size="11" fill="#33424a">Auth & Seguridad (4)</text>
+<rect x="260" y="2312" width="14" height="14" rx="3" fill="#e1f3ef" stroke="#0e8d7e" stroke-width="1.5"/>
+<text x="282" y="2323" font-size="11" fill="#33424a">Banco Clínico (5)</text>
+<rect x="480" y="2312" width="14" height="14" rx="3" fill="#fef3e2" stroke="#d98a1f" stroke-width="1.5"/>
+<text x="502" y="2323" font-size="11" fill="#33424a">Plantillas & Aplicaciones (4)</text>
+<rect x="700" y="2312" width="14" height="14" rx="3" fill="#eaf0fb" stroke="#3a78b3" stroke-width="1.5"/>
+<text x="722" y="2323" font-size="11" fill="#33424a">Atención Profesional (2)</text>
+<rect x="920" y="2312" width="14" height="14" rx="3" fill="#efeafa" stroke="#7a5cc4" stroke-width="1.5"/>
+<text x="942" y="2323" font-size="11" fill="#33424a">Servicios al Alumno (3)</text>
+<rect x="1140" y="2312" width="14" height="14" rx="3" fill="#f4f5f6" stroke="#5a6a70" stroke-width="1.5"/>
+<text x="1162" y="2323" font-size="11" fill="#33424a">Sistema (1)</text>
+</svg>
+  </div>
+</body>
+</html>

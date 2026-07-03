@@ -281,10 +281,17 @@ export const api = {
     await client.delete(`/psychologist/citas/${cita_id}`);
   },
 
-  // ─── HU-34 / HU-18: reportes PDF ───
+  // ─── HU-34 / HU-18 / HU-57: reportes PDF y Word ───
   async descargarReporteIndividual(studentId) {
     const resp = await client.get(
       `/psychologist/students/${studentId}/report.pdf`,
+      { responseType: "blob" },
+    );
+    return resp.data;
+  },
+  async descargarReporteIndividualWord(studentId) {
+    const resp = await client.get(
+      `/psychologist/students/${studentId}/report.docx`,
       { responseType: "blob" },
     );
     return resp.data;
@@ -295,6 +302,83 @@ export const api = {
       { params: { anio, mes }, responseType: "blob" },
     );
     return resp.data;
+  },
+
+  // ─── HU-56: firma de la psicóloga ───
+  async firmaInfo() {
+    const { data } = await client.get(`/psychologist/firma`);
+    return data;
+  },
+  async subirFirma(file) {
+    const form = new FormData();
+    form.append("archivo", file);
+    const { data } = await client.post(`/psychologist/firma`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  },
+  async eliminarFirma() {
+    await client.delete(`/psychologist/firma`);
+  },
+
+  // ─── HU-55 / HU-58: panel del padre ───
+  async padreListarHijos() {
+    const { data } = await client.get(`/padre/hijos`);
+    return data;
+  },
+  async padreDetalleHijo(hijoId) {
+    const { data } = await client.get(`/padre/hijos/${hijoId}`);
+    return data;
+  },
+  async padreInformePDF(hijoId) {
+    const resp = await client.get(`/padre/hijos/${hijoId}/informe.pdf`, {
+      responseType: "blob",
+    });
+    return resp.data;
+  },
+  async padreInformeWord(hijoId) {
+    const resp = await client.get(`/padre/hijos/${hijoId}/informe.docx`, {
+      responseType: "blob",
+    });
+    return resp.data;
+  },
+
+  // ─── HU-60: psicóloga vincula al padre con su estudiante ───
+  async listarPadresDisponibles() {
+    const { data } = await client.get(`/psychologist/padres`);
+    return data;
+  },
+  async getPadreDeEstudiante(student_id) {
+    const { data } = await client.get(
+      `/psychologist/students/${student_id}/padre`,
+    );
+    return data;
+  },
+  async asignarPadreAEstudiante(student_id, padre_id) {
+    const { data } = await client.post(
+      `/psychologist/students/${student_id}/assign-padre`,
+      { padre_id },
+    );
+    return data;
+  },
+  async desasignarPadreDeEstudiante(student_id) {
+    await client.delete(`/psychologist/students/${student_id}/assign-padre`);
+  },
+
+  // ─── Admin: vincular padre ↔ hijo ───
+  async adminVincularPadre(padre_id, estudiante_id) {
+    const { data } = await client.post(`/admin/padres/vincular`, {
+      padre_id,
+      estudiante_id,
+    });
+    return data;
+  },
+  async adminDesvincularPadre(padre_id, estudiante_id) {
+    const { data } = await client.post(`/admin/padres/desvincular`, {
+      padre_id,
+      estudiante_id,
+    });
+    return data;
   },
 
   // ─── NOTAS CLÍNICAS ───

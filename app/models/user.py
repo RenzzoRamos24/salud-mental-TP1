@@ -16,24 +16,23 @@ class User(Base):
     nombre = Column(String(100), nullable=False)
     apellido = Column(String(100), nullable=False)
 
-    # estudiante | psicologo | admin
+    # estudiante | psicologo | admin | padre
     role = Column(String(20), nullable=False, default="estudiante", index=True)
 
     activo = Column(Boolean, default=True, nullable=False)
 
     # ── Sprint 8 ────────────────────────────────────────────────────
-    # HU-35: estado del caso (solo aplica a estudiantes).
-    #   "activo"      → caso abierto, evaluándose
-    #   "seguimiento" → el psicólogo lo está acompañando
-    #   "cerrado"     → caso resuelto / dado de alta
     estado_caso = Column(String(20), nullable=True, default="activo", index=True)
-
-    # HU-38: psicólogo asignado al estudiante (FK suave por simplicidad — apunta a users.id).
-    # Solo se llena cuando role="estudiante".
     psicologo_id = Column(String(36), nullable=True, index=True)
-
-    # Grado / sección (contexto secundaria) — opcional, lo llena el estudiante en su perfil.
     grado = Column(String(20), nullable=True)
+
+    # ── Sprint 11 — rol padre + firma psicólogo ─────────────────────
+    # HU-55: padre que tutela a un estudiante. Cuando role="estudiante",
+    # apunta a un User con role="padre". Un padre puede tutelar N estudiantes.
+    padre_id = Column(String(36), nullable=True, index=True)
+    # HU-56: ruta a la imagen PNG/JPG de la firma del psicólogo (solo
+    # se llena cuando role="psicologo"). Se inserta al final del informe.
+    firma_path = Column(String(255), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

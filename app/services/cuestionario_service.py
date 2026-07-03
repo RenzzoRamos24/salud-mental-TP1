@@ -295,6 +295,63 @@ class CuestionarioService:
             "asignada_at": app_.asignada_at.isoformat() if app_.asignada_at else None,
             "completada_at": app_.completada_at.isoformat() if app_.completada_at else None,
             "resultado": resultado,
+            # Detalle DASS-21 para que la psicóloga pueda validar la opinión
+            # del SVM viendo exactamente qué respondió el alumno.
+            "dass21_detalle": CuestionarioService._dass21_detalle(db, aplicacion_id),
+        }
+
+    # ── Detalle DASS-21 (respuestas item-a-item por subescala) ─────────────
+    @staticmethod
+    def _dass21_detalle(db: Session, aplicacion_id: int) -> dict | None:
+        from app.models.bank import RespuestaAplicacion, BankInstrumento
+
+        dass = db.query(BankInstrumento).filter_by(codigo="DASS-21").first()
+        if not dass:
+            return None
+
+        rows = (
+            db.query(RespuestaAplicacion)
+            .filter(RespuestaAplicacion.aplicacion_id == aplicacion_id)
+            .filter(RespuestaAplicacion.origen.like("INSTR:DASS-21:%"))
+            .all()
+        )
+        if not rows:
+            return None
+        resps = {r.origen: r for r in rows}
+
+        # Índices de subescala (item numero 1-21 → 'D'|'A'|'S')
+        DEP = {3, 5, 10, 13, 16, 17, 21}
+        ANS = {2, 4, 7, 9, 15, 19, 20}
+        LABELS = ["No me aplicó", "Un poco", "Bastante", "Mucho"]
+
+        items_out = []
+        for it in sorted(dass.items, key=lambda x: x.numero):
+            r = resps.get(f"INSTR:DASS-21:{it.numero}")
+            val = int(r.valor_num) if r and r.valor_num is not None else None
+            sub = "D" if it.numero in DEP else "A" if it.numero in ANS else "S"
+            items_out.append({
+                "numero": it.numero,
+                "texto": it.texto,
+                "valor": val,
+                "etiqueta": LABELS[val] if val is not None and 0 <= val <= 3 else None,
+                "subescala": sub,
+            })
+
+        def _sub_total(nums):
+            total = 0
+            for n in nums:
+                r = resps.get(f"INSTR:DASS-21:{n}")
+                if r and r.valor_num is not None:
+                    total += int(r.valor_num)
+            return total * 2  # DASS-21 × 2 = escala DASS-42
+
+        return {
+            "items": items_out,
+            "subtotales": {
+                "depresion": _sub_total(DEP),
+                "ansiedad": _sub_total(ANS),
+                "estres": _sub_total({1, 6, 8, 11, 12, 14, 18}),
+            },
         }
 
     @staticmethod

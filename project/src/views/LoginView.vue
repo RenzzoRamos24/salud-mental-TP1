@@ -21,6 +21,7 @@ function destinoTras(user) {
   if (!user.consentimiento_aceptado) return "/consent";
   if (user.role === "psicologo") return "/psicologo";
   if (user.role === "admin") return "/admin";
+  if (user.role === "padre") return "/padre";
   return "/menu";
 }
 

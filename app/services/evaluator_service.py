@@ -59,6 +59,15 @@ UCLA_CORTES = [
     (3, 5, "no solitario", False),
     (6, 9, "solitario", True),
 ]
+# DASS-21 total (0-63) — orientativo. La interpretación clínica va por subescalas
+# (D=3,5,10,13,16,17,21 | A=2,4,7,9,15,19,20 | S=1,6,8,11,12,14,18) y las
+# realiza el SVM segunda opinión (`_segunda_opinion_svm`).
+DASS21_CORTES = [
+    (0, 14, "sin sospecha", False),
+    (15, 33, "leve", False),
+    (34, 50, "moderado", True),
+    (51, 63, "severo", True),
+]
 
 
 def _aplicar_cortes(total: int, tabla) -> tuple[str, bool]:
@@ -81,6 +90,8 @@ def _severidad_instrumento(codigo: str, total: int) -> tuple[str, bool]:
         return _aplicar_cortes(total, WHO5_CORTES)
     if codigo == "UCLA-3":
         return _aplicar_cortes(total, UCLA_CORTES)
+    if codigo == "DASS-21":
+        return _aplicar_cortes(total, DASS21_CORTES)
     return "desconocido", False
 
 

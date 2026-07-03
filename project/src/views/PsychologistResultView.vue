@@ -34,6 +34,50 @@ async function marcarRevisado() {
 }
 
 const resultado = computed(() => data.value?.resultado || null);
+const dass21Detalle = computed(() => data.value?.dass21_detalle || null);
+
+const dass21Items = computed(() => {
+  const d = dass21Detalle.value;
+  if (!d) return { D: [], A: [], S: [] };
+  const grupos = { D: [], A: [], S: [] };
+  for (const it of d.items) grupos[it.subescala]?.push(it);
+  return grupos;
+});
+
+function sevDep(s) {
+  if (s <= 9) return "normal";
+  if (s <= 13) return "leve";
+  if (s <= 20) return "moderada";
+  if (s <= 27) return "severa";
+  return "ext. severa";
+}
+function sevAns(s) {
+  if (s <= 7) return "normal";
+  if (s <= 9) return "leve";
+  if (s <= 14) return "moderada";
+  if (s <= 19) return "severa";
+  return "ext. severa";
+}
+function sevEst(s) {
+  if (s <= 14) return "normal";
+  if (s <= 18) return "leve";
+  if (s <= 25) return "moderado";
+  if (s <= 33) return "severo";
+  return "ext. severo";
+}
+function colorSev(sev) {
+  if (sev.startsWith("normal")) return "text-green-700 bg-green-100";
+  if (sev.startsWith("leve")) return "text-yellow-700 bg-yellow-100";
+  if (sev.startsWith("moderad")) return "text-orange-700 bg-orange-100";
+  return "text-red-700 bg-red-100";
+}
+function colorValor(v) {
+  if (v === 0) return "bg-green-100 text-green-800";
+  if (v === 1) return "bg-yellow-100 text-yellow-800";
+  if (v === 2) return "bg-orange-100 text-orange-800";
+  if (v === 3) return "bg-red-100 text-red-800";
+  return "bg-gray-100 text-gray-500";
+}
 
 function colorRiesgo(r) {
   const map = {
@@ -146,6 +190,69 @@ function fmtFecha(iso) {
           >
             ✓ Coincide con las reglas
           </span>
+        </div>
+
+        <!-- Detalle DASS-21 · qué respondió el alumno, agrupado por subescala.
+             Esto le permite a la psicóloga validar la opinión del SVM: si
+             levanta bandera, ver dónde específicamente están los puntajes
+             altos. -->
+        <div v-if="dass21Detalle" class="mt-5 pt-5 border-t border-current border-opacity-20">
+          <p class="text-xs uppercase tracking-wide text-ink-500 font-semibold mb-3">
+            Qué respondió el alumno · 21 ítems agrupados por subescala
+          </p>
+
+          <!-- Subtotales por subescala con severidad clínica -->
+          <div class="grid grid-cols-3 gap-3 mb-4">
+            <div class="p-3 rounded-lg bg-white/70 border border-gray-200">
+              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold">Depresión</p>
+              <p class="text-xl font-bold mt-1">{{ dass21Detalle.subtotales.depresion }}</p>
+              <span :class="'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 ' + colorSev(sevDep(dass21Detalle.subtotales.depresion))">
+                {{ sevDep(dass21Detalle.subtotales.depresion) }}
+              </span>
+            </div>
+            <div class="p-3 rounded-lg bg-white/70 border border-gray-200">
+              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold">Ansiedad</p>
+              <p class="text-xl font-bold mt-1">{{ dass21Detalle.subtotales.ansiedad }}</p>
+              <span :class="'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 ' + colorSev(sevAns(dass21Detalle.subtotales.ansiedad))">
+                {{ sevAns(dass21Detalle.subtotales.ansiedad) }}
+              </span>
+            </div>
+            <div class="p-3 rounded-lg bg-white/70 border border-gray-200">
+              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold">Estrés</p>
+              <p class="text-xl font-bold mt-1">{{ dass21Detalle.subtotales.estres }}</p>
+              <span :class="'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 ' + colorSev(sevEst(dass21Detalle.subtotales.estres))">
+                {{ sevEst(dass21Detalle.subtotales.estres) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Los 21 ítems, uno por fila -->
+          <div class="space-y-1.5">
+            <div
+              v-for="grupo in [{ key: 'D', label: 'Depresión' }, { key: 'A', label: 'Ansiedad' }, { key: 'S', label: 'Estrés' }]"
+              :key="grupo.key"
+            >
+              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold mt-3 mb-1">{{ grupo.label }}</p>
+              <div
+                v-for="it in dass21Items[grupo.key]"
+                :key="it.numero"
+                class="flex items-start gap-3 text-sm py-1 border-b border-gray-200 border-opacity-30 last:border-0"
+              >
+                <span class="w-6 text-right text-ink-500 font-mono text-xs pt-0.5">{{ it.numero }}.</span>
+                <span class="flex-1 text-ink-700">{{ it.texto }}</span>
+                <span
+                  :class="'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap ' + colorValor(it.valor)"
+                >
+                  {{ it.valor !== null ? it.valor : '—' }} · {{ it.etiqueta || 'sin dato' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-ink-500 mt-4 italic">
+            Subtotales multiplicados × 2 para equipararlos a la escala DASS-42 (Lovibond &amp; Lovibond, 1995).
+            Cortes clínicos aplicados según normas validadas para adolescentes.
+          </p>
         </div>
       </div>
 

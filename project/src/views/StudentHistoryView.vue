@@ -15,19 +15,53 @@ const error = ref("");
 const nuevaNota = ref({ texto: "", etiqueta: "" });
 const guardandoNota = ref(false);
 
+// HU-60: padre vinculado al estudiante
+const padre = ref({ tiene_padre: false });
+const padresDisponibles = ref([]);
+const padreSeleccionado = ref("");
+const guardandoPadre = ref(false);
+
 async function cargar() {
   cargando.value = true;
   try {
-    const [h, n] = await Promise.all([
+    const [h, n, p, ps] = await Promise.all([
       api.historialEstudiante(id.value),
       api.listarNotas(id.value).catch(() => []),
+      api.getPadreDeEstudiante(id.value).catch(() => ({ tiene_padre: false })),
+      api.listarPadresDisponibles().catch(() => []),
     ]);
     data.value = h;
     notas.value = n;
+    padre.value = p;
+    padresDisponibles.value = ps;
   } catch (e) {
     error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
     cargando.value = false;
+  }
+}
+
+async function vincularPadre() {
+  if (!padreSeleccionado.value || guardandoPadre.value) return;
+  guardandoPadre.value = true;
+  try {
+    await api.asignarPadreAEstudiante(id.value, padreSeleccionado.value);
+    padre.value = await api.getPadreDeEstudiante(id.value);
+    padreSeleccionado.value = "";
+  } catch (e) {
+    alert(e?.response?.data?.detail || "No se pudo vincular al padre.");
+  } finally {
+    guardandoPadre.value = false;
+  }
+}
+
+async function desvincularPadre() {
+  if (!confirm("¿Quitar el padre/tutor vinculado a este estudiante?")) return;
+  try {
+    await api.desasignarPadreDeEstudiante(id.value);
+    padre.value = { tiene_padre: false };
+  } catch (e) {
+    alert(e?.response?.data?.detail || "No se pudo desvincular.");
   }
 }
 
@@ -74,15 +108,18 @@ function asignar() {
 }
 
 const exportando = ref(false);
-async function exportarPDF() {
+async function exportarReporte(formato = "pdf") {
   if (exportando.value) return;
   exportando.value = true;
   try {
-    const blob = await api.descargarReporteIndividual(id.value);
+    const blob =
+      formato === "pdf"
+        ? await api.descargarReporteIndividual(id.value)
+        : await api.descargarReporteIndividualWord(id.value);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `reporte_${(data.value?.estudiante?.nombre || "alumno").toLowerCase()}.pdf`;
+    a.download = `reporte_${(data.value?.estudiante?.nombre || "alumno").toLowerCase()}.${formato === "pdf" ? "pdf" : "docx"}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -93,6 +130,8 @@ async function exportarPDF() {
     exportando.value = false;
   }
 }
+const exportarPDF = () => exportarReporte("pdf");
+const exportarWord = () => exportarReporte("docx");
 
 function fmt(iso) {
   if (!iso) return "—";
@@ -134,9 +173,58 @@ function colorRiesgo(r) {
           <button class="btn-ghost" @click="exportarPDF" :disabled="exportando">
             {{ exportando ? "Generando…" : "Exportar PDF" }}
           </button>
+          <button class="btn-ghost" @click="exportarWord" :disabled="exportando">
+            {{ exportando ? "Generando…" : "Exportar Word" }}
+          </button>
           <button class="btn-mint" @click="asignar">+ Asignar cuestionario</button>
         </div>
       </header>
+
+      <!-- HU-60: Padre/Tutor vinculado -->
+      <section class="card p-4 mb-4">
+        <div class="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <h2 class="text-lg font-semibold">Padre / Tutor vinculado</h2>
+            <p class="text-sm text-ink-500">
+              Si vinculas a un padre, podrá ver el informe firmado del estudiante
+              desde su propia cuenta (sin acceder a puntajes ni datos clínicos sensibles).
+            </p>
+          </div>
+        </div>
+
+        <div v-if="padre.tiene_padre" class="flex items-center justify-between gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
+          <div>
+            <div class="font-semibold text-ink-900">{{ padre.nombre }} {{ padre.apellido }}</div>
+            <div class="text-xs text-ink-500">{{ padre.email }}</div>
+          </div>
+          <button class="btn-ghost text-sm" @click="desvincularPadre">Quitar vínculo</button>
+        </div>
+
+        <div v-else class="flex items-center gap-2">
+          <select
+            v-model="padreSeleccionado"
+            class="input flex-1"
+            :disabled="guardandoPadre || padresDisponibles.length === 0"
+          >
+            <option value="">
+              {{ padresDisponibles.length === 0 ? "No hay padres registrados aún" : "Elige un padre registrado…" }}
+            </option>
+            <option v-for="p in padresDisponibles" :key="p.id" :value="p.id">
+              {{ p.nombre }} {{ p.apellido }} · {{ p.email }}
+            </option>
+          </select>
+          <button
+            class="btn-mint"
+            :disabled="!padreSeleccionado || guardandoPadre"
+            @click="vincularPadre"
+          >
+            {{ guardandoPadre ? "Vinculando…" : "Vincular" }}
+          </button>
+        </div>
+        <p v-if="padresDisponibles.length === 0" class="text-xs text-ink-400 mt-2">
+          El padre debe haberse registrado primero en <code>/register</code> con rol "Padre/Tutor".
+        </p>
+      </section>
 
       <h2 class="text-lg font-semibold mb-3">Historial de cuestionarios</h2>
 

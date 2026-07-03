@@ -35,8 +35,8 @@ class AuthService:
         if existente:
             raise ValueError("Ya existe una cuenta con este correo")
 
-        if role not in ("estudiante", "psicologo"):
-            raise ValueError("Rol inválido. Solo se permite estudiante o psicologo.")
+        if role not in ("estudiante", "psicologo", "padre"):
+            raise ValueError("Rol inválido. Solo se permite estudiante, psicologo o padre.")
 
         user = User(
             email=email_lower,

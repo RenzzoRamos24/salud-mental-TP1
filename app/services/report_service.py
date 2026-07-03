@@ -211,11 +211,139 @@ def reporte_individual_pdf(db: Session, estudiante_id: str) -> bytes:
     else:
         story.append(rl["Paragraph"]("Sin notas clínicas registradas.", s["muted"]))
 
+    # HU-56: firma del psicólogo responsable
+    _agregar_firma_psicologa(story, rl, s, db, est.psicologo_id)
+
     story.append(rl["Spacer"](1, 18))
     story.append(rl["Paragraph"](
         "Este documento contiene información sensible protegida por la Ley 29733. "
         "Su uso está restringido al ejercicio profesional psicológico autorizado.",
         s["muted"]
+    ))
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+# ── HU-56: bloque de firma reutilizable ──────────────────────────────────
+def _agregar_firma_psicologa(story, rl, s, db: Session, psicologo_id):
+    """Anexa firma + nombre del psicólogo si existe la imagen subida."""
+    import os
+    psi = None
+    if psicologo_id:
+        psi = db.query(User).filter(User.id == psicologo_id).first()
+
+    story.append(rl["Spacer"](1, 22))
+    story.append(rl["Paragraph"]("Firma de la psicóloga responsable", s["h2"]))
+
+    if psi and psi.firma_path and os.path.exists(psi.firma_path):
+        try:
+            from reportlab.platypus import Image
+            img = Image(psi.firma_path, width=5 * rl["cm"], height=2 * rl["cm"])
+            story.append(img)
+        except Exception as e:
+            logger.warning("No se pudo cargar la firma: %s", e)
+            story.append(rl["Paragraph"]("_______________________", s["body"]))
+    else:
+        story.append(rl["Paragraph"]("_______________________", s["body"]))
+
+    nombre = f"{psi.nombre} {psi.apellido}" if psi else "Equipo Sami"
+    story.append(rl["Paragraph"](f"<b>{nombre}</b><br/>Psicóloga responsable", s["body"]))
+
+
+# ── HU-58: informe para padre (sin datos clínicos sensibles) ─────────────
+def informe_para_padre_pdf(db: Session, estudiante_id: str) -> bytes:
+    """
+    PDF informativo para el padre — NO incluye puntajes ni banderas.
+    Solo: identidad del hijo, actividad, mensaje de la psicóloga y firma.
+    """
+    rl = _import_rl()
+    s = _estilos(rl)
+
+    est = db.query(User).filter(
+        User.id == estudiante_id, User.role == "estudiante"
+    ).first()
+    if not est:
+        raise ValueError("Estudiante no encontrado")
+
+    apl = (
+        db.query(AplicacionCuestionario)
+        .filter(
+            AplicacionCuestionario.estudiante_id == estudiante_id,
+            AplicacionCuestionario.estado.in_(["completado", "revisado"]),
+        )
+        .order_by(AplicacionCuestionario.asignada_at.desc())
+        .all()
+    )
+    ultima_cita = (
+        db.query(Cita)
+        .filter(
+            Cita.estudiante_id == estudiante_id,
+            Cita.resumen_para_estudiante.isnot(None),
+        )
+        .order_by(Cita.fecha.desc(), Cita.hora.desc())
+        .first()
+    )
+
+    buf = io.BytesIO()
+    doc = rl["SimpleDocTemplate"](
+        buf, pagesize=rl["A4"],
+        leftMargin=2.0 * rl["cm"], rightMargin=2.0 * rl["cm"],
+        topMargin=1.8 * rl["cm"], bottomMargin=1.8 * rl["cm"],
+        title=f"Informe para padre — {est.nombre} {est.apellido}",
+        author="Sami — Salud Mental",
+    )
+    story = []
+
+    story.append(rl["Paragraph"]("Sami · Informe para padre o tutor", s["title"]))
+    story.append(rl["Paragraph"](
+        f"Generado el {datetime.utcnow().strftime('%d/%m/%Y')} · "
+        "Documento informativo sin datos clínicos sensibles.",
+        s["subtitle"],
+    ))
+
+    story.append(rl["Paragraph"]("Su estudiante", s["h2"]))
+    story.append(rl["Paragraph"](
+        f"<b>Nombre:</b> {est.nombre} {est.apellido}<br/>"
+        f"<b>Grado / curso:</b> {est.grado or '—'}<br/>"
+        f"<b>Estado del seguimiento:</b> {(est.estado_caso or 'activo').title()}",
+        s["body"],
+    ))
+    story.append(rl["Spacer"](1, 10))
+
+    story.append(rl["Paragraph"]("Resumen de actividad", s["h2"]))
+    if apl:
+        story.append(rl["Paragraph"](
+            f"Su estudiante ha completado <b>{len(apl)} cuestionario(s)</b> "
+            f"de bienestar. El último se completó el "
+            f"<b>{apl[0].asignada_at.strftime('%d/%m/%Y')}</b>.",
+            s["body"],
+        ))
+    else:
+        story.append(rl["Paragraph"](
+            "Su estudiante aún no ha completado cuestionarios. La psicóloga le "
+            "asignará uno cuando corresponda.",
+            s["body"],
+        ))
+    story.append(rl["Spacer"](1, 10))
+
+    story.append(rl["Paragraph"]("Mensaje de la psicóloga", s["h2"]))
+    if ultima_cita and ultima_cita.resumen_para_estudiante:
+        story.append(rl["Paragraph"](ultima_cita.resumen_para_estudiante, s["body"]))
+    else:
+        story.append(rl["Paragraph"](
+            "La psicóloga aún no ha dejado un mensaje. Cuando lo haga, "
+            "aparecerá en este informe.",
+            s["muted"],
+        ))
+
+    _agregar_firma_psicologa(story, rl, s, db, est.psicologo_id)
+
+    story.append(rl["Spacer"](1, 18))
+    story.append(rl["Paragraph"](
+        "Este informe no contiene puntajes ni datos clínicos sensibles. "
+        "Si desea más información, agende una cita con la psicóloga del colegio.",
+        s["muted"],
     ))
 
     doc.build(story)

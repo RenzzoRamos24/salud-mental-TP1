@@ -3,8 +3,11 @@ Endpoints del rol psicólogo (Sprint 9 — cuestionarios).
 Acceso restringido por require_role("psicologo", "admin").
 """
 import logging
+import os
+import uuid
+from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from app.database import get_db
@@ -12,13 +15,16 @@ from app.schemas.psychologist import EstudianteResumen
 from app.schemas.cita import CitaCreate, CitaUpdate, CitaOut
 from app.services.psychologist_service import PsychologistService
 from app.services.cita_service import CitaService
-from app.services import report_service
+from app.services import report_service, word_service
 from fastapi.responses import Response
 from app.services.notes_service import NotesService
 from app.core.deps import require_role
 from app.models.user import User
 from app.models.cita import Cita  # noqa: F401 (Base.metadata)
 from app.models.clinical_note import ClinicalNote  # noqa: F401 (Base.metadata)
+
+UPLOAD_FIRMAS_DIR = Path("uploads/firmas")
+UPLOAD_FIRMAS_DIR.mkdir(parents=True, exist_ok=True)
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +199,191 @@ async def descargar_reporte_individual(
         "Content-Disposition": f'attachment; filename="reporte_{student_id[:8]}.pdf"'
     }
     return Response(content=pdf, media_type="application/pdf", headers=headers)
+
+
+# HU-60: psicóloga vincula/desvincula al padre de un estudiante ─────────
+class AsignarPadreIn(BaseModel):
+    padre_id: str
+
+
+@router.get("/padres")
+async def listar_padres_disponibles(
+    _: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Lista todos los padres registrados — para que la psicóloga elija."""
+    padres = (
+        db.query(User)
+        .filter(User.role == "padre", User.activo == True)  # noqa: E712
+        .order_by(User.nombre)
+        .all()
+    )
+    return [
+        {"id": p.id, "nombre": p.nombre, "apellido": p.apellido, "email": p.email}
+        for p in padres
+    ]
+
+
+def _validar_acceso_psi_a_alumno(db: Session, psi: User, student_id: str) -> User:
+    """El psicólogo solo puede tocar alumnos que tiene asignados (admin todo)."""
+    est = db.query(User).filter(User.id == student_id, User.role == "estudiante").first()
+    if not est:
+        raise HTTPException(404, "Estudiante no encontrado.")
+    if psi.role == "psicologo" and est.psicologo_id != psi.id:
+        raise HTTPException(403, "El estudiante no está asignado a ti.")
+    return est
+
+
+@router.post("/students/{student_id}/assign-padre")
+async def asignar_padre(
+    student_id: str,
+    payload: AsignarPadreIn,
+    me: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    est = _validar_acceso_psi_a_alumno(db, me, student_id)
+    padre = db.query(User).filter(
+        User.id == payload.padre_id, User.role == "padre"
+    ).first()
+    if not padre:
+        raise HTTPException(404, "Padre no encontrado o rol incorrecto.")
+    est.padre_id = padre.id
+    db.commit()
+    return {
+        "ok": True,
+        "padre": f"{padre.nombre} {padre.apellido}",
+        "padre_email": padre.email,
+        "estudiante": f"{est.nombre} {est.apellido}",
+    }
+
+
+@router.delete("/students/{student_id}/assign-padre", status_code=204)
+async def desasignar_padre(
+    student_id: str,
+    me: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    est = _validar_acceso_psi_a_alumno(db, me, student_id)
+    est.padre_id = None
+    db.commit()
+
+
+@router.get("/students/{student_id}/padre")
+async def padre_del_estudiante(
+    student_id: str,
+    me: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    est = _validar_acceso_psi_a_alumno(db, me, student_id)
+    if not est.padre_id:
+        return {"tiene_padre": False}
+    padre = db.query(User).filter(User.id == est.padre_id).first()
+    if not padre:
+        return {"tiene_padre": False}
+    return {
+        "tiene_padre": True,
+        "id": padre.id,
+        "nombre": padre.nombre,
+        "apellido": padre.apellido,
+        "email": padre.email,
+    }
+
+
+# HU-57: descarga del reporte clínico individual en Word ─────────────────
+@router.get("/students/{student_id}/report.docx")
+async def descargar_reporte_individual_word(
+    student_id: str,
+    _: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    try:
+        docx = word_service.reporte_individual_docx(db, student_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.exception("Falló reporte individual Word")
+        raise HTTPException(500, f"Error generando Word: {e}")
+    headers = {
+        "Content-Disposition": f'attachment; filename="reporte_{student_id[:8]}.docx"'
+    }
+    return Response(
+        content=docx,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers=headers,
+    )
+
+
+# HU-56: subir / consultar firma de la psicóloga ─────────────────────────
+class FirmaInfo(BaseModel):
+    tiene_firma: bool
+    url: Optional[str] = None
+
+
+@router.get("/firma", response_model=FirmaInfo)
+async def info_firma(
+    me: User = Depends(require_role("psicologo")),
+):
+    if me.firma_path and os.path.exists(me.firma_path):
+        return FirmaInfo(tiene_firma=True, url=f"/api/v1/psychologist/firma/img?t={me.updated_at.timestamp()}")
+    return FirmaInfo(tiene_firma=False)
+
+
+@router.get("/firma/img")
+async def firma_imagen(
+    me: User = Depends(require_role("psicologo", "admin")),
+):
+    if not me.firma_path or not os.path.exists(me.firma_path):
+        raise HTTPException(404, "Sin firma cargada")
+    ext = Path(me.firma_path).suffix.lower().lstrip(".")
+    mime = f"image/{'jpeg' if ext == 'jpg' else ext}"
+    with open(me.firma_path, "rb") as f:
+        return Response(content=f.read(), media_type=mime)
+
+
+@router.post("/firma")
+async def subir_firma(
+    archivo: UploadFile = File(...),
+    me: User = Depends(require_role("psicologo")),
+    db: Session = Depends(get_db),
+):
+    """Sube la imagen PNG/JPG de la firma de la psicóloga."""
+    ext = Path(archivo.filename or "").suffix.lower()
+    if ext not in {".png", ".jpg", ".jpeg"}:
+        raise HTTPException(400, "Solo se aceptan PNG o JPG.")
+    contenido = await archivo.read()
+    if len(contenido) > 2 * 1024 * 1024:
+        raise HTTPException(400, "La firma no puede pesar más de 2 MB.")
+
+    # Borra firma anterior si existía
+    if me.firma_path and os.path.exists(me.firma_path):
+        try:
+            os.remove(me.firma_path)
+        except OSError:
+            pass
+
+    nombre = f"{me.id}_{uuid.uuid4().hex[:8]}{ext}"
+    destino = UPLOAD_FIRMAS_DIR / nombre
+    destino.write_bytes(contenido)
+
+    me.firma_path = str(destino)
+    db.add(me)
+    db.commit()
+    return {"ok": True, "url": f"/api/v1/psychologist/firma/img?t={me.updated_at.timestamp()}"}
+
+
+@router.delete("/firma", status_code=204)
+async def eliminar_firma(
+    me: User = Depends(require_role("psicologo")),
+    db: Session = Depends(get_db),
+):
+    if me.firma_path and os.path.exists(me.firma_path):
+        try:
+            os.remove(me.firma_path)
+        except OSError:
+            pass
+    me.firma_path = None
+    db.add(me)
+    db.commit()
 
 
 @router.get("/reports/monthly.pdf")

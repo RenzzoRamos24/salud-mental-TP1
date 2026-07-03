@@ -24,6 +24,7 @@ function destinoTras(user) {
   if (!user.consentimiento_aceptado) return "/consent";
   if (user.role === "psicologo") return "/psicologo";
   if (user.role === "admin") return "/admin";
+  if (user.role === "padre") return "/padre";
   return "/menu";
 }
 
@@ -171,7 +172,7 @@ async function registrar() {
       <!-- Selector de rol -->
       <div>
         <label class="label">¿Quién eres?</label>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-3 gap-3">
           <label
             :class="[
               'cursor-pointer flex flex-col items-center gap-1 p-4 rounded-xl border-2 transition',
@@ -205,6 +206,23 @@ async function registrar() {
               :disabled="cargando"
             />
             <span class="text-sm font-semibold text-ink-900">Psicólogo/a</span>
+          </label>
+          <label
+            :class="[
+              'cursor-pointer flex flex-col items-center gap-1 p-4 rounded-xl border-2 transition',
+              role === 'padre'
+                ? 'border-green-400 bg-green-50 shadow-soft'
+                : 'border-ink-200 bg-white hover:border-green-200',
+            ]"
+          >
+            <input
+              v-model="role"
+              type="radio"
+              value="padre"
+              class="sr-only"
+              :disabled="cargando"
+            />
+            <span class="text-sm font-semibold text-ink-900">Padre/Tutor</span>
           </label>
         </div>
       </div>

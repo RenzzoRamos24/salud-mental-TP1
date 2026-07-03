@@ -27,6 +27,10 @@ import PsychologistResultView from "../views/PsychologistResultView.vue";
 import PsychologistSOSView from "../views/PsychologistSOSView.vue";
 import PsychologistAppointmentsView from "../views/PsychologistAppointmentsView.vue";
 
+import PadreHomeView from "../views/PadreHomeView.vue";
+import PadreHijoView from "../views/PadreHijoView.vue";
+import PsychologistFirmaView from "../views/PsychologistFirmaView.vue";
+
 import AdminDashboardView from "../views/AdminDashboardView.vue";
 import AdminSystemView from "../views/AdminSystemView.vue";
 import AdminContentView from "../views/AdminContentView.vue";
@@ -130,6 +134,26 @@ const routes = [
     component: PsychologistAppointmentsView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
+  {
+    path: "/psicologo/firma",
+    name: "psicologo-firma",
+    component: PsychologistFirmaView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo"] },
+  },
+
+  // ── Padre ──
+  {
+    path: "/padre",
+    name: "padre",
+    component: PadreHomeView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["padre"] },
+  },
+  {
+    path: "/padre/hijo/:id",
+    name: "padre-hijo",
+    component: PadreHijoView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["padre"] },
+  },
 
   // ── Admin ──
   {
@@ -180,6 +204,7 @@ const router = createRouter({
 function inicioPorRol(rol) {
   if (rol === "psicologo") return { name: "psicologo" };
   if (rol === "admin") return { name: "admin" };
+  if (rol === "padre") return { name: "padre" };
   return { name: "menu" };
 }
 

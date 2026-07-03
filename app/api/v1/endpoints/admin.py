@@ -11,6 +11,7 @@ from app.schemas.admin import UsuarioResumen, StatsUsuarios
 from app.services.admin_service import AdminService
 from app.models.configuracion import Configuracion  # noqa: F401
 from app.models.access_log import AccessLog         # noqa: F401
+from app.models.user import User
 
 router = APIRouter()
 
@@ -81,6 +82,55 @@ async def recargar_modelo(_admin=Depends(require_role("admin"))):
 
 class AsignacionIn(BaseModel):
     psicologo_id: str | None = None
+
+
+# HU-55: vinculación padre ↔ estudiante (un padre tutela N estudiantes) ───
+class VincularPadreIn(BaseModel):
+    padre_id: str
+    estudiante_id: str
+
+
+@router.post("/padres/vincular")
+async def vincular_padre_estudiante(
+    payload: VincularPadreIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    padre = db.query(User).filter(
+        User.id == payload.padre_id, User.role == "padre"
+    ).first()
+    if not padre:
+        raise HTTPException(404, "Padre no encontrado o rol incorrecto.")
+    est = db.query(User).filter(
+        User.id == payload.estudiante_id, User.role == "estudiante"
+    ).first()
+    if not est:
+        raise HTTPException(404, "Estudiante no encontrado.")
+    est.padre_id = padre.id
+    db.commit()
+    return {
+        "ok": True,
+        "padre": f"{padre.nombre} {padre.apellido}",
+        "estudiante": f"{est.nombre} {est.apellido}",
+    }
+
+
+@router.post("/padres/desvincular")
+async def desvincular_padre_estudiante(
+    payload: VincularPadreIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    est = db.query(User).filter(
+        User.id == payload.estudiante_id, User.role == "estudiante"
+    ).first()
+    if not est:
+        raise HTTPException(404, "Estudiante no encontrado.")
+    if est.padre_id != payload.padre_id:
+        raise HTTPException(400, "Ese padre no estaba vinculado.")
+    est.padre_id = None
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/students/{student_id}/assign-psychologist")

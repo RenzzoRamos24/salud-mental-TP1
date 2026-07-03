@@ -40,3 +40,7 @@ project/.vite/
 
 # ─── WSL / Windows ───
 *:Zone.Identifier
+
+# ─── Claude Code ───
+.claude/
+.deploy.zip
