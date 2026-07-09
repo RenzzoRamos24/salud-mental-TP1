@@ -2,11 +2,15 @@
 NLPService — Clasificación zero-shot multi-label con BETO / XLM-RoBERTa.
 
 Modelo: Recognai/bert-base-spanish-wwm-cased-xnli (BETO + XNLI).
-Uso en Sami: clasificar respuestas abiertas (frases incompletas) en categorías
-emocionales (tristeza, ansiedad, soledad, ira, miedo, ideación, esperanza,
-neutral). El servicio mantiene una única instancia del pipeline en memoria
-(singleton thread-safe) para que la inferencia sea instantánea tras la primera
-carga.
+Uso en Sami: clasificar respuestas abiertas (frases incompletas) en dos
+dimensiones clínicamente alineadas con los instrumentos cuantitativos del
+sistema — **depresión** (paralelo a PHQ-A) y **ansiedad** (paralelo a GAD-7).
+
+Se descartaron intencionalmente las otras categorías (ira, miedo, soledad,
+esperanza, neutral) para concentrar la señal semántica en las dos dimensiones
+que el sistema efectivamente utiliza como criterio de tamizaje. Esto también
+alinea el clasificador con las escalas validadas y mejora la precisión en
+zero-shot (menos categorías = menos dilución de la probabilidad).
 """
 import logging
 import threading
@@ -18,24 +22,40 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-# Categorías emocionales que clasificamos sobre las frases incompletas.
-# Una respuesta puede tener varias etiquetas (multi-label).
+# Categorías clínicamente alineadas con los instrumentos del sistema.
+# Se agrega una categoría 'neutral' explícita para forzar competencia
+# semántica (softmax) — sin ella, cualquier texto con mínima carga
+# negativa disparaba las dos categorías patológicas al mismo tiempo,
+# incluyendo respuestas positivas o cotidianas.
 CATEGORIAS_EMOCIONALES = {
-    "tristeza":         "Este texto expresa tristeza o desánimo.",
-    "ansiedad":         "Este texto expresa ansiedad o preocupación.",
-    "soledad":          "Este texto expresa soledad o aislamiento.",
-    "ira":              "Este texto expresa enojo o frustración.",
-    "miedo":            "Este texto expresa miedo o temor.",
-    "ideacion_suicida": "Este texto expresa deseos de hacerse daño o pensamientos sobre la muerte.",
-    "esperanza":        "Este texto expresa esperanza o motivación.",
-    "neutral":          "Este texto es neutro y no expresa una emoción intensa.",
+    "depresion": (
+        "Este texto expresa desesperanza profunda, ideas de muerte o "
+        "suicidio, sentimientos persistentes de inutilidad o culpa "
+        "excesiva, incapacidad para experimentar placer en actividades "
+        "habituales, o sufrimiento emocional severo y prolongado."
+    ),
+    "ansiedad": (
+        "Este texto expresa preocupación persistente e incontrolable, "
+        "nerviosismo constante, tensión física, miedo intenso, o síntomas "
+        "de pánico o crisis de angustia."
+    ),
+    "neutral": (
+        "Este texto describe actividades cotidianas, hobbies, deportes, "
+        "videojuegos, descanso, estudios, relaciones sociales positivas, "
+        "amistad, familia, agradecimiento, alegría, esperanza, o cualquier "
+        "contenido sin indicadores clínicos de sufrimiento emocional."
+    ),
 }
 
-# Umbral por defecto para considerar una etiqueta "detectada".
+# Umbral por defecto para considerar una dimensión clínica "detectada".
+# Con 3 categorías competitivas (softmax), el score en cada una es más
+# bajo pero más discriminativo.
 UMBRAL_DETECCION = 0.50
-# La ideación suicida activa la bandera de crisis con un umbral más bajo
-# (preferimos un falso positivo a perder un caso real).
-UMBRAL_CRISIS = 0.40
+# Bandera de crisis: puntaje alto en depresión que domina sobre las otras
+# categorías. Requiere revisión clínica prioritaria. Calibrado para
+# detectar ideación clara ("quiero desaparecer", "no puedo más") sin
+# marcar como crisis contenido semánticamente dudoso.
+UMBRAL_CRISIS = 0.55
 
 
 class NLPService:
@@ -124,16 +144,32 @@ class NLPService:
         resultado = classifier(
             texto.strip(),
             candidate_labels=hipotesis,
-            multi_label=True,
+            # multi_label=False → softmax competitivo entre las 3 categorías.
+            # Fuerza que sumen 1.0 y compitan entre sí. Sin esto, cualquier
+            # texto con carga negativa activaba tanto 'depresion' como
+            # 'ansiedad' al mismo tiempo por overlap semántico.
+            multi_label=False,
         )
 
         scores = {}
         for hip, score in zip(resultado["labels"], resultado["scores"]):
             scores[hipotesis_a_clave[hip]] = float(score)
 
-        detectadas = [k for k, v in scores.items() if v >= UMBRAL_DETECCION and k != "neutral"]
-        crisis = scores.get("ideacion_suicida", 0.0) >= UMBRAL_CRISIS
+        # Filtro 'detectadas' → solo categorías clínicas por encima del
+        # umbral. La categoría 'neutral' NO se lista aunque gane, porque
+        # no es una etiqueta clínica sino un contraste semántico.
+        detectadas = [
+            k for k, v in scores.items()
+            if v >= UMBRAL_DETECCION and k != "neutral"
+        ]
+        # Crisis: depresión gana Y supera el umbral. Con softmax, si
+        # 'neutral' domina significa que la respuesta no es clínicamente
+        # preocupante.
         dominante = max(scores, key=scores.get) if scores else None
+        crisis = (
+            dominante == "depresion"
+            and scores.get("depresion", 0.0) >= UMBRAL_CRISIS
+        )
 
         return {
             "scores": {k: round(v, 4) for k, v in scores.items()},
