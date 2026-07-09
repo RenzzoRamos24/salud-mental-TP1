@@ -29,32 +29,39 @@ logger = logging.getLogger(__name__)
 # incluyendo respuestas positivas o cotidianas.
 CATEGORIAS_EMOCIONALES = {
     "depresion": (
-        "Este texto expresa desesperanza profunda, ideas de muerte o "
-        "suicidio, sentimientos persistentes de inutilidad o culpa "
-        "excesiva, incapacidad para experimentar placer en actividades "
-        "habituales, o sufrimiento emocional severo y prolongado."
+        "Este texto expresa ideas de muerte, ideación suicida, deseo de "
+        "desaparecer, desesperanza total sobre el futuro, o sentimientos "
+        "profundos e incapacitantes de inutilidad, fracaso o vacío emocional "
+        "que impiden funcionar en la vida cotidiana."
     ),
     "ansiedad": (
         "Este texto expresa preocupación persistente e incontrolable, "
-        "nerviosismo constante, tensión física, miedo intenso, o síntomas "
-        "de pánico o crisis de angustia."
+        "nerviosismo intenso, tensión física paralizante, miedo severo, "
+        "o síntomas de pánico o crisis de angustia."
+    ),
+    "adaptativo": (
+        "Este texto describe afrontamiento saludable, resiliencia, metas "
+        "personales, sueños, aspiraciones, esfuerzo para superar "
+        "dificultades, crecimiento personal, autoconocimiento, o "
+        "estrategias positivas para manejar emociones."
     ),
     "neutral": (
         "Este texto describe actividades cotidianas, hobbies, deportes, "
-        "videojuegos, descanso, estudios, relaciones sociales positivas, "
-        "amistad, familia, agradecimiento, alegría, esperanza, o cualquier "
-        "contenido sin indicadores clínicos de sufrimiento emocional."
+        "videojuegos, descanso, estudios, personalidad, rasgos de carácter, "
+        "relaciones sociales, familia, amistad, agradecimiento, alegría, "
+        "aburrimiento leve o cansancio normal, sin sufrimiento clínico."
     ),
 }
 
-# Umbral por defecto para considerar una dimensión clínica "detectada".
-# Con 3 categorías competitivas (softmax), el score en cada una es más
-# bajo pero más discriminativo.
-UMBRAL_DETECCION = 0.50
-# Bandera de crisis: puntaje alto en depresión que domina sobre las otras
-# categorías. Requiere revisión clínica prioritaria. Calibrado para
-# detectar ideación clara ("quiero desaparecer", "no puedo más") sin
-# marcar como crisis contenido semánticamente dudoso.
+# Umbrales calibrados para softmax con 4 categorías. Con esta
+# configuración la masa se divide entre depresion/ansiedad/adaptativo/
+# neutral, así que scores medios son suficientes para ser señal fiable.
+# El requisito extra en `clasificar_frase` es que la categoría clínica
+# también domine — así una nota positiva con 0.40 de depresion no
+# dispara nada porque adaptativo suele ganar por más.
+UMBRAL_DETECCION = 0.40
+# Bandera de crisis: depresión domina Y supera este umbral. Calibrado
+# para atrapar ideación clara sin marcar contenido semánticamente dudoso.
 UMBRAL_CRISIS = 0.55
 
 
@@ -155,17 +162,16 @@ class NLPService:
         for hip, score in zip(resultado["labels"], resultado["scores"]):
             scores[hipotesis_a_clave[hip]] = float(score)
 
-        # Filtro 'detectadas' → solo categorías clínicas por encima del
-        # umbral. La categoría 'neutral' NO se lista aunque gane, porque
-        # no es una etiqueta clínica sino un contraste semántico.
-        detectadas = [
-            k for k, v in scores.items()
-            if v >= UMBRAL_DETECCION and k != "neutral"
-        ]
-        # Crisis: depresión gana Y supera el umbral. Con softmax, si
-        # 'neutral' domina significa que la respuesta no es clínicamente
-        # preocupante.
+        # Filtro 'detectadas' → una categoría clínica solo se lista si
+        # domina Y supera el umbral. Si 'adaptativo' o 'neutral' dominan,
+        # la respuesta no es preocupante aunque una clínica pase el umbral.
+        NO_CLINICAS = {"neutral", "adaptativo"}
         dominante = max(scores, key=scores.get) if scores else None
+        detectadas = []
+        if dominante and dominante not in NO_CLINICAS:
+            if scores.get(dominante, 0.0) >= UMBRAL_DETECCION:
+                detectadas.append(dominante)
+        # Crisis: depresión domina Y supera el umbral de crisis.
         crisis = (
             dominante == "depresion"
             and scores.get("depresion", 0.0) >= UMBRAL_CRISIS
