@@ -172,53 +172,70 @@ def _stats_salon(db, apps):
 
 def _muestras_preocupantes(db, apps_pack_c, max_muestras=8):
     """
-    Extrae frases del Pack C con contenido clínicamente preocupante.
-    Criterio: crisis flag O keywords sensibles ('morir', 'matar', 'solo',
-    'vida', 'inútil', 'fracaso', etc.). Excluye respuestas mayormente
-    ilegibles y falsos positivos ambiguos ('desahogar').
+    Extrae frases del Pack C con contenido clínicamente MÁS FUERTE.
+    Prioriza por severidad de keywords: ideación/muerte > desesperanza
+    > síntomas > malestar general. Excluye respuestas ilegibles y falsos
+    positivos ambiguos ('desahogar').
     """
-    KEYWORDS_SENSIBLES = (
-        "morir", "matar", "muerto", "muerte", "suicid", "desaparecer",
-        "vida", "fracas", "inútil", "inutil", "solo", "sola", "nadie",
-        "vacío", "vacio", "infierno", "duele", "pecho", "aburrid",
-        "feo", "fea", "abandon", "perder", "triste", "llor",
-    )
-    # Frases claramente adaptativas mal disparadas — filtrarlas del PDF.
+    KW_IDEACION = ("matar", "morir", "muerto", "muerte", "suicid",
+                   "desaparecer", "no quiero seguir", "no quiero vivir")
+    KW_DESESPERANZA = ("vacío", "vacio", "sentido", "inútil", "inutil",
+                       "fracaso", "fracasar", "sola", "nadie", "abandon",
+                       "perder", "infierno")
+    KW_SINTOMAS = ("duele", "pecho", "ansios", "pánico", "panico", "llor",
+                   "tristeza", "triste", "miedo", "aterra")
     FALSOS_POSITIVOS = ("desahog", "desestresar", "meditar", "música mientras")
+
+    def _prioridad_kw(respuesta_low):
+        if any(k in respuesta_low for k in KW_IDEACION):
+            return 3
+        if any(k in respuesta_low for k in KW_DESESPERANZA):
+            return 2
+        if any(k in respuesta_low for k in KW_SINTOMAS):
+            return 1
+        return 0
 
     muestras = []
     for a in apps_pack_c:
         if not a.resultado_json:
             continue
         r = json.loads(a.resultado_json)
+        mejor_del_alumno = None
         for f in r.get("frases", []):
             respuesta = f.get("respuesta", "").strip()
             if not respuesta:
                 continue
-            # Descartar respuestas mayormente ilegibles.
             texto_util = respuesta.replace("[ilegible]", "").strip()
             if len(texto_util) < 12:
                 continue
             respuesta_low = respuesta.lower()
             if any(fp in respuesta_low for fp in FALSOS_POSITIVOS):
                 continue
-            tiene_keyword = any(k in respuesta_low for k in KEYWORDS_SENSIBLES)
+            prio = _prioridad_kw(respuesta_low)
             score_dep = f.get("scores", {}).get("depresion", 0.0)
             score_ans = f.get("scores", {}).get("ansiedad", 0.0)
             score_max = max(score_dep, score_ans)
-            # Aceptar si: crisis flag Y hay keyword sensible, O score muy alto
-            if (f.get("crisis") and tiene_keyword) or score_max >= 0.60:
-                muestras.append({
-                    "aplicacion_id": a.id,
-                    "estimulo": f["pregunta"],
-                    "respuesta": respuesta,
-                    "detectadas": f.get("detectadas", []),
-                    "dominante": f.get("dominante", "—"),
-                    "score_max": score_max,
-                })
-                break  # una frase por alumno para diversificar
-    # Priorizar por score más alto (más señal clínica)
-    muestras.sort(key=lambda x: -x["score_max"])
+            # Solo aceptar si hay señal (keyword sensible O score alto)
+            if prio == 0 and score_max < 0.60:
+                continue
+            candidato = {
+                "aplicacion_id": a.id,
+                "estimulo": f["pregunta"],
+                "respuesta": respuesta,
+                "detectadas": f.get("detectadas", []),
+                "dominante": f.get("dominante", "—"),
+                "score_max": score_max,
+                "prioridad": prio,
+            }
+            # Nos quedamos con la más severa del alumno
+            if (mejor_del_alumno is None
+                or (candidato["prioridad"], candidato["score_max"])
+                > (mejor_del_alumno["prioridad"], mejor_del_alumno["score_max"])):
+                mejor_del_alumno = candidato
+        if mejor_del_alumno:
+            muestras.append(mejor_del_alumno)
+    # Priorizar globalmente por gravedad de keyword y luego por score
+    muestras.sort(key=lambda x: (-x["prioridad"], -x["score_max"]))
     return muestras[:max_muestras]
 
 
