@@ -31,6 +31,20 @@ def _enriquecer(cita: Cita, db: Session) -> dict:
     }
 
 
+# Claves que jamás deben viajar hacia el estudiante. `notas` es la anotación
+# interna de la psicóloga; el canal dirigido al alumno es
+# `resumen_para_estudiante` (HU-52).
+_CAMPOS_OCULTOS_AL_ESTUDIANTE = ("notas", "estudiante_email")
+
+
+def _enriquecer_para_estudiante(cita: Cita, db: Session) -> dict:
+    """Igual que `_enriquecer` pero sin los campos reservados al personal."""
+    datos = _enriquecer(cita, db)
+    for clave in _CAMPOS_OCULTOS_AL_ESTUDIANTE:
+        datos.pop(clave, None)
+    return datos
+
+
 class CitaService:
 
     @staticmethod
@@ -133,7 +147,7 @@ class CitaService:
         db.commit()
         db.refresh(cita)
         logger.info(f"Estudiante {estudiante_id} solicitó cita {cita.id}")
-        return _enriquecer(cita, db)
+        return _enriquecer_para_estudiante(cita, db)
 
     @staticmethod
     def listar_estudiante(db: Session, estudiante_id: str) -> list:
@@ -141,7 +155,7 @@ class CitaService:
                    .filter(Cita.estudiante_id == estudiante_id)
                    .order_by(Cita.fecha.asc(), Cita.hora.asc())
                    .all())
-        return [_enriquecer(c, db) for c in citas]
+        return [_enriquecer_para_estudiante(c, db) for c in citas]
 
     @staticmethod
     def slots_sugeridos(

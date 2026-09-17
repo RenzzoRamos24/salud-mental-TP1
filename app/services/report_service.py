@@ -227,28 +227,90 @@ def reporte_individual_pdf(db: Session, estudiante_id: str) -> bytes:
 
 # ── HU-56: bloque de firma reutilizable ──────────────────────────────────
 def _agregar_firma_psicologa(story, rl, s, db: Session, psicologo_id):
-    """Anexa firma + nombre del psicólogo si existe la imagen subida."""
+    """Anexa un bloque de firma prolijo al pie del informe, con la imagen
+    (respetando aspect ratio) si la psicóloga la subió, o una línea limpia
+    para firmar a mano si no hay imagen.
+    """
     import os
+    from datetime import datetime
+
     psi = None
     if psicologo_id:
         psi = db.query(User).filter(User.id == psicologo_id).first()
 
-    story.append(rl["Spacer"](1, 22))
-    story.append(rl["Paragraph"]("Firma de la psicóloga responsable", s["h2"]))
+    # Separación amplia antes del bloque de firma para que no quede pegado
+    # al último bloque de contenido clínico.
+    story.append(rl["Spacer"](1, 40))
 
+    # Estilo del bloque de firma: línea limpia + nombre + rol + fecha.
+    firma_style = rl["ParagraphStyle"](
+        name="FirmaBlock",
+        parent=s["body"],
+        alignment=1,        # centrado
+        fontSize=10.5,
+        leading=15,
+        textColor=rl["colors"].HexColor("#1F2937"),
+    )
+    rol_style = rl["ParagraphStyle"](
+        name="FirmaRol",
+        parent=s["body"],
+        alignment=1,
+        fontSize=9,
+        leading=12,
+        textColor=rl["colors"].HexColor("#667085"),
+    )
+
+    # Imagen de la firma (o espacio en blanco equivalente para firmar a mano).
+    img_added = False
     if psi and psi.firma_path and os.path.exists(psi.firma_path):
         try:
             from reportlab.platypus import Image
-            img = Image(psi.firma_path, width=5 * rl["cm"], height=2 * rl["cm"])
+            from PIL import Image as PILImage
+
+            with PILImage.open(psi.firma_path) as pil_img:
+                w_px, h_px = pil_img.size
+
+            # Preservamos aspect ratio. Ancho máximo 6cm, alto máximo 2.5cm.
+            max_w = 6.0 * rl["cm"]
+            max_h = 2.5 * rl["cm"]
+            aspect = w_px / h_px if h_px else 1.0
+            w = max_w
+            h = w / aspect
+            if h > max_h:
+                h = max_h
+                w = h * aspect
+
+            img = Image(psi.firma_path, width=w, height=h)
+            img.hAlign = "CENTER"
             story.append(img)
+            img_added = True
         except Exception as e:
             logger.warning("No se pudo cargar la firma: %s", e)
-            story.append(rl["Paragraph"]("_______________________", s["body"]))
-    else:
-        story.append(rl["Paragraph"]("_______________________", s["body"]))
 
+    if not img_added:
+        # Espaciado equivalente al tamaño típico de una firma manuscrita,
+        # para que la psicóloga pueda firmar a mano sobre el PDF impreso.
+        story.append(rl["Spacer"](1, 60))
+
+    # Línea horizontal limpia (una tabla de 1×1 con solo el borde superior).
+    line_table = rl["Table"](
+        [[""]],
+        colWidths=[6.5 * rl["cm"]],
+        rowHeights=[0.5],
+    )
+    line_table.setStyle(rl["TableStyle"]([
+        ("LINEABOVE", (0, 0), (-1, 0), 0.7, rl["colors"].HexColor("#98A2B3")),
+    ]))
+    line_table.hAlign = "CENTER"
+    story.append(line_table)
+
+    # Nombre + rol + fecha (todo centrado bajo la línea).
+    story.append(rl["Spacer"](1, 6))
     nombre = f"{psi.nombre} {psi.apellido}" if psi else "Equipo Sami"
-    story.append(rl["Paragraph"](f"<b>{nombre}</b><br/>Psicóloga responsable", s["body"]))
+    story.append(rl["Paragraph"](f"<b>{nombre}</b>", firma_style))
+    story.append(rl["Paragraph"]("Psicóloga responsable", rol_style))
+    fecha = datetime.utcnow().strftime("%d/%m/%Y")
+    story.append(rl["Paragraph"](f"Fecha: {fecha}", rol_style))
 
 
 # ── HU-58: informe para padre (sin datos clínicos sensibles) ─────────────

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.user import UpdateProfileRequest, ChangePasswordRequest, DeleteAccountRequest
 from app.schemas.auth import UserPublic, MensajeResponse
-from app.schemas.cita import CitaOut, CitaSolicitudEstudiante
+from app.schemas.cita import CitaOutEstudiante, CitaSolicitudEstudiante
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
 from app.services.cita_service import CitaService
@@ -67,7 +67,7 @@ async def cambiar_password(
 
 
 # ── Citas del estudiante ─────────────────────────────────────────
-@router.get("/me/citas", response_model=List[CitaOut])
+@router.get("/me/citas", response_model=List[CitaOutEstudiante])
 async def mis_citas(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -75,7 +75,7 @@ async def mis_citas(
     return CitaService.listar_estudiante(db, current_user.id)
 
 
-@router.post("/me/citas", response_model=CitaOut, status_code=201)
+@router.post("/me/citas", response_model=CitaOutEstudiante, status_code=201)
 async def solicitar_cita(
     payload: CitaSolicitudEstudiante,
     current_user: User = Depends(get_current_user),

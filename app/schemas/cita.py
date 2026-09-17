@@ -52,3 +52,26 @@ class CitaOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CitaOutEstudiante(BaseModel):
+    """Vista de una cita tal como la recibe el ESTUDIANTE (HU-52).
+
+    Deliberadamente NO expone `notas`: ese campo es la anotación interna de
+    la psicóloga y nunca debe llegar al alumno. Lo único dirigido a él es
+    `resumen_para_estudiante`.
+    """
+    id: int
+    psicologo_id: Optional[str] = None
+    estudiante_id: str
+    fecha: str
+    hora: str
+    modalidad: str
+    estado: str
+    resumen_para_estudiante: Optional[str] = None
+    completada_at: Optional[datetime] = None
+    created_at: datetime
+    es_crisis: bool = False
+
+    class Config:
+        from_attributes = True

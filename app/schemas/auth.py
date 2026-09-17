@@ -13,7 +13,7 @@ class RegisterRequest(BaseModel):
                           description="Mínimo 8 caracteres")
     nombre: str = Field(..., min_length=1, max_length=100)
     apellido: str = Field(..., min_length=1, max_length=100)
-    role: Literal["estudiante", "psicologo"] = Field(
+    role: Literal["estudiante", "psicologo", "padre"] = Field(
         ..., description="Rol del usuario. 'admin' solo se crea vía script."
     )
 

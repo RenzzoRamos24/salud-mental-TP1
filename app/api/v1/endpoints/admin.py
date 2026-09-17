@@ -1,8 +1,11 @@
 """
 Endpoints exclusivos para rol admin (Sprint 9 — cuestionarios).
 """
+import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.database import get_db
@@ -144,6 +147,133 @@ async def asignar_psicologo(
         return AdminService.asignar_psicologo(db, student_id, payload.psicologo_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── Reasignación masiva del piloto ─────────────────────────────────────────
+class ReasignacionMasivaIn(BaseModel):
+    psicologo_email: str
+    solo_piloto: bool = True  # si True, solo mueve alumnos del piloto colegio
+
+
+class ReevaluarIn(BaseModel):
+    filtro_plantilla_nombre: str = "%Pack C%"  # plantillas a re-evaluar
+
+
+@router.post("/piloto/re-evaluar-beto")
+async def re_evaluar_beto(
+    payload: ReevaluarIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """Re-evalúa aplicaciones ya cerradas con el modelo BETO actualizado.
+    Reescribe `resultado_json`, `riesgo_global` y `crisis_activada`.
+    """
+    from app.models.bank import AplicacionCuestionario, PlantillaCuestionario
+    from app.services.evaluator_service import EvaluatorService
+    import json as _json
+
+    apps = (
+        db.query(AplicacionCuestionario)
+        .join(PlantillaCuestionario)
+        .filter(PlantillaCuestionario.nombre.like(payload.filtro_plantilla_nombre))
+        .all()
+    )
+    ok, errores = 0, 0
+    for a in apps:
+        try:
+            res = EvaluatorService.evaluar(db, a)
+            a.resultado_json = _json.dumps(res, ensure_ascii=False)
+            a.riesgo_global = res.get("riesgo_global")
+            a.crisis_activada = bool(res.get("crisis_activada"))
+            db.commit()
+            ok += 1
+        except Exception as e:
+            db.rollback()
+            errores += 1
+            logger.warning(f"Re-eval error app_id={a.id}: {e}")
+    return {"aplicaciones_encontradas": len(apps),
+            "reevaluadas_ok": ok, "errores": errores}
+
+
+@router.post("/piloto/reasignar-a-psicologo")
+async def reasignar_piloto(
+    payload: ReasignacionMasivaIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """
+    Mueve todos los alumnos del piloto colegio (los que tienen aplicaciones
+    con plantilla 'Piloto Colegio%') a un psicólogo específico.
+
+    Con `solo_piloto=False`, mueve todos los estudiantes del sistema — usar
+    con cuidado.
+    """
+    from app.models.user import User
+    from app.models.bank import AplicacionCuestionario, PlantillaCuestionario
+
+    psi = db.query(User).filter(
+        User.email == payload.psicologo_email.lower(),
+        User.role == "psicologo",
+    ).first()
+    if not psi:
+        raise HTTPException(404, f"No existe psicólogo con email {payload.psicologo_email}")
+
+    # Encuentro los IDs de alumnos afectados usando subquery para portabilidad
+    if payload.solo_piloto:
+        plantilla_ids_sub = [
+            p.id for p in db.query(PlantillaCuestionario)
+            .filter(PlantillaCuestionario.nombre.like("Piloto Colegio%")).all()
+        ]
+        est_ids = list({
+            r[0] for r in
+            db.query(AplicacionCuestionario.estudiante_id)
+            .filter(AplicacionCuestionario.plantilla_id.in_(plantilla_ids_sub))
+            .all()
+        })
+    else:
+        est_ids = [
+            u.id for u in db.query(User).filter(User.role == "estudiante").all()
+        ]
+
+    if not est_ids:
+        return {"reasignados": 0, "aplicaciones_reasignadas": 0}
+
+    # Actualizo el psicólogo responsable
+    n_users = (
+        db.query(User)
+        .filter(User.id.in_(est_ids))
+        .update({User.psicologo_id: psi.id}, synchronize_session=False)
+    )
+
+    # También actualizo el psicologo_id de las aplicaciones piloto.
+    # Uso subquery en vez de JOIN porque UPDATE ... FROM JOIN se comporta
+    # distinto en SQLite vs Postgres.
+    if payload.solo_piloto:
+        plantilla_ids = [
+            p.id for p in db.query(PlantillaCuestionario)
+            .filter(PlantillaCuestionario.nombre.like("Piloto Colegio%")).all()
+        ]
+        n_apps = (
+            db.query(AplicacionCuestionario)
+            .filter(AplicacionCuestionario.plantilla_id.in_(plantilla_ids))
+            .update({AplicacionCuestionario.psicologo_id: psi.id},
+                    synchronize_session=False)
+        )
+    else:
+        n_apps = (
+            db.query(AplicacionCuestionario)
+            .filter(AplicacionCuestionario.estudiante_id.in_(est_ids))
+            .update({AplicacionCuestionario.psicologo_id: psi.id},
+                    synchronize_session=False)
+        )
+    db.commit()
+
+    return {
+        "psicologo": {"id": psi.id, "email": psi.email,
+                      "nombre": f"{psi.nombre} {psi.apellido}"},
+        "estudiantes_reasignados": n_users,
+        "aplicaciones_reasignadas": n_apps,
+    }
 
 
 # ── Estadísticas de cuestionarios ───────────────────────────────────────────

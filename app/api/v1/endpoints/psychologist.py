@@ -35,30 +35,42 @@ router = APIRouter()
 
 @router.get("/dashboard-stats")
 async def dashboard_stats(
-    _: User = Depends(require_role("psicologo", "admin")),
+    current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
-    return PsychologistService.stats_dashboard(db)
+    return PsychologistService.stats_dashboard(
+        db,
+        psicologo_id=current_user.id,
+        es_admin=(current_user.role == "admin"),
+    )
 
 
 # ── Listado de estudiantes ──────────────────────────────────────────────────
 
 @router.get("/students", response_model=List[EstudianteResumen])
 async def listar_estudiantes(
-    _: User = Depends(require_role("psicologo", "admin")),
+    current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
-    return PsychologistService.listar_estudiantes(db)
+    return PsychologistService.listar_estudiantes(
+        db,
+        psicologo_id=current_user.id,
+        es_admin=(current_user.role == "admin"),
+    )
 
 
 @router.get("/students/{student_id}/history")
 async def historial_estudiante(
     student_id: str,
-    _: User = Depends(require_role("psicologo", "admin")),
+    current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
     try:
-        return PsychologistService.historial_estudiante(db, student_id)
+        return PsychologistService.historial_estudiante(
+            db, student_id,
+            psicologo_id=current_user.id,
+            es_admin=(current_user.role == "admin"),
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -139,6 +151,7 @@ async def crear_nota(
     current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
+    _validar_acceso_psi_a_alumno(db, current_user, student_id)
     try:
         nota = NotesService.crear(
             db, student_id, current_user.id, payload.texto, payload.etiqueta
@@ -169,9 +182,10 @@ class EstadoCasoIn(BaseModel):
 async def cambiar_estado_caso(
     student_id: str,
     payload: EstadoCasoIn,
-    _: User = Depends(require_role("psicologo", "admin")),
+    me: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
+    _validar_acceso_psi_a_alumno(db, me, student_id)
     try:
         return PsychologistService.cambiar_estado_caso(db, student_id, payload.estado)
     except ValueError as e:
@@ -184,10 +198,11 @@ async def cambiar_estado_caso(
 @router.get("/students/{student_id}/report.pdf")
 async def descargar_reporte_individual(
     student_id: str,
-    _: User = Depends(require_role("psicologo", "admin")),
+    me: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
     """HU-34: descarga el reporte clínico individual del estudiante en PDF."""
+    _validar_acceso_psi_a_alumno(db, me, student_id)
     try:
         pdf = report_service.reporte_individual_pdf(db, student_id)
     except ValueError as e:
@@ -293,9 +308,10 @@ async def padre_del_estudiante(
 @router.get("/students/{student_id}/report.docx")
 async def descargar_reporte_individual_word(
     student_id: str,
-    _: User = Depends(require_role("psicologo", "admin")),
+    me: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
+    _validar_acceso_psi_a_alumno(db, me, student_id)
     try:
         docx = word_service.reporte_individual_docx(db, student_id)
     except ValueError as e:

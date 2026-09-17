@@ -29,13 +29,20 @@ def _ultima_aplicacion_revisada(db: Session, user_id: str):
 class PsychologistService:
 
     @staticmethod
-    def stats_dashboard(db: Session) -> dict:
-        """Métricas agregadas para el dashboard del psicólogo."""
-        estudiantes = (
+    def stats_dashboard(db: Session, psicologo_id: str | None = None,
+                        es_admin: bool = False) -> dict:
+        """Métricas agregadas para el dashboard del psicólogo.
+
+        - Si `es_admin=True`: ve todos los estudiantes activos.
+        - Si no: ve solo los estudiantes cuyo `psicologo_id` coincide.
+        """
+        q = (
             db.query(User)
             .filter(User.role == "estudiante", User.activo == True)
-            .all()
         )
+        if not es_admin and psicologo_id:
+            q = q.filter(User.psicologo_id == psicologo_id)
+        estudiantes = q.all()
         total = len(estudiantes)
         distribucion = {
             "CRITICO": 0, "ALTO": 0, "MEDIO": 0, "BAJO": 0,
@@ -68,23 +75,33 @@ class PsychologistService:
             -(datetime.fromisoformat(x["fecha_evaluacion"]).timestamp() if x["fecha_evaluacion"] else 0),
         ))
 
+        aplicaciones_q = db.query(AplicacionCuestionario)
+        if not es_admin and psicologo_id:
+            aplicaciones_q = aplicaciones_q.filter(
+                AplicacionCuestionario.psicologo_id == psicologo_id
+            )
+
         return {
             "total_estudiantes": total,
             "distribucion_riesgo": distribucion,
             "estudiantes_en_alerta": alertas,
-            "total_cuestionarios_asignados": db.query(AplicacionCuestionario).count(),
-            "total_cuestionarios_completados": db.query(AplicacionCuestionario)
+            "total_cuestionarios_asignados": aplicaciones_q.count(),
+            "total_cuestionarios_completados": aplicaciones_q
                 .filter(AplicacionCuestionario.completada_at.isnot(None)).count(),
         }
 
     @staticmethod
-    def listar_estudiantes(db: Session) -> list:
-        estudiantes = (
+    def listar_estudiantes(db: Session, psicologo_id: str | None = None,
+                           es_admin: bool = False) -> list:
+        """Lista estudiantes. Los psicólogos solo ven los suyos; admin ve todos."""
+        q = (
             db.query(User)
             .filter(User.role == "estudiante", User.activo == True)
             .order_by(User.created_at.desc())
-            .all()
         )
+        if not es_admin and psicologo_id:
+            q = q.filter(User.psicologo_id == psicologo_id)
+        estudiantes = q.all()
         out = []
         for est in estudiantes:
             ultima = _ultima_aplicacion_revisada(db, est.id)
@@ -125,7 +142,9 @@ class PsychologistService:
         return {"id": est.id, "estado_caso": est.estado_caso}
 
     @staticmethod
-    def historial_estudiante(db: Session, student_id: str) -> dict:
+    def historial_estudiante(db: Session, student_id: str,
+                             psicologo_id: str | None = None,
+                             es_admin: bool = False) -> dict:
         estudiante = (
             db.query(User)
             .filter(User.id == student_id, User.role == "estudiante")
@@ -133,6 +152,9 @@ class PsychologistService:
         )
         if not estudiante:
             raise ValueError("Estudiante no encontrado")
+        # Un psicólogo solo puede ver el historial de sus propios estudiantes.
+        if not es_admin and psicologo_id and estudiante.psicologo_id != psicologo_id:
+            raise ValueError("No tienes acceso al historial de este estudiante.")
 
         aplicaciones = (
             db.query(AplicacionCuestionario)
