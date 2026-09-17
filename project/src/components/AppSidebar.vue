@@ -2,10 +2,19 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { authStore } from "../store/auth";
+import { uiStore } from "../store/ui";
 import { api } from "../api";
 
 const router = useRouter();
 const route = useRoute();
+
+// Al navegar se cierra el panel móvil; en escritorio no tiene efecto.
+watch(() => route.path, () => uiStore.cerrarMenu());
+
+function irA(to) {
+  uiStore.cerrarMenu();
+  router.push(to);
+}
 
 const rol = computed(() => authStore.rol.value);
 const esPsicologo = computed(() => rol.value === "psicologo");
@@ -149,7 +158,12 @@ function iconPhone() {
 </script>
 
 <template>
-  <aside class="apollo-sidebar">
+  <div
+    v-if="uiStore.menuAbierto"
+    class="apollo-sidebar__scrim"
+    @click="uiStore.cerrarMenu()"
+  ></div>
+  <aside class="apollo-sidebar" :class="{ 'is-abierto': uiStore.menuAbierto }">
     <!-- logo row -->
     <div class="apollo-logo">
       <div class="apollo-logo__brand">
@@ -158,7 +172,13 @@ function iconPhone() {
         </div>
         <span class="apollo-logo__name">Sami</span>
       </div>
-      <button class="apollo-logo__menu" type="button">
+      <button
+        class="apollo-logo__menu"
+        type="button"
+        title="Cerrar menú"
+        aria-label="Cerrar menú"
+        @click="uiStore.cerrarMenu()"
+      >
         <svg
           width="16"
           height="16"
@@ -187,7 +207,7 @@ function iconPhone() {
         href="#"
         class="apollo-nav__item"
         :class="{ 'is-active': esActivo(it.to) }"
-        @click.prevent="router.push(it.to)"
+        @click.prevent="irA(it.to)"
       >
         <span class="apollo-nav__icon-wrap">
           <svg
@@ -202,7 +222,7 @@ function iconPhone() {
             v-html="it.icon"
           />
         </span>
-        {{ it.label }}
+        <span class="apollo-nav__label">{{ it.label }}</span>
         <span v-if="it.badge" class="apollo-nav__badge">{{ it.badge }}</span>
       </a>
     </nav>
@@ -223,7 +243,7 @@ function iconPhone() {
             v-html="iconPhone()"
           />
         </div>
-        <div>
+        <div class="apollo-support__txt">
           <div class="apollo-support__number">113 — opción 5</div>
           <div class="apollo-support__label">Línea de ayuda · MINSA 24/7</div>
         </div>
@@ -454,14 +474,54 @@ function iconPhone() {
   .apollo-profile__role,
   .apollo-nav__label,
   .apollo-support__txt { display: none; }
-  .apollo-nav__link { justify-content: center; padding: 10px 8px; }
+  .apollo-nav__item { justify-content: center; padding: 10px 8px; }
   .apollo-logo { justify-content: center; padding: 0 12px; }
   .apollo-logo__menu { display: none; }
   .apollo-profile { padding: 18px 8px; }
   .apollo-profile__avatar { width: 46px; height: 46px; font-size: 17px; }
   .apollo-support { padding: 12px; justify-content: center; }
 }
+
+/* En móvil el sidebar deja de ocupar columna y se abre como panel sobre el
+   contenido, disparado por el botón de menú de la topbar. */
+.apollo-sidebar__scrim { display: none; }
+
 @media (max-width: 760px) {
-  .apollo-sidebar { display: none; }
+  .apollo-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 264px;
+    flex: 0 0 264px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 0 0 40px rgba(31, 61, 71, 0.18);
+    z-index: 60;
+  }
+  .apollo-sidebar.is-abierto { transform: translateX(0); }
+
+  /* Dentro del panel se recupera el diseño completo, no el colapsado. */
+  .apollo-logo__name,
+  .apollo-profile__name,
+  .apollo-profile__role,
+  .apollo-nav__label,
+  .apollo-support__txt { display: block; }
+  .apollo-logo { justify-content: space-between; padding: 0 18px; }
+  .apollo-logo__menu { display: flex; }
+  .apollo-nav__item { justify-content: flex-start; padding: 10px 14px; }
+  .apollo-support { padding: 16px; justify-content: stretch; }
+
+  .apollo-sidebar__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 40, 46, 0.42);
+    z-index: 50;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apollo-sidebar { transition: none; }
 }
 </style>

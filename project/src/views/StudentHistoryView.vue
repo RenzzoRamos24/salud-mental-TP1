@@ -41,6 +41,30 @@ async function cargar() {
   }
 }
 
+// ── Estado del caso (activo / seguimiento / cerrado) ──────────────────
+const guardandoEstado = ref(false);
+// Error propio: `error` corta el render de toda la ficha (v-else-if), y este
+// fallo es puntual — no debe hacer desaparecer el historial.
+const errorEstado = ref("");
+const estadoCaso = computed(
+  () => data.value?.estudiante?.estado_caso || "activo",
+);
+
+async function cambiarEstado(nuevo) {
+  if (nuevo === estadoCaso.value || guardandoEstado.value) return;
+  guardandoEstado.value = true;
+  errorEstado.value = "";
+  try {
+    await api.cambiarEstadoCaso(id.value, nuevo);
+    data.value.estudiante.estado_caso = nuevo;
+  } catch (e) {
+    errorEstado.value =
+      e?.response?.data?.detail || "No se pudo cambiar el estado.";
+  } finally {
+    guardandoEstado.value = false;
+  }
+}
+
 async function vincularPadre() {
   if (!padreSeleccionado.value || guardandoPadre.value) return;
   guardandoPadre.value = true;
@@ -167,6 +191,28 @@ function colorRiesgo(r) {
             {{ data.estudiante.email }}
             <span v-if="data.estudiante.grado"> — {{ data.estudiante.grado }}</span>
           </p>
+          <div class="flex items-center gap-2 mt-3">
+            <label class="text-sm text-ink-500" for="estado-caso">
+              Estado del caso
+            </label>
+            <select
+              id="estado-caso"
+              class="input py-1 text-sm w-auto"
+              :value="estadoCaso"
+              :disabled="guardandoEstado"
+              @change="cambiarEstado($event.target.value)"
+            >
+              <option value="activo">Activo</option>
+              <option value="seguimiento">En seguimiento</option>
+              <option value="cerrado">Cerrado</option>
+            </select>
+            <span v-if="guardandoEstado" class="text-xs text-ink-400">
+              Guardando…
+            </span>
+            <span v-else-if="errorEstado" class="text-xs text-coral-600">
+              {{ errorEstado }}
+            </span>
+          </div>
         </div>
         <div class="flex gap-2">
           <button class="btn-ghost" @click="agendarCita">+ Cita</button>

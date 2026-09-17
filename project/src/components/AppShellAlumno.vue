@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { authStore } from "../store/auth";
+import { api } from "../api";
 
 const props = defineProps({
   view: { type: String, required: true },
@@ -34,6 +35,20 @@ const nowLabel = computed(() => {
 function goView(v) {
   emit("change-view", v);
 }
+
+// Cuestionarios que el alumno todavía no cerró. Alimenta el badge de la
+// campana; si no hay ninguno, la campana no muestra punto.
+const pendientes = ref(0);
+onMounted(async () => {
+  try {
+    const cs = await api.misCuestionarios();
+    pendientes.value = (cs || []).filter((c) =>
+      ["pendiente", "en_progreso"].includes(c.estado),
+    ).length;
+  } catch {
+    pendientes.value = 0;
+  }
+});
 function goSOS() {
   emit("change-view", "inicio");
   setTimeout(() => {
@@ -113,18 +128,18 @@ const nav = [
     <!-- MAIN -->
     <div class="alumno-main">
       <header class="alumno-topbar">
-        <div class="alumno-search">
-          <svg class="alumno-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aa7ab" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-          <input placeholder="Buscar en Sami…" />
-        </div>
         <div class="alumno-topbar__actions">
-          <button class="alumno-tb-btn" title="Notificaciones">
+          <button
+            class="alumno-tb-btn"
+            type="button"
+            :title="pendientes ? `Tienes ${pendientes} cuestionario(s) por responder` : 'No tienes cuestionarios pendientes'"
+            @click="goView('cuestionario')"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9z"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-            <span class="alumno-tb-dot alumno-tb-dot--y"></span>
+            <span v-if="pendientes" class="alumno-tb-dot alumno-tb-dot--y"></span>
           </button>
-          <button class="alumno-tb-btn" title="Mensajes" @click="goView('reuniones')">
+          <button class="alumno-tb-btn" type="button" title="Reuniones" @click="goView('reuniones')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12 7.6L3 21l1.9-6A8.4 8.4 0 1 1 21 11.5z"/></svg>
-            <span class="alumno-tb-dot alumno-tb-dot--g"></span>
           </button>
           <button class="alumno-avatar-btn" @click="goView('perfil')" :title="fullName || 'Perfil'">
             <span class="alumno-avatar alumno-avatar--sm">{{ initials }}</span>
@@ -330,29 +345,6 @@ const nav = [
   padding: 0 26px;
   gap: 18px;
 }
-.alumno-search {
-  position: relative;
-  width: 340px;
-  max-width: 42vw;
-}
-.alumno-search__icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-.alumno-search input {
-  width: 100%;
-  height: 42px;
-  border: 1px solid #e7ecec;
-  background: #f8fafa;
-  border-radius: 12px;
-  padding: 0 14px 0 40px;
-  font-size: 14px;
-  font-family: inherit;
-  color: #33424a;
-  outline: none;
-}
 .alumno-topbar__actions {
   margin-left: auto;
   display: flex;
@@ -382,7 +374,6 @@ const nav = [
   border: 1.5px solid #fff;
 }
 .alumno-tb-dot--y { background: #f5b301; }
-.alumno-tb-dot--g { background: #1fbf75; }
 .alumno-avatar-btn {
   position: relative;
   background: none;
@@ -430,12 +421,9 @@ const nav = [
   .alumno-side__profile .alumno-avatar { width: 46px; height: 46px; font-size: 17px; }
   .alumno-cta__text { display: none; }
   .alumno-cta { justify-content: center; padding: 12px; }
-  .alumno-search { width: 200px; }
 }
 @media (max-width: 760px) {
   .alumno-side { display: none; }
-  .alumno-search { width: 160px; }
-  .alumno-search__input { font-size: 13px; }
   .alumno-content { padding: 16px 14px 32px; }
   .alumno-week-chip { display: none; }
 }

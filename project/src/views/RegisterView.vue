@@ -254,7 +254,7 @@ async function registrar() {
           v-model="email"
           type="email"
           :disabled="cargando"
-          placeholder="tucorreo@upc.edu.pe"
+          placeholder="tucorreo@colegio.edu.pe"
           class="input"
         />
       </div>

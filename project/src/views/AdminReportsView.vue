@@ -3,8 +3,25 @@ import { ref, onMounted } from "vue";
 import { api } from "../api";
 
 const stats = ref(null);
+const satisfaccion = ref(null);
 const cargando = ref(true);
 const error = ref("");
+
+const ESCALAS_SATISFACCION = [
+  { clave: "facilidad_uso", label: "Facilidad de uso" },
+  { clave: "utilidad", label: "Utilidad percibida" },
+  { clave: "confianza", label: "Confianza" },
+  { clave: "recomendaria", label: "Lo recomendaría" },
+];
+
+function fecha(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 const ahora = new Date();
 const anio = ref(ahora.getFullYear());
@@ -14,7 +31,12 @@ const exportando = ref(false);
 async function cargar() {
   cargando.value = true;
   try {
-    stats.value = await api.adminStatsCuestionarios();
+    const [s, sat] = await Promise.all([
+      api.adminStatsCuestionarios(),
+      api.adminResumenSatisfaccion().catch(() => null),
+    ]);
+    stats.value = s;
+    satisfaccion.value = sat;
   } catch (e) {
     error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
@@ -108,6 +130,47 @@ onMounted(cargar);
           <p class="text-xl font-semibold">{{ n }}</p>
         </div>
       </div>
+
+      <!-- Encuesta de satisfacción (HU-18) -->
+      <h2 class="text-lg font-semibold mt-8 mb-3">Encuesta de satisfacción</h2>
+      <div v-if="!satisfaccion || !satisfaccion.total" class="card p-6 text-ink-500">
+        Todavía ningún alumno respondió la encuesta.
+      </div>
+      <template v-else>
+        <p class="text-sm text-ink-500 mb-3">
+          {{ satisfaccion.total }}
+          {{ satisfaccion.total === 1 ? "respuesta" : "respuestas" }}
+          · promedios sobre 5
+        </p>
+        <div class="grid sm:grid-cols-4 gap-2">
+          <div
+            v-for="e in ESCALAS_SATISFACCION"
+            :key="e.clave"
+            class="card p-4 text-center"
+          >
+            <p class="text-xs text-ink-400">{{ e.label }}</p>
+            <p class="text-xl font-semibold">
+              {{ satisfaccion.promedios?.[e.clave] ?? "—" }}
+            </p>
+          </div>
+        </div>
+
+        <div v-if="satisfaccion.ultimos_comentarios?.length" class="mt-4">
+          <h3 class="text-sm font-semibold text-ink-700 mb-2">
+            Últimos comentarios
+          </h3>
+          <ul class="grid gap-2">
+            <li
+              v-for="(c, i) in satisfaccion.ultimos_comentarios"
+              :key="i"
+              class="card p-3"
+            >
+              <p class="text-sm text-ink-700">“{{ c.comentario }}”</p>
+              <p class="text-xs text-ink-400 mt-1">{{ fecha(c.timestamp) }}</p>
+            </li>
+          </ul>
+        </div>
+      </template>
     </template>
   </div>
 </template>

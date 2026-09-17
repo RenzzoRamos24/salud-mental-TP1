@@ -97,6 +97,14 @@ const proximaEnMin = computed(() => {
   return diff;
 });
 
+// Rótulo de la sesión. No usamos `notas`: es la anotación interna de la
+// psicóloga y el alumno nunca debe verla (HU-52).
+function tituloSesion(c) {
+  if (!c) return "Sesión";
+  if (c.es_crisis) return "Atención prioritaria";
+  return c.modalidad === "online" ? "Sesión online" : "Sesión presencial";
+}
+
 // Habilitamos "Unirse" sólo dentro de la ventana [-5, +15] minutos.
 function puedeUnirseACita(c) {
   if (!c || c.modalidad !== "online") return false;
@@ -610,7 +618,7 @@ const recursosPorTipo = (categoria) => {
                 {{ (c.estudiante_nombre || psicologo?.nombre || "P")[0] }}
               </div>
               <div class="al-meeting-row__txt">
-                <div class="al-meeting-row__title">{{ c.notas || "Sesión" }}</div>
+                <div class="al-meeting-row__title">{{ tituloSesion(c) }}</div>
                 <div class="al-meeting-row__sub">
                   {{ fmtFechaSimple(c.fecha) }} · {{ c.hora }}
                 </div>
@@ -780,9 +788,9 @@ const recursosPorTipo = (categoria) => {
                 <div><div class="al-info-cell__lbl">Estado</div><div class="al-info-cell__val" style="color:#0e8d7e;">{{ citasFuturas[0].estado }}</div></div>
               </div>
             </div>
-            <div v-if="citasFuturas[0].notas" class="al-objective">
-              <div class="al-objective__lbl">Notas de la sesión</div>
-              <div class="al-objective__txt">{{ citasFuturas[0].notas }}</div>
+            <div v-if="citasFuturas[0].resumen_para_estudiante" class="al-objective">
+              <div class="al-objective__lbl">Mensaje de tu psicólogo</div>
+              <div class="al-objective__txt">{{ citasFuturas[0].resumen_para_estudiante }}</div>
             </div>
             <div class="al-actions-row">
               <button
@@ -811,7 +819,7 @@ const recursosPorTipo = (categoria) => {
           </div>
           <div class="al-meeting__body">
             <div class="al-meeting__title-row">
-              <div class="al-meeting__title">{{ c.notas || "Sesión" }}</div>
+              <div class="al-meeting__title">{{ tituloSesion(c) }}</div>
               <span class="al-chip" :class="c.modalidad === 'online' ? 'al-chip--teal' : 'al-chip--amber'">
                 {{ c.modalidad === "online" ? "Online" : "Presencial" }}
               </span>
@@ -834,7 +842,7 @@ const recursosPorTipo = (categoria) => {
           </div>
           <div class="al-meeting__body">
             <div class="al-meeting__title-row">
-              <div class="al-meeting__title" style="color:#5a6a70;">{{ c.notas || "Sesión" }}</div>
+              <div class="al-meeting__title" style="color:#5a6a70;">{{ tituloSesion(c) }}</div>
               <span class="al-chip al-chip--soft">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                 Realizada
@@ -1089,10 +1097,6 @@ const recursosPorTipo = (categoria) => {
               <div class="al-info-cell__lbl">Cuenta desde</div>
               <div class="al-info-cell__val">{{ fmtFecha(user?.created_at) }}</div>
             </div>
-            <div class="al-info-cell-card">
-              <div class="al-info-cell__lbl">Estado caso</div>
-              <div class="al-info-cell__val">{{ user?.estado_caso || "Activo" }}</div>
-            </div>
           </div>
         </div>
 
@@ -1195,6 +1199,8 @@ const recursosPorTipo = (categoria) => {
 .al-section-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 16px;
 }
 .al-section-title {

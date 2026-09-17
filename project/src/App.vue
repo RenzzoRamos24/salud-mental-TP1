@@ -14,6 +14,7 @@ const STUDENT_ROUTES = [
   "responder",
   "recursos",
   "perfil",
+  "encuesta",
 ];
 
 const PSICO_ROUTES = [
@@ -28,6 +29,7 @@ const PSICO_ROUTES = [
   "psicologo-resultado",
   "psicologo-sos",
   "psicologo-citas",
+  "psicologo-firma",
   "perfil",
   "recursos",
 ];
@@ -52,6 +54,14 @@ const samiMode = computed(
 
 // El alumno mantiene el shell antiguo (sami-mode). La psicóloga usa AppShellPsico.
 const usarShellPsico = computed(() => esPsicoSami.value);
+
+// `/menu` (StudentHomeView) trae su propio shell con sidebar y cabecera. Si
+// además pintáramos AppTopbar, el alumno vería dos navegaciones apiladas con
+// items distintos. En esa ruta la barra horizontal se omite.
+const RUTAS_CON_SHELL_PROPIO = ["menu"];
+const ocultarTopbar = computed(() =>
+  RUTAS_CON_SHELL_PROPIO.includes((route.name || "").toString()),
+);
 
 import { watchEffect, onUnmounted } from "vue";
 watchEffect(() => {
@@ -82,7 +92,7 @@ const mostrarSOS = computed(() => {
 
   <!-- Resto: estudiante / admin / login con topbar horizontal -->
   <div v-else class="min-h-full" :class="{ 'sami-root': samiMode }">
-    <AppTopbar />
+    <AppTopbar v-if="!ocultarTopbar" />
     <router-view />
     <SOSButton v-if="mostrarSOS" />
   </div>

@@ -407,6 +407,17 @@ const rolLabel = computed(() => {
       </form>
     </section>
 
+    <section v-if="esEstudiante" class="card p-6 mb-6 fade-in-up">
+      <h2 class="section-title">Cuéntanos qué te pareció Sami</h2>
+      <p class="text-sm text-ink-700 mb-4">
+        Son unas pocas preguntas y nos ayudan a mejorar. Tus respuestas son
+        anónimas para el equipo y no forman parte de tu evaluación.
+      </p>
+      <button class="btn-mint" type="button" @click="router.push('/encuesta')">
+        Responder la encuesta
+      </button>
+    </section>
+
     <section class="card p-6 border-coral-200 border-2 fade-in-up">
       <h2 class="section-title text-risk-critico">Borrar tu cuenta</h2>
       <p class="text-sm text-ink-700 mb-4">

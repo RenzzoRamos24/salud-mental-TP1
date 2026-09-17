@@ -44,7 +44,7 @@ async function enviar() {
           v-model="email"
           type="email"
           :disabled="cargando"
-          placeholder="tucorreo@upc.edu.pe"
+          placeholder="tucorreo@colegio.edu.pe"
           class="input-lg"
           autofocus
         />

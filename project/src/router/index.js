@@ -6,7 +6,6 @@ import RegisterView from "../views/RegisterView.vue";
 import ForgotPasswordView from "../views/ForgotPasswordView.vue";
 import ResetPasswordView from "../views/ResetPasswordView.vue";
 import ConsentView from "../views/ConsentView.vue";
-import MainMenuView from "../views/MainMenuView.vue";
 import StudentHomeView from "../views/StudentHomeView.vue";
 import ProfileView from "../views/ProfileView.vue";
 import RecursosView from "../views/RecursosView.vue";
@@ -49,7 +48,6 @@ const routes = [
   { path: "/consent", name: "consent", component: ConsentView, meta: { requiereAuth: true } },
 
   { path: "/menu", name: "menu", component: StudentHomeView, meta: { requiereAuth: true, requiereConsent: true } },
-  { path: "/menu-legacy", name: "menu-legacy", component: MainMenuView, meta: { requiereAuth: true, requiereConsent: true } },
   { path: "/perfil", name: "perfil", component: ProfileView, meta: { requiereAuth: true, requiereConsent: true } },
   { path: "/recursos", name: "recursos", component: RecursosView, meta: { requiereAuth: true, requiereConsent: true } },
 
@@ -193,6 +191,17 @@ const routes = [
     name: "encuesta",
     component: SatisfactionSurveyView,
     meta: { requiereAuth: true, requiereConsent: true },
+  },
+
+  // ── Cualquier URL sin ruta (typo, enlace viejo) ──
+  {
+    path: "/:pathMatch(.*)*",
+    name: "not-found",
+    redirect: () => {
+      if (!authStore.isAuthenticated.value) return { name: "login" };
+      if (!authStore.consentimientoAceptado.value) return { name: "consent" };
+      return inicioPorRol(authStore.rol.value);
+    },
   },
 ];
 

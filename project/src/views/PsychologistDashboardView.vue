@@ -44,6 +44,17 @@ const tasaCompletitud = computed(() => {
   return Math.round((totalCompletados.value / totalAsignados.value) * 100);
 });
 
+// Estudiantes en seguimiento: los que están en zona de alerta (crítico, alto
+// o medio). Mismo criterio que `indicadores.depresion` más abajo.
+const enRiesgo = computed(
+  () =>
+    estudiantes.value.filter((e) =>
+      ["CRITICO", "ALTO", "MEDIO"].includes(
+        (e.ultimo_riesgo || "").toUpperCase().replace("Í", "I"),
+      ),
+    ).length,
+);
+
 // ─── Rango de fechas (display, no implementado backend aún) ──────────
 const rangoFechas = computed(() => {
   const hoy = new Date();
