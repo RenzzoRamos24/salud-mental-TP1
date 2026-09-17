@@ -44,3 +44,10 @@ project/.vite/
 # ─── Claude Code ───
 .claude/
 .deploy.zip
+
+# ─── Datos clínicos del piloto (respuestas textuales de menores) ───
+# Anonimizados con códigos, pero son texto libre de salud mental de
+# estudiantes reales. No se versionan en un repo público.
+docs/reportes_colegio/
+docs/piloto_colegio/etiquetado_ideacion/frases_para_etiquetar.csv
+docs/piloto_colegio/etiquetado_ideacion/_clave_muestra.json
