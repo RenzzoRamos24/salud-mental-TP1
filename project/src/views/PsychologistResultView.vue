@@ -215,30 +215,42 @@ function fmtFecha(iso) {
               marcado como no válido para la métrica.
             </p>
 
-            <div class="flex flex-wrap items-center gap-2 mt-4">
+            <div class="flex flex-wrap items-center gap-3 mt-4">
+              <!-- Aceptar: verde sólido. Al elegirlo queda con anillo y check. -->
               <button
                 type="button"
-                class="text-sm px-4 py-2 rounded-full border font-medium transition-colors disabled:opacity-40"
-                :class="veredicto === 'aceptado'
-                  ? 'bg-green-600 text-white border-green-600'
-                  : 'bg-white text-ink-500 border-cream-200 hover:border-green-300 hover:text-green-600'"
+                class="text-sm font-semibold px-5 py-2.5 rounded-full border-2 shadow-soft
+                       transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                :class="veredicto === 'rechazado'
+                  ? 'bg-white text-green-700 border-green-300 hover:bg-green-50'
+                  : 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:border-green-700'"
+                :style="veredicto === 'aceptado'
+                  ? 'box-shadow: 0 0 0 3px #C5E1DC' : ''"
                 :disabled="guardando"
-                :title="veredicto === 'aceptado' ? 'Quitar el veredicto' : 'El análisis es correcto'"
+                :title="veredicto === 'aceptado'
+                  ? 'Quitar el veredicto' : 'El análisis del modelo es correcto'"
                 @click="votar('aceptado')"
               >
+                <span v-if="veredicto === 'aceptado'" class="mr-1">✓</span>
                 Análisis correcto
               </button>
 
+              <!-- Descartar: rojo sólido, el mismo tono del riesgo crítico. -->
               <button
                 type="button"
-                class="text-sm px-4 py-2 rounded-full border font-medium transition-colors disabled:opacity-40"
-                :class="veredicto === 'rechazado'
-                  ? 'bg-coral-500 text-white border-coral-500'
-                  : 'bg-white text-ink-500 border-cream-200 hover:border-coral-300 hover:text-risk-critico'"
+                class="text-sm font-semibold px-5 py-2.5 rounded-full border-2 shadow-soft
+                       transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                :class="veredicto === 'aceptado'
+                  ? 'bg-white text-coral-600 border-coral-300 hover:bg-coral-50'
+                  : 'bg-coral-600 text-white border-coral-600 hover:bg-red-700 hover:border-red-700'"
+                :style="veredicto === 'rechazado'
+                  ? 'box-shadow: 0 0 0 3px #FECACA' : ''"
                 :disabled="guardando"
-                :title="veredicto === 'rechazado' ? 'Quitar el veredicto' : 'Descartar: el análisis es incorrecto'"
+                :title="veredicto === 'rechazado'
+                  ? 'Quitar el veredicto' : 'Descartar: el análisis del modelo es incorrecto'"
                 @click="votar('rechazado')"
               >
+                <span v-if="veredicto === 'rechazado'" class="mr-1">✕</span>
                 Descartar análisis
               </button>
 
@@ -246,7 +258,7 @@ function fmtFecha(iso) {
               <span
                 v-else-if="veredicto"
                 class="text-xs"
-                :class="veredicto === 'aceptado' ? 'text-green-600' : 'text-risk-critico'"
+                :class="veredicto === 'aceptado' ? 'text-green-700' : 'text-coral-600'"
               >
                 {{ veredicto === 'aceptado'
                     ? 'Marcado como correcto. Pulsá de nuevo para deshacer.'
