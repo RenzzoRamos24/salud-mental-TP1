@@ -4,12 +4,17 @@ Endpoints de aplicación de cuestionarios.
   * Psicóloga: asignar, listar asignaciones, ver resultado, marcar revisado.
   * Estudiante: listar propios, ver detalle para responder, enviar respuestas, cerrar.
 """
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.core.deps import get_current_user, require_role
 from app.models.user import User
+from app.models.bank import AplicacionCuestionario
 from app.services.cuestionario_service import CuestionarioService
+from app.services.feedback_service import FeedbackService
 from app.schemas.bank import AsignarCuestionarioIn, EnviarRespuestasIn
 
 router = APIRouter()
@@ -56,6 +61,95 @@ async def marcar_revisado(
         return {"id": a.id, "estado": a.estado, "revisada_at": a.revisada_at.isoformat()}
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+# ── Feedback de la psicóloga sobre las clasificaciones de BETO ──────────────
+
+
+class FeedbackFraseIn(BaseModel):
+    veredicto: str = Field(
+        ...,
+        description="'aceptado' si la clasificación de BETO es correcta, "
+                    "'rechazado' si es incorrecta.",
+    )
+    comentario: Optional[str] = Field(None, max_length=500)
+
+
+@router.post("/aplicacion/{aplicacion_id}/frases/{frase_numero}/feedback")
+async def registrar_feedback_frase(
+    aplicacion_id: int,
+    frase_numero: int,
+    payload: FeedbackFraseIn,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Acepta o descarta lo que BETO clasificó en una frase."""
+    try:
+        fb = FeedbackService.registrar(
+            db,
+            psicologo_id=current_user.id,
+            aplicacion_id=aplicacion_id,
+            frase_numero=frase_numero,
+            veredicto=payload.veredicto,
+            comentario=payload.comentario,
+            es_admin=(current_user.role == "admin"),
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+    from app.services.cuestionario_service import CuestionarioService as _CS  # noqa
+
+    return {
+        "frase_numero": fb.frase_numero,
+        "veredicto": fb.veredicto,
+        "comentario": fb.comentario,
+        "resumen": FeedbackService.resumen_aplicacion(
+            db, aplicacion_id, _total_frases(db, aplicacion_id),
+        ),
+    }
+
+
+@router.delete("/aplicacion/{aplicacion_id}/frases/{frase_numero}/feedback")
+async def quitar_feedback_frase(
+    aplicacion_id: int,
+    frase_numero: int,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Deshace el veredicto: la frase vuelve a quedar sin revisar."""
+    try:
+        quitado = FeedbackService.quitar(
+            db,
+            psicologo_id=current_user.id,
+            aplicacion_id=aplicacion_id,
+            frase_numero=frase_numero,
+            es_admin=(current_user.role == "admin"),
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {
+        "quitado": quitado,
+        "resumen": FeedbackService.resumen_aplicacion(
+            db, aplicacion_id, _total_frases(db, aplicacion_id),
+        ),
+    }
+
+
+def _total_frases(db: Session, aplicacion_id: int) -> int:
+    """Cuántas frases analizó BETO en esta aplicación."""
+    import json as _json
+
+    apl = (
+        db.query(AplicacionCuestionario)
+        .filter(AplicacionCuestionario.id == aplicacion_id)
+        .first()
+    )
+    if not apl or not apl.resultado_json:
+        return 0
+    try:
+        return len(_json.loads(apl.resultado_json).get("frases") or [])
+    except (ValueError, TypeError):
+        return 0
 
 
 # ── Estudiante ──────────────────────────────────────────────────────────────

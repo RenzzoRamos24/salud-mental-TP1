@@ -237,6 +237,25 @@ export const api = {
     return data;
   },
 
+  // ─── Feedback sobre las clasificaciones de BETO ───
+  async feedbackFrase(aplicacion_id, frase_numero, veredicto, comentario = null) {
+    const { data } = await client.post(
+      `/cuestionarios/aplicacion/${aplicacion_id}/frases/${frase_numero}/feedback`,
+      { veredicto, comentario },
+    );
+    return data;
+  },
+  async quitarFeedbackFrase(aplicacion_id, frase_numero) {
+    const { data } = await client.delete(
+      `/cuestionarios/aplicacion/${aplicacion_id}/frases/${frase_numero}/feedback`,
+    );
+    return data;
+  },
+  async metricasClasificador() {
+    const { data } = await client.get("/psychologist/metricas-clasificador");
+    return data;
+  },
+
   // ─── PSICÓLOGA: dashboard y estudiantes ───
   async dashboardStats() {
     const { data } = await client.get("/psychologist/dashboard-stats");

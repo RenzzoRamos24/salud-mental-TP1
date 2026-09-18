@@ -15,6 +15,8 @@ async function cargar() {
   cargando.value = true;
   try {
     data.value = await api.obtenerResultado(aplicacionId.value);
+    feedback.value = data.value?.frases_feedback || {};
+    if (data.value?.frases_resumen) resumen.value = data.value.frases_resumen;
   } catch (e) {
     error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
@@ -22,7 +24,10 @@ async function cargar() {
   }
 }
 
-onMounted(cargar);
+onMounted(async () => {
+  await cargar();
+  await cargarMetricas();
+});
 
 async function marcarRevisado() {
   try {
@@ -35,6 +40,66 @@ async function marcarRevisado() {
 
 const resultado = computed(() => data.value?.resultado || null);
 const dass21Detalle = computed(() => data.value?.dass21_detalle || null);
+
+// ── Feedback sobre las clasificaciones de BETO ──────────────────────────
+// `feedback` es { numero_de_frase: { veredicto, comentario } }.
+const feedback = ref({});
+const resumen = ref({
+  aceptados: 0, rechazados: 0, revisadas: 0,
+  sin_revisar: 0, total: 0, tasa_acierto: null,
+});
+const metricas = ref(null);
+const guardando = ref(null);      // número de frase en curso, para deshabilitar
+const errorFeedback = ref({});
+
+function veredictoDe(numero) {
+  return feedback.value?.[numero]?.veredicto || null;
+}
+
+/**
+ * Vota sobre una frase. Volver a pulsar el mismo botón quita el veredicto,
+ * así la psicóloga puede corregirse sin quedar atrapada en una elección.
+ */
+async function votar(numero, veredicto) {
+  if (guardando.value !== null) return;
+  guardando.value = numero;
+  errorFeedback.value = { ...errorFeedback.value, [numero]: "" };
+
+  const actual = veredictoDe(numero);
+  const previo = { ...feedback.value };
+  const quitar = actual === veredicto;
+
+  // Actualización optimista: la UI responde al instante.
+  const optimista = { ...feedback.value };
+  if (quitar) delete optimista[numero];
+  else optimista[numero] = { ...(optimista[numero] || {}), veredicto };
+  feedback.value = optimista;
+
+  try {
+    const r = quitar
+      ? await api.quitarFeedbackFrase(aplicacionId.value, numero)
+      : await api.feedbackFrase(aplicacionId.value, numero, veredicto);
+    if (r?.resumen) resumen.value = r.resumen;
+    await cargarMetricas();
+  } catch (e) {
+    feedback.value = previo;   // revierte si el servidor rechazó
+    errorFeedback.value = {
+      ...errorFeedback.value,
+      [numero]: e?.response?.data?.detail || "No se pudo guardar el veredicto.",
+    };
+  } finally {
+    guardando.value = null;
+  }
+}
+
+async function cargarMetricas() {
+  try {
+    metricas.value = await api.metricasClasificador();
+  } catch {
+    // Las métricas son informativas: si fallan, la pantalla sigue usable.
+    metricas.value = null;
+  }
+}
 
 const dass21Items = computed(() => {
   const d = dass21Detalle.value;
@@ -288,33 +353,178 @@ function fmtFecha(iso) {
 
       <!-- Frases incompletas -->
       <template v-if="(resultado?.frases || []).length > 0">
-        <h2 class="text-lg font-semibold mb-3">Frases incompletas</h2>
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-lg font-semibold">Frases incompletas</h2>
+            <p class="text-xs text-ink-400 mt-0.5">
+              Marca si la categoría que asignó el modelo es correcta. Tu
+              veredicto alimenta la métrica de precisión del clasificador.
+            </p>
+          </div>
+
+          <!-- Conteo de esta aplicación -->
+          <div class="flex items-center gap-2 text-xs">
+            <span
+              class="px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200"
+              title="Clasificaciones que diste por correctas"
+            >
+              {{ resumen.aceptados }} aceptadas
+            </span>
+            <span
+              class="px-2.5 py-1 rounded-full bg-coral-50 text-risk-critico border border-coral-200"
+              title="Clasificaciones que descartaste por incorrectas"
+            >
+              {{ resumen.rechazados }} descartadas
+            </span>
+            <span
+              v-if="resumen.sin_revisar > 0"
+              class="px-2.5 py-1 rounded-full bg-cream-100 text-ink-400 border border-cream-200"
+            >
+              {{ resumen.sin_revisar }} sin revisar
+            </span>
+            <span
+              v-if="resumen.tasa_acierto !== null"
+              class="px-2.5 py-1 rounded-full bg-mint-50 text-green-700 border border-mint-200 font-semibold"
+              title="Aceptadas sobre el total de revisadas"
+            >
+              {{ Math.round(resumen.tasa_acierto * 100) }}% de acierto
+            </span>
+          </div>
+        </div>
+
         <div class="grid gap-3">
           <div
             v-for="f in resultado.frases"
             :key="`${f.area}-${f.numero}`"
-            class="card p-4"
-            :class="{ 'border-red-300': f.crisis }"
+            class="card p-4 transition-opacity"
+            :class="{
+              'border-red-300': f.crisis && veredictoDe(f.numero) !== 'rechazado',
+              'opacity-60': veredictoDe(f.numero) === 'rechazado',
+            }"
           >
             <p class="text-xs text-ink-400 mb-1">{{ f.area }} — #{{ f.numero }}</p>
             <p class="text-sm italic text-ink-500 mb-2">{{ f.pregunta }}</p>
             <p class="font-medium">"{{ f.respuesta }}"</p>
-            <div class="flex flex-wrap gap-1 mt-3">
+
+            <div class="flex flex-wrap items-center gap-1 mt-3">
               <span
                 v-for="d in f.detectadas"
                 :key="d"
                 class="chip-mint text-xs"
+                :class="{ 'line-through opacity-60': veredictoDe(f.numero) === 'rechazado' }"
               >
                 {{ d }}
               </span>
               <span
                 v-if="f.crisis"
-                class="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200"
+                class="text-xs px-2 py-0.5 rounded-full border"
+                :class="veredictoDe(f.numero) === 'rechazado'
+                  ? 'bg-cream-100 text-ink-400 border-cream-200 line-through'
+                  : 'bg-red-50 text-red-700 border-red-200'"
               >
                 ideación detectada
               </span>
+              <span
+                v-if="!(f.detectadas || []).length && !f.crisis"
+                class="text-xs text-ink-300 italic"
+              >
+                sin categoría asignada
+              </span>
+
+              <!-- Botones de veredicto -->
+              <div class="flex items-center gap-1 ml-auto">
+                <span
+                  v-if="veredictoDe(f.numero)"
+                  class="text-[11px] mr-1"
+                  :class="veredictoDe(f.numero) === 'aceptado'
+                    ? 'text-green-600' : 'text-risk-critico'"
+                >
+                  {{ veredictoDe(f.numero) === 'aceptado' ? 'Marcada correcta' : 'Descartada' }}
+                </span>
+
+                <button
+                  type="button"
+                  class="text-xs px-2.5 py-1 rounded-full border transition-colors disabled:opacity-40"
+                  :class="veredictoDe(f.numero) === 'aceptado'
+                    ? 'bg-green-600 text-white border-green-600'
+                    : 'bg-white text-ink-400 border-cream-200 hover:border-green-300 hover:text-green-600'"
+                  :disabled="guardando === f.numero"
+                  :title="veredictoDe(f.numero) === 'aceptado'
+                    ? 'Quitar el veredicto' : 'La clasificación es correcta'"
+                  @click="votar(f.numero, 'aceptado')"
+                >
+                  Correcta
+                </button>
+
+                <button
+                  type="button"
+                  class="text-xs px-2.5 py-1 rounded-full border transition-colors disabled:opacity-40"
+                  :class="veredictoDe(f.numero) === 'rechazado'
+                    ? 'bg-coral-500 text-white border-coral-500'
+                    : 'bg-white text-ink-400 border-cream-200 hover:border-coral-300 hover:text-risk-critico'"
+                  :disabled="guardando === f.numero"
+                  :title="veredictoDe(f.numero) === 'rechazado'
+                    ? 'Quitar el veredicto' : 'Descartar: la clasificación es incorrecta'"
+                  @click="votar(f.numero, 'rechazado')"
+                >
+                  Descartar
+                </button>
+              </div>
+            </div>
+
+            <p v-if="errorFeedback[f.numero]" class="text-xs text-risk-critico mt-2">
+              {{ errorFeedback[f.numero] }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Acumulado global del clasificador -->
+        <div v-if="metricas && metricas.revisadas > 0" class="card p-4 mt-4">
+          <h3 class="text-sm font-semibold mb-1">Precisión acumulada del clasificador</h3>
+          <p class="text-xs text-ink-400 mb-3">
+            Sobre todas las frases que revisaste, no solo las de este cuestionario.
+          </p>
+          <div class="flex flex-wrap items-center gap-4">
+            <div>
+              <p class="text-2xl font-semibold text-green-700">
+                {{ metricas.tasa_acierto !== null
+                    ? Math.round(metricas.tasa_acierto * 100) + '%' : '—' }}
+              </p>
+              <p class="text-xs text-ink-400">de acierto</p>
+            </div>
+            <div class="text-sm">
+              <p class="text-green-700">{{ metricas.aceptados }} aceptadas</p>
+              <p class="text-risk-critico">{{ metricas.rechazados }} descartadas</p>
+              <p class="text-ink-400 text-xs mt-0.5">
+                {{ metricas.revisadas }} frases revisadas en total
+              </p>
+            </div>
+            <div v-if="(metricas.por_categoria || []).length" class="text-xs ml-auto">
+              <p class="text-ink-400 mb-1">Por categoría del modelo</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="c in metricas.por_categoria"
+                  :key="c.categoria"
+                  class="px-2 py-0.5 rounded-full bg-cream-100 border border-cream-200"
+                  :title="`${c.aceptados} aceptadas · ${c.rechazados} descartadas`"
+                >
+                  {{ c.categoria }}:
+                  {{ c.tasa_acierto !== null ? Math.round(c.tasa_acierto * 100) + '%' : '—' }}
+                </span>
+              </div>
             </div>
           </div>
+          <p
+            v-if="metricas.crisis && metricas.crisis.revisadas > 0"
+            class="text-xs text-ink-400 mt-3 pt-3 border-t border-cream-200"
+          >
+            En frases marcadas como ideación:
+            <strong class="text-ink-500">{{ metricas.crisis.aceptados }}</strong> confirmadas ·
+            <strong class="text-ink-500">{{ metricas.crisis.rechazados }}</strong> descartadas
+            <span v-if="metricas.crisis.tasa_acierto !== null">
+              ({{ Math.round(metricas.crisis.tasa_acierto * 100) }}% de acierto)
+            </span>
+          </p>
         </div>
       </template>
     </template>

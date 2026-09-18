@@ -421,3 +421,25 @@ async def descargar_reporte_mensual(
         "Content-Disposition": f'attachment; filename="reporte_{anio}_{mes:02d}.pdf"'
     }
     return Response(content=pdf, media_type="application/pdf", headers=headers)
+
+
+# ── Métricas del clasificador BETO ──────────────────────────────────────────
+
+
+@router.get("/metricas-clasificador")
+async def metricas_clasificador(
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Acumulado de veredictos sobre las clasificaciones de BETO.
+
+    La psicóloga ve los suyos; el admin ve los de todo el sistema. Es la
+    medida de precisión del clasificador en uso real — la que permite decir
+    si el modelo está acertando o no sobre las frases del colegio.
+    """
+    from app.services.feedback_service import FeedbackService
+
+    return FeedbackService.metricas_globales(
+        db, current_user.id, es_admin=(current_user.role == "admin"),
+    )
