@@ -1,0 +1,109 @@
+# Despliegue continuo de Sami en Azure App Service.
+#
+# Replica el proceso manual documentado en DEPLOY.md:
+#   1. Compila el frontend Vue  (project/dist queda fuera del repo)
+#   2. Arma el paquete con los mismos archivos que el zip manual
+#   3. Publica en el App Service sami-app-9921877
+#
+# Las dependencias de Python NO se instalan aqui: el App Service tiene
+# SCM_DO_BUILD_DURING_DEPLOYMENT=true, asi que Oryx corre pip install
+# en el servidor. Instalarlas aqui solo haria el artefacto varios GB
+# mas pesado (torch + transformers) sin ningun beneficio.
+
+name: Desplegar en Azure
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      # Cambios que no afectan a la app no reinician produccion.
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  workflow_dispatch:        # Permite lanzarlo a mano desde la pestaña Actions
+
+# Si llegan dos pushes seguidos, el segundo espera al primero en vez de
+# pisarlo a mitad de publicacion.
+concurrency:
+  group: deploy-azure
+  cancel-in-progress: false
+
+env:
+  APP_NAME: sami-app-9921877
+  NODE_VERSION: '22'
+
+jobs:
+  desplegar:
+    name: Compilar y publicar
+    runs-on: ubuntu-latest
+    environment:
+      name: produccion
+      url: https://sami-app-9921877.azurewebsites.net
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: project/package-lock.json
+
+      - name: Instalar dependencias del frontend
+        working-directory: project
+        run: npm ci
+
+      - name: Compilar el frontend (Vite)
+        working-directory: project
+        run: npm run build
+
+      - name: Verificar que el build existe
+        run: |
+          test -f project/dist/index.html \
+            || { echo "::error::El build de Vite no genero project/dist/index.html"; exit 1; }
+          echo "Build OK — $(find project/dist -type f | wc -l) archivos"
+
+      - name: Armar el paquete de despliegue
+        run: |
+          set -e
+          rm -rf paquete && mkdir -p paquete/scripts
+          # Mismos archivos que el zip manual de DEPLOY.md
+          cp -r app                          paquete/app
+          mkdir -p paquete/project
+          cp -r project/dist                 paquete/project/dist
+          cp scripts/seed_admin.py           paquete/scripts/
+          cp scripts/bootstrap_postgres.py   paquete/scripts/
+          cp startup.sh                      paquete/
+          cp requirements.txt                paquete/
+          # Basura de Python que no debe viajar
+          find paquete -name '__pycache__' -type d -prune -exec rm -rf {} +
+          find paquete -name '*.py[co]' -delete
+          echo "Paquete armado — $(du -sh paquete | cut -f1)"
+
+      - name: Comprimir
+        run: cd paquete && zip -qr ../deploy.zip . && cd .. && ls -lh deploy.zip
+
+      - name: Publicar en Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: deploy.zip
+
+      - name: Comprobar que la app responde
+        run: |
+          echo "Esperando a que el App Service reinicie…"
+          for intento in $(seq 1 20); do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+              "https://${APP_NAME}.azurewebsites.net/docs" || echo 000)
+            if [ "$codigo" = "200" ]; then
+              echo "La app responde HTTP 200 (intento $intento)."
+              exit 0
+            fi
+            echo "  intento $intento — HTTP $codigo, reintentando en 15 s…"
+            sleep 15
+          done
+          echo "::error::La app no respondio 200 tras 5 minutos."
+          exit 1
