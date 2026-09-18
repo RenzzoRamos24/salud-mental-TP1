@@ -304,8 +304,29 @@ def main() -> None:
             f"{db.query(BankItem).count()} items, "
             f"{db.query(BankFraseIncompleta).count()} frases."
         )
+        _limpiar_tablas_obsoletas(db)
     finally:
         db.close()
+
+
+def _limpiar_tablas_obsoletas(db) -> None:
+    """
+    Quita tablas de iteraciones anteriores del esquema.
+
+    `frase_feedback` guardaba un veredicto por frase; se reemplazó por
+    `resultado_feedback`, que guarda uno por cuestionario completo. La tabla
+    vieja nunca llegó a tener datos en uso real, así que se elimina en vez de
+    migrarla. Idempotente: si no existe, no hace nada.
+    """
+    from sqlalchemy import text
+
+    for tabla in ("frase_feedback",):
+        try:
+            db.execute(text(f"DROP TABLE IF EXISTS {tabla}"))
+            db.commit()
+        except Exception as e:      # noqa: BLE001 - limpieza best-effort
+            db.rollback()
+            print(f"  (no se pudo eliminar '{tabla}': {e})")
 
 
 if __name__ == "__main__":

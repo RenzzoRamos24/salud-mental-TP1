@@ -1,8 +1,9 @@
-"""Feedback de la psicologa sobre las clasificaciones de BETO.
+"""Feedback de la psicologa sobre el analisis de BETO.
 
-Cubre el ciclo completo por HTTP: aceptar, descartar, cambiar de opinion,
-deshacer, y que los conteos y las metricas globales cuadren. Tambien que
-una psicologa ajena no pueda votar sobre una aplicacion que no es suya.
+El veredicto es por cuestionario completo, no por frase. Cubre el ciclo
+por HTTP: aceptar, descartar, cambiar de opinion, deshacer, y que los
+conteos y las metricas globales cuadren. Tambien que una psicologa ajena
+no pueda votar sobre una aplicacion que no es suya.
 
 Uso:  PYTHONPATH=. venv/bin/python tests/test_feedback_clasificador.py
 """
@@ -60,6 +61,7 @@ async def main():
         db = SessionLocal()
         pl = PlantillaCuestionario(nombre=f"Test {suf}", psicologo_id=id_psi)
         db.add(pl); db.commit(); db.refresh(pl)
+        pl_id = pl.id
         apl = AplicacionCuestionario(
             plantilla_id=pl.id, estudiante_id=id_alu, psicologo_id=id_psi,
             estado="completado", resultado_json=json.dumps(RESULTADO),
@@ -70,77 +72,88 @@ async def main():
 
         base = f"/api/v1/cuestionarios/aplicacion/{aid}"
 
-        # 1. Al principio no hay ningun veredicto.
+        # Segunda aplicacion, para que el acumulado tenga mas de un caso.
+        db = SessionLocal()
+        apl2 = AplicacionCuestionario(
+            plantilla_id=pl_id, estudiante_id=id_alu, psicologo_id=id_psi,
+            estado="completado", resultado_json=json.dumps(
+                {**RESULTADO, "riesgo_global": "BAJO", "crisis_activada": False}),
+            riesgo_global="BAJO", crisis_activada=False)
+        db.add(apl2); db.commit(); db.refresh(apl2)
+        aid2 = apl2.id
+        db.close()
+        base2 = f"/api/v1/cuestionarios/aplicacion/{aid2}"
+
+        # 1. Al principio el resultado no tiene veredicto.
         r = await c.get(f"{base}/resultado", headers=H(tok_psi))
         assert r.status_code == 200, (r.status_code, r.text)
-        d = r.json()
-        assert d["frases_feedback"] == {}, d["frases_feedback"]
-        assert d["frases_resumen"]["sin_revisar"] == 3, d["frases_resumen"]
-        print("1. Sin veredictos, las 3 frases salen sin revisar ..... OK")
+        assert r.json()["feedback"] is None, r.json()["feedback"]
+        print("1. Sin veredicto, el resultado sale sin juzgar ........ OK")
 
-        # 2. Descartar la clasificacion incorrecta ("duermo" -> depresion).
-        r = await c.post(f"{base}/frases/1/feedback", headers=H(tok_psi),
+        # 2. Descartar el analisis de este cuestionario.
+        r = await c.post(f"{base}/feedback", headers=H(tok_psi),
                          json={"veredicto": "rechazado",
-                               "comentario": "responde literal, no hay malestar"})
+                               "comentario": "marca ideacion donde no la hay"})
         assert r.status_code == 200, (r.status_code, r.text)
-        res = r.json()["resumen"]
-        assert (res["rechazados"], res["aceptados"]) == (1, 0), res
-        print("2. Descartar una clasificacion incorrecta ............ OK")
+        m = r.json()["metricas"]
+        assert (m["rechazados"], m["aceptados"]) == (1, 0), m
+        print("2. Descartar el analisis completo .................... OK")
 
-        # 3. Aceptar las otras dos.
-        for n in (5, 21):
-            r = await c.post(f"{base}/frases/{n}/feedback", headers=H(tok_psi),
-                             json={"veredicto": "aceptado"})
-            assert r.status_code == 200, (r.status_code, r.text)
-        res = r.json()["resumen"]
-        assert (res["aceptados"], res["rechazados"], res["sin_revisar"]) == (2, 1, 0), res
-        assert res["tasa_acierto"] == 0.6667, res["tasa_acierto"]
-        print("3. Conteo: 2 aceptadas / 1 descartada / 66.67% ....... OK")
-
-        # 4. Cambiar de opinion no duplica el registro.
-        r = await c.post(f"{base}/frases/1/feedback", headers=H(tok_psi),
+        # 3. Aceptar el analisis del segundo cuestionario.
+        r = await c.post(f"{base2}/feedback", headers=H(tok_psi),
                          json={"veredicto": "aceptado"})
-        res = r.json()["resumen"]
-        assert (res["aceptados"], res["rechazados"]) == (3, 0), res
-        assert res["revisadas"] == 3, res
+        assert r.status_code == 200, (r.status_code, r.text)
+        m = r.json()["metricas"]
+        assert (m["aceptados"], m["rechazados"], m["revisados"]) == (1, 1, 2), m
+        assert m["tasa_acierto"] == 0.5, m["tasa_acierto"]
+        print("3. Conteo: 1 aceptado / 1 descartado / 50% ........... OK")
+
+        # 4. Cambiar de opinion reemplaza, no suma otro registro.
+        r = await c.post(f"{base}/feedback", headers=H(tok_psi),
+                         json={"veredicto": "aceptado"})
+        m = r.json()["metricas"]
+        assert (m["aceptados"], m["rechazados"]) == (2, 0), m
+        assert m["revisados"] == 2, m
         print("4. Cambiar de opinion reemplaza, no suma ............. OK")
 
-        # 5. Deshacer devuelve la frase a sin revisar.
-        r = await c.delete(f"{base}/frases/1/feedback", headers=H(tok_psi))
+        # 5. Deshacer devuelve el resultado a sin juzgar.
+        r = await c.delete(f"{base}/feedback", headers=H(tok_psi))
         assert r.status_code == 200, (r.status_code, r.text)
-        res = r.json()["resumen"]
-        assert res["sin_revisar"] == 1 and res["revisadas"] == 2, res
+        m = r.json()["metricas"]
+        assert m["revisados"] == 1 and m["sin_revisar"] == 1, m
         print("5. Deshacer el veredicto ............................. OK")
 
-        # 6. El estado persiste al recargar el resultado.
+        # 6. El veredicto persiste al recargar el resultado.
+        d = (await c.get(f"{base2}/resultado", headers=H(tok_psi))).json()
+        assert d["feedback"]["veredicto"] == "aceptado", d["feedback"]
         d = (await c.get(f"{base}/resultado", headers=H(tok_psi))).json()
-        assert set(d["frases_feedback"].keys()) == {"5", "21"}, d["frases_feedback"]
-        print("6. El estado persiste al recargar .................... OK")
+        assert d["feedback"] is None, d["feedback"]
+        print("6. El veredicto persiste al recargar ................. OK")
 
-        # 7. Metricas globales de la psicologa.
+        # 7. Metricas globales con desglose por nivel de riesgo.
         m = (await c.get("/api/v1/psychologist/metricas-clasificador",
                          headers=H(tok_psi))).json()
-        assert m["aceptados"] == 2 and m["rechazados"] == 0, m
-        assert m["tasa_acierto"] == 1.0, m
-        cats = {x["categoria"] for x in m["por_categoria"]}
-        assert cats == {"neutral", "ansiedad"}, cats
-        print("7. Metricas globales y desglose por categoria ........ OK")
+        assert m["aceptados"] == 1 and m["rechazados"] == 0, m
+        assert m["total_evaluados"] == 2, m
+        riesgos = {x["riesgo"] for x in m["por_riesgo"]}
+        assert riesgos == {"BAJO"}, riesgos
+        print("7. Metricas globales y desglose por riesgo ........... OK")
 
         # 8. Una psicologa ajena no puede votar sobre esta aplicacion.
-        r = await c.post(f"{base}/frases/5/feedback", headers=H(tok_otra),
+        r = await c.post(f"{base}/feedback", headers=H(tok_otra),
                          json={"veredicto": "rechazado"})
         assert r.status_code == 400, (r.status_code, r.text)
         assert "acceso" in r.text.lower(), r.text
         print("8. Una psicologa ajena no puede votar ................ OK")
 
-        # 9. Veredicto invalido y frase inexistente se rechazan.
-        r = await c.post(f"{base}/frases/5/feedback", headers=H(tok_psi),
+        # 9. Veredicto invalido y aplicacion inexistente se rechazan.
+        r = await c.post(f"{base}/feedback", headers=H(tok_psi),
                          json={"veredicto": "quiza"})
         assert r.status_code == 400, (r.status_code, r.text)
-        r = await c.post(f"{base}/frases/999/feedback", headers=H(tok_psi),
-                         json={"veredicto": "aceptado"})
+        r = await c.post("/api/v1/cuestionarios/aplicacion/99999/feedback",
+                         headers=H(tok_psi), json={"veredicto": "aceptado"})
         assert r.status_code == 400, (r.status_code, r.text)
-        print("9. Veredicto invalido y frase inexistente rechazados .. OK")
+        print("9. Veredicto invalido y aplicacion inexistente ....... OK")
 
         print("\nTODO OK - el feedback del clasificador funciona.")
 

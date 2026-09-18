@@ -217,47 +217,45 @@ class RespuestaAplicacion(Base):
     aplicacion = relationship("AplicacionCuestionario", back_populates="respuestas")
 
 
-# ── Feedback de la psicóloga sobre la clasificación de BETO ─────────────────
+# ── Feedback de la psicóloga sobre el análisis de BETO ──────────────────────
 
 
-class FraseFeedback(Base):
+class ResultadoFeedback(Base):
     """
-    Veredicto de la psicóloga sobre lo que BETO clasificó en una frase.
+    Veredicto de la psicóloga sobre el análisis que BETO hizo de un
+    cuestionario completo.
 
     Existe para medir la precisión percibida del clasificador en uso real:
-    cada vez que la psicóloga marca una clasificación como acertada o la
-    descarta por incorrecta, queda un registro. El acumulado de aceptados
-    frente a rechazados es la métrica de calidad del modelo en producción.
+    al revisar un resultado, la psicóloga dice si el análisis del modelo
+    sirvió o si lo descarta por incorrecto. El acumulado de aceptados frente
+    a descartados es la métrica de calidad del modelo en producción.
 
-    Hay como mucho un veredicto por (aplicación, frase): volver a votar
-    reemplaza el voto anterior en vez de sumar otro registro.
+    Un veredicto por aplicación: volver a votar reemplaza el anterior en vez
+    de sumar otro registro.
     """
 
-    __tablename__ = "frase_feedback"
-    __table_args__ = (
-        UniqueConstraint("aplicacion_id", "frase_numero", name="uq_frase_feedback"),
-    )
+    __tablename__ = "resultado_feedback"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     aplicacion_id = Column(
         Integer,
         ForeignKey("aplicacion_cuestionario.id", ondelete="CASCADE"),
         nullable=False,
+        unique=True,
         index=True,
     )
-    # Número de la frase dentro del banco (BankFraseIncompleta.numero).
-    frase_numero = Column(Integer, nullable=False)
     psicologo_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
 
-    # 'aceptado' = la clasificación es correcta
-    # 'rechazado' = la clasificación es incorrecta (falso positivo del modelo)
+    # 'aceptado'  = el análisis del modelo es correcto / útil
+    # 'rechazado' = el análisis es incorrecto, se descarta
     veredicto = Column(String(12), nullable=False, index=True)
 
     # Qué había dicho el modelo cuando se emitió el veredicto. Se congela acá
     # para que el histórico siga siendo interpretable aunque luego se
     # recalibren los umbrales o se reevalúen las frases.
-    categoria_modelo = Column(String(32), nullable=True)
+    riesgo_modelo = Column(String(20), nullable=True)
     crisis_modelo = Column(Boolean, nullable=False, default=False)
+    n_frases = Column(Integer, nullable=False, default=0)
 
     comentario = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

@@ -299,12 +299,9 @@ class CuestionarioService:
             # Detalle DASS-21 para que la psicóloga pueda validar la opinión
             # del SVM viendo exactamente qué respondió el alumno.
             "dass21_detalle": CuestionarioService._dass21_detalle(db, aplicacion_id),
-            # Veredictos ya emitidos sobre las clasificaciones de BETO, para
-            # que la vista pinte cada botón en el estado en que quedó.
-            "frases_feedback": FeedbackService.por_aplicacion(db, aplicacion_id),
-            "frases_resumen": FeedbackService.resumen_aplicacion(
-                db, aplicacion_id, len((resultado or {}).get("frases") or []),
-            ),
+            # Veredicto ya emitido sobre el análisis del modelo, para que la
+            # vista pinte los botones en el estado en que quedaron.
+            "feedback": FeedbackService.por_aplicacion(db, aplicacion_id),
         }
 
     # ── Detalle DASS-21 (respuestas item-a-item por subescala) ─────────────

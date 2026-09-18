@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.core.deps import get_current_user, require_role
 from app.models.user import User
-from app.models.bank import AplicacionCuestionario
 from app.services.cuestionario_service import CuestionarioService
 from app.services.feedback_service import FeedbackService
 from app.schemas.bank import AsignarCuestionarioIn, EnviarRespuestasIn
@@ -63,33 +62,31 @@ async def marcar_revisado(
         raise HTTPException(400, str(e))
 
 
-# ── Feedback de la psicóloga sobre las clasificaciones de BETO ──────────────
+# ── Feedback de la psicóloga sobre el análisis de BETO ──────────────────────
 
 
-class FeedbackFraseIn(BaseModel):
+class FeedbackResultadoIn(BaseModel):
     veredicto: str = Field(
         ...,
-        description="'aceptado' si la clasificación de BETO es correcta, "
-                    "'rechazado' si es incorrecta.",
+        description="'aceptado' si el análisis del modelo es correcto, "
+                    "'rechazado' si se descarta por incorrecto.",
     )
     comentario: Optional[str] = Field(None, max_length=500)
 
 
-@router.post("/aplicacion/{aplicacion_id}/frases/{frase_numero}/feedback")
-async def registrar_feedback_frase(
+@router.post("/aplicacion/{aplicacion_id}/feedback")
+async def registrar_feedback_resultado(
     aplicacion_id: int,
-    frase_numero: int,
-    payload: FeedbackFraseIn,
+    payload: FeedbackResultadoIn,
     current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
-    """Acepta o descarta lo que BETO clasificó en una frase."""
+    """Acepta o descarta el análisis que el modelo hizo de este cuestionario."""
     try:
         fb = FeedbackService.registrar(
             db,
             psicologo_id=current_user.id,
             aplicacion_id=aplicacion_id,
-            frase_numero=frase_numero,
             veredicto=payload.veredicto,
             comentario=payload.comentario,
             es_admin=(current_user.role == "admin"),
@@ -97,59 +94,38 @@ async def registrar_feedback_frase(
     except ValueError as e:
         raise HTTPException(400, str(e))
 
-    from app.services.cuestionario_service import CuestionarioService as _CS  # noqa
-
     return {
-        "frase_numero": fb.frase_numero,
+        "aplicacion_id": fb.aplicacion_id,
         "veredicto": fb.veredicto,
         "comentario": fb.comentario,
-        "resumen": FeedbackService.resumen_aplicacion(
-            db, aplicacion_id, _total_frases(db, aplicacion_id),
+        "metricas": FeedbackService.metricas_globales(
+            db, current_user.id, es_admin=(current_user.role == "admin"),
         ),
     }
 
 
-@router.delete("/aplicacion/{aplicacion_id}/frases/{frase_numero}/feedback")
-async def quitar_feedback_frase(
+@router.delete("/aplicacion/{aplicacion_id}/feedback")
+async def quitar_feedback_resultado(
     aplicacion_id: int,
-    frase_numero: int,
     current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
-    """Deshace el veredicto: la frase vuelve a quedar sin revisar."""
+    """Deshace el veredicto: el resultado vuelve a quedar sin juzgar."""
     try:
         quitado = FeedbackService.quitar(
             db,
             psicologo_id=current_user.id,
             aplicacion_id=aplicacion_id,
-            frase_numero=frase_numero,
             es_admin=(current_user.role == "admin"),
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {
         "quitado": quitado,
-        "resumen": FeedbackService.resumen_aplicacion(
-            db, aplicacion_id, _total_frases(db, aplicacion_id),
+        "metricas": FeedbackService.metricas_globales(
+            db, current_user.id, es_admin=(current_user.role == "admin"),
         ),
     }
-
-
-def _total_frases(db: Session, aplicacion_id: int) -> int:
-    """Cuántas frases analizó BETO en esta aplicación."""
-    import json as _json
-
-    apl = (
-        db.query(AplicacionCuestionario)
-        .filter(AplicacionCuestionario.id == aplicacion_id)
-        .first()
-    )
-    if not apl or not apl.resultado_json:
-        return 0
-    try:
-        return len(_json.loads(apl.resultado_json).get("frases") or [])
-    except (ValueError, TypeError):
-        return 0
 
 
 # ── Estudiante ──────────────────────────────────────────────────────────────

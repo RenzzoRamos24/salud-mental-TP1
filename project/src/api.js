@@ -237,17 +237,17 @@ export const api = {
     return data;
   },
 
-  // ─── Feedback sobre las clasificaciones de BETO ───
-  async feedbackFrase(aplicacion_id, frase_numero, veredicto, comentario = null) {
+  // ─── Feedback sobre el análisis de BETO ───
+  async feedbackResultado(aplicacion_id, veredicto, comentario = null) {
     const { data } = await client.post(
-      `/cuestionarios/aplicacion/${aplicacion_id}/frases/${frase_numero}/feedback`,
+      `/cuestionarios/aplicacion/${aplicacion_id}/feedback`,
       { veredicto, comentario },
     );
     return data;
   },
-  async quitarFeedbackFrase(aplicacion_id, frase_numero) {
+  async quitarFeedbackResultado(aplicacion_id) {
     const { data } = await client.delete(
-      `/cuestionarios/aplicacion/${aplicacion_id}/frases/${frase_numero}/feedback`,
+      `/cuestionarios/aplicacion/${aplicacion_id}/feedback`,
     );
     return data;
   },
