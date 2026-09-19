@@ -238,20 +238,16 @@ export const api = {
   },
 
   // ─── Feedback sobre el análisis de BETO ───
-  // `campos` puede traer veredicto y/o alerta_veredicto: las dos dimensiones
-  // son independientes y se mandan por separado.
-  async feedbackResultado(aplicacion_id, campos) {
+  async feedbackResultado(aplicacion_id, veredicto, comentario = null) {
     const { data } = await client.post(
       `/cuestionarios/aplicacion/${aplicacion_id}/feedback`,
-      campos,
+      { veredicto, comentario },
     );
     return data;
   },
-  // `campo`: "analisis", "alerta" o "todo".
-  async quitarFeedbackResultado(aplicacion_id, campo = "todo") {
+  async quitarFeedbackResultado(aplicacion_id) {
     const { data } = await client.delete(
       `/cuestionarios/aplicacion/${aplicacion_id}/feedback`,
-      { params: { campo } },
     );
     return data;
   },

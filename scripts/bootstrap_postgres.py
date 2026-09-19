@@ -314,18 +314,17 @@ def _migrar_esquema(db) -> None:
     Ajustes de esquema que `create_all` no puede hacer solo.
 
     `create_all` crea tablas que faltan, pero no toca las que ya existen: no
-    agrega columnas nuevas ni afloja restricciones. Estos cambios se aplican
-    a mano, siempre de forma idempotente y aditiva — nunca se borran datos.
+    agrega ni quita columnas. Estos cambios se aplican a mano, siempre de
+    forma idempotente.
 
     Historial:
       * `frase_feedback` guardaba un veredicto por frase; se reemplazó por
         `resultado_feedback` (uno por cuestionario). Nunca tuvo datos reales.
-      * `resultado_feedback.alerta_veredicto`: segunda dimensión del feedback
-        (si el caso requiere evaluación adicional).
-      * `resultado_feedback.veredicto` pasó a admitir NULL, porque ahora se
-        puede responder solo una de las dos dimensiones.
+      * `resultado_feedback.alerta_veredicto` fue una segunda pregunta sobre
+        si el caso requería evaluación adicional. Se quitó del producto: la
+        psicóloga responde una sola pregunta, si el análisis es correcto.
     """
-    from sqlalchemy import inspect, text
+    from sqlalchemy import inspect
 
     # 1. Tablas obsoletas.
     for tabla in ("frase_feedback",):
@@ -336,26 +335,15 @@ def _migrar_esquema(db) -> None:
         return      # create_all ya la habrá creado con el esquema al día
 
     columnas = {c["name"] for c in inspector.get_columns("resultado_feedback")}
-    dialecto = db.get_bind().dialect.name
 
-    # 2. Columna nueva.
-    if "alerta_veredicto" not in columnas:
+    # 2. Columnas obsoletas.
+    if "alerta_veredicto" in columnas:
         _ejecutar(
             db,
-            "ALTER TABLE resultado_feedback ADD COLUMN alerta_veredicto VARCHAR(12)",
-            "agregar 'alerta_veredicto'",
+            "ALTER TABLE resultado_feedback DROP COLUMN alerta_veredicto",
+            "eliminar 'alerta_veredicto'",
         )
-        print("  + columna resultado_feedback.alerta_veredicto")
-
-    # 3. Aflojar el NOT NULL de veredicto. SQLite no permite ALTER COLUMN,
-    #    pero como la tabla se creó con este mismo script en desarrollo, ahí
-    #    alcanza con recrearla; en Postgres es un ALTER directo.
-    if dialecto == "postgresql":
-        _ejecutar(
-            db,
-            "ALTER TABLE resultado_feedback ALTER COLUMN veredicto DROP NOT NULL",
-            "aflojar NOT NULL de 'veredicto'",
-        )
+        print("  - columna resultado_feedback.alerta_veredicto (obsoleta)")
 
 
 def _ejecutar(db, sql: str, descripcion: str) -> None:

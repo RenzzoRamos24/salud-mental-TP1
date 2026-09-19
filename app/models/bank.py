@@ -246,20 +246,9 @@ class ResultadoFeedback(Base):
     )
     psicologo_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
 
-    # ── Dimensión 1: ¿el análisis del modelo es correcto? ──
-    # 'aceptado'  = el análisis del modelo es correcto / útil
-    # 'rechazado' = el análisis es incorrecto, se descarta
-    # None        = todavía no se juzgó
-    veredicto = Column(String(12), nullable=True, index=True)
-
-    # ── Dimensión 2: ¿el caso requiere evaluación psicológica adicional? ──
-    # Es un juicio clínico distinto del anterior: el modelo puede haber
-    # analizado bien y aun así no hacer falta derivar, o al revés.
-    # 'mantener'  = sí, corresponde mantener la alerta
-    # 'descartar' = no, descartaría la alerta
-    # 'incierto'  = no está segura / requiere evaluación adicional
-    # None        = todavía no se pronunció
-    alerta_veredicto = Column(String(12), nullable=True, index=True)
+    # 'aceptado'  = el análisis del modelo es correcto
+    # 'rechazado' = el análisis del modelo es incorrecto
+    veredicto = Column(String(12), nullable=False, index=True)
 
     # Qué había dicho el modelo cuando se emitió el veredicto. Se congela acá
     # para que el histórico siga siendo interpretable aunque luego se

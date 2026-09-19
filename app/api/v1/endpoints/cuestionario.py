@@ -66,22 +66,10 @@ async def marcar_revisado(
 
 
 class FeedbackResultadoIn(BaseModel):
-    """
-    Las dos dimensiones son independientes y opcionales: se puede mandar solo
-    una y la otra queda como estaba. Mandar null en un campo lo deja sin juzgar.
-    """
-
-    veredicto: Optional[str] = Field(
-        None,
+    veredicto: str = Field(
+        ...,
         description="'aceptado' si el análisis del modelo es correcto, "
-                    "'rechazado' si se descarta por incorrecto.",
-    )
-    alerta_veredicto: Optional[str] = Field(
-        None,
-        description="¿El caso requiere evaluación psicológica adicional? "
-                    "'mantener' (sí, corresponde mantener la alerta), "
-                    "'descartar' (no, descartaría la alerta), "
-                    "'incierto' (no está segura / requiere evaluación adicional).",
+                    "'rechazado' si es incorrecto.",
     )
     comentario: Optional[str] = Field(None, max_length=500)
 
@@ -95,25 +83,21 @@ async def registrar_feedback_resultado(
 ):
     """Acepta o descarta el análisis que el modelo hizo de este cuestionario."""
     try:
-        enviados = payload.model_dump(exclude_unset=True)
         fb = FeedbackService.registrar(
             db,
             psicologo_id=current_user.id,
             aplicacion_id=aplicacion_id,
+            veredicto=payload.veredicto,
+            comentario=payload.comentario,
             es_admin=(current_user.role == "admin"),
-            **{k: v for k, v in enviados.items()
-               if k in ("veredicto", "alerta_veredicto", "comentario")},
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    except TypeError:
-        raise HTTPException(400, "No mandaste ningún veredicto que guardar.")
 
     return {
-        "aplicacion_id": aplicacion_id,
-        "veredicto": fb.veredicto if fb else None,
-        "alerta_veredicto": fb.alerta_veredicto if fb else None,
-        "comentario": fb.comentario if fb else None,
+        "aplicacion_id": fb.aplicacion_id,
+        "veredicto": fb.veredicto,
+        "comentario": fb.comentario,
         "metricas": FeedbackService.metricas_globales(
             db, current_user.id, es_admin=(current_user.role == "admin"),
         ),
@@ -123,19 +107,15 @@ async def registrar_feedback_resultado(
 @router.delete("/aplicacion/{aplicacion_id}/feedback")
 async def quitar_feedback_resultado(
     aplicacion_id: int,
-    campo: str = "todo",
     current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
 ):
-    """
-    Deshace un veredicto. `campo` = 'analisis', 'alerta' o 'todo' (por defecto).
-    """
+    """Deshace el veredicto: el resultado vuelve a quedar sin juzgar."""
     try:
         quitado = FeedbackService.quitar(
             db,
             psicologo_id=current_user.id,
             aplicacion_id=aplicacion_id,
-            campo=campo,
             es_admin=(current_user.role == "admin"),
         )
     except ValueError as e:
