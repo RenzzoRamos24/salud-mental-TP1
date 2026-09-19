@@ -1,9 +1,13 @@
 """Feedback de la psicologa sobre el analisis de BETO.
 
-El veredicto es por cuestionario completo, no por frase. Cubre el ciclo
-por HTTP: aceptar, descartar, cambiar de opinion, deshacer, y que los
-conteos y las metricas globales cuadren. Tambien que una psicologa ajena
-no pueda votar sobre una aplicacion que no es suya.
+Dos dimensiones independientes por cuestionario:
+  1. si el analisis del modelo es correcto (aceptado / rechazado);
+  2. si el caso requiere evaluacion adicional (mantener / descartar /
+     incierto).
+
+Cubre por HTTP: votar, cambiar de opinion, deshacer una dimension sin
+tocar la otra, que los conteos cuadren, y que una psicologa ajena no pueda
+votar sobre una aplicacion que no es suya.
 
 Uso:  PYTHONPATH=. venv/bin/python tests/test_feedback_clasificador.py
 """
@@ -146,14 +150,52 @@ async def main():
         assert "acceso" in r.text.lower(), r.text
         print("8. Una psicologa ajena no puede votar ................ OK")
 
-        # 9. Veredicto invalido y aplicacion inexistente se rechazan.
+        # 9. Las dos dimensiones son independientes.
+        r = await c.post(f"{base}/feedback", headers=H(tok_psi),
+                         json={"alerta_veredicto": "mantener"})
+        assert r.status_code == 200, (r.status_code, r.text)
+        d = (await c.get(f"{base}/resultado", headers=H(tok_psi))).json()["feedback"]
+        assert d["alerta_veredicto"] == "mantener", d
+        assert d["veredicto"] is None, d   # no piso el analisis al votar la alerta
+        print("9. Las dos dimensiones no se pisan entre si ......... OK")
+
+        # 10. Las tres opciones de alerta se aceptan y se cuentan aparte.
+        await c.post(f"{base2}/feedback", headers=H(tok_psi),
+                     json={"alerta_veredicto": "descartar"})
+        db = SessionLocal()
+        apl3 = AplicacionCuestionario(
+            plantilla_id=pl_id, estudiante_id=id_alu, psicologo_id=id_psi,
+            estado="completado", resultado_json=json.dumps(RESULTADO),
+            riesgo_global="MEDIO", crisis_activada=False)
+        db.add(apl3); db.commit(); db.refresh(apl3); aid3 = apl3.id; db.close()
+        r = await c.post(f"/api/v1/cuestionarios/aplicacion/{aid3}/feedback",
+                         headers=H(tok_psi), json={"alerta_veredicto": "incierto"})
+        m = r.json()["metricas"]["alerta"]
+        assert (m["mantener"], m["descartar"], m["incierto"]) == (1, 1, 1), m
+        assert m["revisados"] == 3, m
+        assert m["tasa_confirmacion"] == 0.5, m   # inciertas fuera del denominador
+        print("10. Las 3 opciones se cuentan; incierto no pondera ... OK")
+
+        # 11. Se puede deshacer solo una dimension.
+        await c.post(f"{base}/feedback", headers=H(tok_psi),
+                     json={"veredicto": "aceptado"})
+        r = await c.delete(f"{base}/feedback?campo=alerta", headers=H(tok_psi))
+        assert r.status_code == 200, (r.status_code, r.text)
+        d = (await c.get(f"{base}/resultado", headers=H(tok_psi))).json()["feedback"]
+        assert d["alerta_veredicto"] is None and d["veredicto"] == "aceptado", d
+        print("11. Deshacer una dimension no borra la otra .......... OK")
+
+        # 12. Veredicto invalido y aplicacion inexistente se rechazan.
         r = await c.post(f"{base}/feedback", headers=H(tok_psi),
                          json={"veredicto": "quiza"})
         assert r.status_code == 400, (r.status_code, r.text)
         r = await c.post("/api/v1/cuestionarios/aplicacion/99999/feedback",
                          headers=H(tok_psi), json={"veredicto": "aceptado"})
         assert r.status_code == 400, (r.status_code, r.text)
-        print("9. Veredicto invalido y aplicacion inexistente ....... OK")
+        r = await c.post(f"{base}/feedback", headers=H(tok_psi),
+                         json={"alerta_veredicto": "quiza"})
+        assert r.status_code == 400, (r.status_code, r.text)
+        print("12. Veredictos invalidos y aplicacion inexistente .... OK")
 
         print("\nTODO OK - el feedback del clasificador funciona.")
 

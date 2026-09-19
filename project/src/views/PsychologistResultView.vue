@@ -16,6 +16,7 @@ async function cargar() {
   try {
     data.value = await api.obtenerResultado(aplicacionId.value);
     veredicto.value = data.value?.feedback?.veredicto || null;
+    alerta.value = data.value?.feedback?.alerta_veredicto || null;
   } catch (e) {
     error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
@@ -42,9 +43,12 @@ const dass21Detalle = computed(() => data.value?.dass21_detalle || null);
 
 // ── Veredicto de la psicóloga sobre el análisis del modelo ─────────────
 const veredicto = ref(null);          // 'aceptado' | 'rechazado' | null
+const alerta = ref(null);             // 'mantener' | 'descartar' | 'incierto' | null
 const metricas = ref(null);
 const guardando = ref(false);
+const guardandoAlerta = ref(false);
 const errorFeedback = ref("");
+const errorAlerta = ref("");
 
 /**
  * Vota sobre el análisis de este cuestionario. Volver a pulsar el mismo
@@ -62,8 +66,8 @@ async function votar(nuevo) {
 
   try {
     const r = quitar
-      ? await api.quitarFeedbackResultado(aplicacionId.value)
-      : await api.feedbackResultado(aplicacionId.value, nuevo);
+      ? await api.quitarFeedbackResultado(aplicacionId.value, "analisis")
+      : await api.feedbackResultado(aplicacionId.value, { veredicto: nuevo });
     if (r?.metricas) metricas.value = r.metricas;
   } catch (e) {
     veredicto.value = previo;   // revierte si el servidor rechazó
@@ -71,6 +75,33 @@ async function votar(nuevo) {
       e?.response?.data?.detail || "No se pudo guardar el veredicto.";
   } finally {
     guardando.value = false;
+  }
+}
+
+/**
+ * Responde la pregunta sobre si el caso requiere evaluación adicional.
+ * Pulsar la opción ya elegida la deja sin responder.
+ */
+async function votarAlerta(opcion) {
+  if (guardandoAlerta.value) return;
+  guardandoAlerta.value = true;
+  errorAlerta.value = "";
+
+  const previo = alerta.value;
+  const quitar = previo === opcion;
+  alerta.value = quitar ? null : opcion;   // actualización optimista
+
+  try {
+    const r = quitar
+      ? await api.quitarFeedbackResultado(aplicacionId.value, "alerta")
+      : await api.feedbackResultado(aplicacionId.value, { alerta_veredicto: opcion });
+    if (r?.metricas) metricas.value = r.metricas;
+  } catch (e) {
+    alerta.value = previo;   // revierte si el servidor rechazó
+    errorAlerta.value =
+      e?.response?.data?.detail || "No se pudo guardar tu respuesta.";
+  } finally {
+    guardandoAlerta.value = false;
   }
 }
 
@@ -261,14 +292,86 @@ function fmtFecha(iso) {
                 :class="veredicto === 'aceptado' ? 'text-green-700' : 'text-coral-600'"
               >
                 {{ veredicto === 'aceptado'
-                    ? 'Marcado como correcto. Pulsá de nuevo para deshacer.'
-                    : 'Descartado. Pulsá de nuevo para deshacer.' }}
+                    ? 'Marcado como correcto. Podés cambiarlo, o pulsar de nuevo para deshacer.'
+                    : 'Descartado. Podés cambiarlo, o pulsar de nuevo para deshacer.' }}
               </span>
             </div>
 
             <p v-if="errorFeedback" class="text-xs text-risk-critico mt-2">
               {{ errorFeedback }}
             </p>
+
+            <!-- Dimensión 2: juicio clínico sobre la alerta -->
+            <div class="mt-6 pt-5 border-t border-cream-200">
+              <h3 class="text-sm font-semibold">
+                ¿Considera usted que la clasificación como caso de riesgo
+                requiere evaluación psicológica adicional?
+              </h3>
+              <p class="text-xs text-ink-400 mt-1">
+                Es una decisión clínica distinta de la anterior: el modelo
+                puede haber analizado bien y aun así no hacer falta derivar,
+                o al revés.
+              </p>
+
+              <div class="flex flex-wrap items-center gap-3 mt-4">
+                <button
+                  type="button"
+                  class="text-sm font-semibold px-5 py-2.5 rounded-full border-2 shadow-soft
+                         transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  :class="alerta && alerta !== 'mantener'
+                    ? 'bg-white text-green-700 border-green-300 hover:bg-green-50'
+                    : 'bg-green-600 text-white border-green-600 hover:bg-green-700 hover:border-green-700'"
+                  :style="alerta === 'mantener' ? 'box-shadow: 0 0 0 3px #C5E1DC' : ''"
+                  :disabled="guardandoAlerta"
+                  title="Sí, corresponde mantener la alerta"
+                  @click="votarAlerta('mantener')"
+                >
+                  <span v-if="alerta === 'mantener'" class="mr-1">✓</span>
+                  Sí, corresponde mantener la alerta
+                </button>
+
+                <button
+                  type="button"
+                  class="text-sm font-semibold px-5 py-2.5 rounded-full border-2 shadow-soft
+                         transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  :class="alerta && alerta !== 'descartar'
+                    ? 'bg-white text-coral-600 border-coral-300 hover:bg-coral-50'
+                    : 'bg-coral-600 text-white border-coral-600 hover:bg-red-700 hover:border-red-700'"
+                  :style="alerta === 'descartar' ? 'box-shadow: 0 0 0 3px #FECACA' : ''"
+                  :disabled="guardandoAlerta"
+                  title="No, descartaría la alerta"
+                  @click="votarAlerta('descartar')"
+                >
+                  <span v-if="alerta === 'descartar'" class="mr-1">✕</span>
+                  No, descartaría la alerta
+                </button>
+
+                <button
+                  type="button"
+                  class="text-sm font-semibold px-5 py-2.5 rounded-full border-2 shadow-soft
+                         transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  :class="alerta && alerta !== 'incierto'
+                    ? 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'
+                    : 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600 hover:border-amber-600'"
+                  :style="alerta === 'incierto' ? 'box-shadow: 0 0 0 3px #FDE68A' : ''"
+                  :disabled="guardandoAlerta"
+                  title="No estoy segura / requiere evaluación adicional"
+                  @click="votarAlerta('incierto')"
+                >
+                  <span v-if="alerta === 'incierto'" class="mr-1">?</span>
+                  No estoy segura / requiere evaluación adicional
+                </button>
+
+                <span v-if="guardandoAlerta" class="text-xs text-ink-400">Guardando…</span>
+              </div>
+
+              <p v-if="errorAlerta" class="text-xs text-risk-critico mt-2">
+                {{ errorAlerta }}
+              </p>
+              <p v-else-if="alerta" class="text-xs text-ink-400 mt-2">
+                Podés cambiar tu respuesta, o pulsar la misma opción para dejarla sin responder.
+              </p>
+            </div>
           </div>
 
           <!-- Conteo acumulado -->
@@ -298,7 +401,7 @@ function fmtFecha(iso) {
 
         <!-- Desgloses -->
         <div
-          v-if="metricas && metricas.revisados > 0"
+          v-if="metricas && (metricas.revisados > 0 || (metricas.alerta?.revisados || 0) > 0)"
           class="mt-4 pt-4 border-t border-cream-200 flex flex-wrap gap-x-6 gap-y-2 text-xs"
         >
           <div v-if="(metricas.por_riesgo || []).length">
@@ -311,6 +414,24 @@ function fmtFecha(iso) {
             >
               {{ r.riesgo }}:
               {{ r.tasa_acierto !== null ? Math.round(r.tasa_acierto * 100) + '%' : '—' }}
+            </span>
+          </div>
+          <div
+            v-if="metricas.alerta && metricas.alerta.revisados > 0"
+            class="text-ink-400 w-full"
+          >
+            <span class="text-ink-400">Sobre la alerta:</span>
+            <span class="ml-1.5 px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+              {{ metricas.alerta.mantener }} mantenidas
+            </span>
+            <span class="ml-1.5 px-2 py-0.5 rounded-full bg-coral-50 text-coral-600 border border-coral-200">
+              {{ metricas.alerta.descartar }} descartadas
+            </span>
+            <span class="ml-1.5 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              {{ metricas.alerta.incierto }} sin certeza
+            </span>
+            <span v-if="metricas.alerta.tasa_confirmacion !== null" class="ml-1.5">
+              — {{ Math.round(metricas.alerta.tasa_confirmacion * 100) }}% de alertas sostenidas
             </span>
           </div>
           <div v-if="metricas.crisis && metricas.crisis.revisados > 0" class="text-ink-400">
