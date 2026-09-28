@@ -42,6 +42,10 @@ export const api = {
     const { data } = await client.post("/auth/login", { email, password });
     return data;
   },
+  async loginCodigo(codigo) {
+    const { data } = await client.post("/auth/login-codigo", { codigo });
+    return data;
+  },
   async logout() {
     try {
       await client.post("/auth/logout");

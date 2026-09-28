@@ -32,6 +32,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class LoginCodigoRequest(BaseModel):
+    """Login anónimo con código de acceso (re-encuesta del colegio, sin email)."""
+    codigo: str = Field(..., min_length=3, max_length=20)
+
+    @field_validator("codigo")
+    @classmethod
+    def normalizar_codigo(cls, v: str) -> str:
+        return v.strip().upper()
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

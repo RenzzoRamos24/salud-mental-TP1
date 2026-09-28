@@ -323,6 +323,15 @@ def _migrar_esquema(db) -> None:
       * `resultado_feedback.alerta_veredicto` fue una segunda pregunta sobre
         si el caso requería evaluación adicional. Se quitó del producto: la
         psicóloga responde una sola pregunta, si el análisis es correcto.
+      * `users.codigo_acceso` es nueva: login anónimo por código para la
+        re-encuesta del colegio (scripts/generar_codigos_encuesta.py).
+      * `satisfaction_surveys` se realineó a las 5 dimensiones del
+        instrumento de validación UX (facilidad_uso, claridad, utilidad,
+        fluidez, satisfaccion_general). Las columnas viejas (confianza,
+        recomendaria, nivel_animo_post) se dejan en la tabla tal cual —
+        pueden tener respuestas reales de estudiantes y no hay forma de
+        recuperarlas si se borran — solo se aflojan a NULL porque el ORM
+        ya no las escribe.
     """
     from sqlalchemy import inspect
 
@@ -331,12 +340,52 @@ def _migrar_esquema(db) -> None:
         _ejecutar(db, f"DROP TABLE IF EXISTS {tabla}", f"eliminar '{tabla}'")
 
     inspector = inspect(db.get_bind())
-    if "resultado_feedback" not in inspector.get_table_names():
+    tablas = inspector.get_table_names()
+
+    # 2. users.codigo_acceso (login por código).
+    if "users" in tablas:
+        cols_users = {c["name"] for c in inspector.get_columns("users")}
+        if "codigo_acceso" not in cols_users:
+            _ejecutar(
+                db,
+                "ALTER TABLE users ADD COLUMN codigo_acceso VARCHAR(20)",
+                "agregar 'users.codigo_acceso'",
+            )
+            _ejecutar(
+                db,
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_codigo_acceso "
+                "ON users (codigo_acceso)",
+                "indexar 'users.codigo_acceso'",
+            )
+            print("  - columna users.codigo_acceso (login por código)")
+
+    # 3. satisfaction_surveys → 5 dimensiones nuevas.
+    if "satisfaction_surveys" in tablas:
+        cols_sat = {c["name"] for c in inspector.get_columns("satisfaction_surveys")}
+        nuevas = ("claridad", "fluidez", "satisfaccion_general")
+        for col in nuevas:
+            if col not in cols_sat:
+                _ejecutar(
+                    db,
+                    f"ALTER TABLE satisfaction_surveys ADD COLUMN {col} INTEGER",
+                    f"agregar 'satisfaction_surveys.{col}'",
+                )
+        for col in ("confianza", "recomendaria"):
+            if col in cols_sat:
+                _ejecutar(
+                    db,
+                    f"ALTER TABLE satisfaction_surveys ALTER COLUMN {col} DROP NOT NULL",
+                    f"aflojar NOT NULL de 'satisfaction_surveys.{col}'",
+                )
+        if any(c not in cols_sat for c in nuevas):
+            print("  - satisfaction_surveys realineada a las 5 dimensiones nuevas")
+
+    if "resultado_feedback" not in tablas:
         return      # create_all ya la habrá creado con el esquema al día
 
     columnas = {c["name"] for c in inspector.get_columns("resultado_feedback")}
 
-    # 2. Columnas obsoletas.
+    # 4. Columnas obsoletas.
     if "alerta_veredicto" in columnas:
         _ejecutar(
             db,

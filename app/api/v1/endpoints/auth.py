@@ -8,6 +8,7 @@ from app.database import get_db
 from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
+    LoginCodigoRequest,
     TokenResponse,
     ForgotPasswordRequest,
     ResetPasswordRequest,
@@ -79,6 +80,25 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales inválidas",
+        )
+    token_data = AuthService.emitir_token(user)
+    return TokenResponse(
+        **token_data,
+        user=_user_a_publico(user, db),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────
+# LOGIN POR CÓDIGO — re-encuesta anónima del colegio
+# ─────────────────────────────────────────────────────────────────
+
+@router.post("/login-codigo", response_model=TokenResponse)
+async def login_codigo(req: LoginCodigoRequest, db: Session = Depends(get_db)):
+    user = AuthService.autenticar_por_codigo(db, req.codigo)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Código inválido",
         )
     token_data = AuthService.emitir_token(user)
     return TokenResponse(

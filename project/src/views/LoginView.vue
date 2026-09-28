@@ -179,6 +179,10 @@ async function loginConMicrosoft() {
         ¿No tienes cuenta?
         <router-link to="/register">Regístrate</router-link>
       </p>
+      <p>
+        ¿Tienes un código de tu colegio?
+        <router-link to="/codigo">Entra con código</router-link>
+      </p>
     </template>
   </AuthShell>
 </template>

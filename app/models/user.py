@@ -26,6 +26,11 @@ class User(Base):
     psicologo_id = Column(String(36), nullable=True, index=True)
     grado = Column(String(20), nullable=True)
 
+    # ── Encuesta anónima con código de acceso (re-encuesta colegio) ──
+    # Alumnos cargados vía scripts/generar_codigos_encuesta.py entran con
+    # este código en vez de email+contraseña. NULL para el resto de roles.
+    codigo_acceso = Column(String(20), unique=True, nullable=True, index=True)
+
     # ── Sprint 11 — rol padre + firma psicólogo ─────────────────────
     # HU-55: padre que tutela a un estudiante. Cuando role="estudiante",
     # apunta a un User con role="padre". Un padre puede tutelar N estudiantes.

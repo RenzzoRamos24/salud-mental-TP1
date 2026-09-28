@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { authStore } from "../store/auth";
 
 import LoginView from "../views/LoginView.vue";
+import LoginCodigoView from "../views/LoginCodigoView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import ForgotPasswordView from "../views/ForgotPasswordView.vue";
 import ResetPasswordView from "../views/ResetPasswordView.vue";
@@ -41,6 +42,7 @@ import SatisfactionSurveyView from "../views/SatisfactionSurveyView.vue";
 const routes = [
   { path: "/", redirect: "/login" },
   { path: "/login", name: "login", component: LoginView, meta: { publica: true } },
+  { path: "/codigo", name: "login-codigo", component: LoginCodigoView, meta: { publica: true } },
   { path: "/register", name: "register", component: RegisterView, meta: { publica: true } },
   { path: "/forgot-password", name: "forgot", component: ForgotPasswordView, meta: { publica: true } },
   { path: "/reset-password", name: "reset", component: ResetPasswordView, meta: { publica: true } },

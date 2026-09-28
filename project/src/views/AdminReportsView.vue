@@ -9,9 +9,10 @@ const error = ref("");
 
 const ESCALAS_SATISFACCION = [
   { clave: "facilidad_uso", label: "Facilidad de uso" },
+  { clave: "claridad", label: "Claridad de las preguntas" },
   { clave: "utilidad", label: "Utilidad percibida" },
-  { clave: "confianza", label: "Confianza" },
-  { clave: "recomendaria", label: "Lo recomendaría" },
+  { clave: "fluidez", label: "Fluidez sin dificultades" },
+  { clave: "satisfaccion_general", label: "Satisfacción general" },
 ];
 
 function fecha(iso) {

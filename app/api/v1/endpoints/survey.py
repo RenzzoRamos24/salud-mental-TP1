@@ -13,10 +13,10 @@ router = APIRouter(tags=["survey"])
 
 class SatisfactionIn(BaseModel):
     facilidad_uso: conint(ge=1, le=5)
+    claridad: conint(ge=1, le=5)
     utilidad: conint(ge=1, le=5)
-    confianza: conint(ge=1, le=5)
-    recomendaria: conint(ge=1, le=5)
-    nivel_animo_post: Optional[conint(ge=1, le=5)] = None
+    fluidez: conint(ge=1, le=5)
+    satisfaccion_general: conint(ge=1, le=5)
     comentario: Optional[str] = Field(None, max_length=2000)
 
 

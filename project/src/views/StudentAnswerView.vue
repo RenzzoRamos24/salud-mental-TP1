@@ -235,7 +235,7 @@ async function finalizar() {
 }
 
 function volverInicio() {
-  router.push("/mis-cuestionarios");
+  router.push("/encuesta");
 }
 </script>
 
@@ -256,7 +256,7 @@ function volverInicio() {
       <h2>¡Listo!</h2>
       <p>{{ mensajeFinal }}</p>
       <button class="sami-btn sami-btn--primary" @click="volverInicio">
-        Volver a mis cuestionarios
+        Continuar a la encuesta de satisfacción
       </button>
     </div>
 

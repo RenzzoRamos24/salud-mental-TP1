@@ -66,6 +66,15 @@ class AuthService:
         return user
 
     @staticmethod
+    def autenticar_por_codigo(db: Session, codigo: str) -> Optional[User]:
+        """Login anónimo por código de acceso (re-encuesta del colegio).
+        El código en sí es la credencial — no hay contraseña de por medio."""
+        user = db.query(User).filter(User.codigo_acceso == codigo.strip().upper()).first()
+        if not user or not user.activo:
+            return None
+        return user
+
+    @staticmethod
     def emitir_token(user: User) -> dict:
         token = crear_access_token(
             user_id=user.id, email=user.email, role=user.role

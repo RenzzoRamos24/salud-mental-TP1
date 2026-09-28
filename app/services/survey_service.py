@@ -16,10 +16,10 @@ class SurveyService:
         s = SatisfactionSurvey(
             user_id=user_id,
             facilidad_uso=_validar(data["facilidad_uso"]),
+            claridad=_validar(data["claridad"]),
             utilidad=_validar(data["utilidad"]),
-            confianza=_validar(data["confianza"]),
-            recomendaria=_validar(data["recomendaria"]),
-            nivel_animo_post=int(data["nivel_animo_post"]) if data.get("nivel_animo_post") is not None else None,
+            fluidez=_validar(data["fluidez"]),
+            satisfaccion_general=_validar(data["satisfaccion_general"]),
             comentario=(data.get("comentario") or "").strip() or None,
         )
         db.add(s)
@@ -39,9 +39,10 @@ class SurveyService:
             return {"total": 0}
         promedios = db.query(
             func.avg(SatisfactionSurvey.facilidad_uso),
+            func.avg(SatisfactionSurvey.claridad),
             func.avg(SatisfactionSurvey.utilidad),
-            func.avg(SatisfactionSurvey.confianza),
-            func.avg(SatisfactionSurvey.recomendaria),
+            func.avg(SatisfactionSurvey.fluidez),
+            func.avg(SatisfactionSurvey.satisfaccion_general),
         ).first()
         ultimos = (db.query(SatisfactionSurvey)
                      .filter(SatisfactionSurvey.comentario.isnot(None))
@@ -51,9 +52,10 @@ class SurveyService:
             "total": total,
             "promedios": {
                 "facilidad_uso": round(promedios[0] or 0, 2),
-                "utilidad": round(promedios[1] or 0, 2),
-                "confianza": round(promedios[2] or 0, 2),
-                "recomendaria": round(promedios[3] or 0, 2),
+                "claridad": round(promedios[1] or 0, 2),
+                "utilidad": round(promedios[2] or 0, 2),
+                "fluidez": round(promedios[3] or 0, 2),
+                "satisfaccion_general": round(promedios[4] or 0, 2),
             },
             "ultimos_comentarios": [
                 {"comentario": s.comentario, "timestamp": s.timestamp.isoformat()}

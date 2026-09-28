@@ -13,37 +13,37 @@ const error = ref("");
 
 const respuestas = ref({
   facilidad_uso: 0,
+  claridad: 0,
   utilidad: 0,
-  confianza: 0,
-  recomendaria: 0,
-  nivel_animo_post: 0,
+  fluidez: 0,
+  satisfaccion_general: 0,
   comentario: "",
 });
 
 const preguntas = [
   {
     clave: "facilidad_uso",
-    titulo: "¿Fue fácil hablar con Sami?",
+    titulo: "¿Te pareció fácil usar y entender el cuestionario?",
+    icon: "",
+  },
+  {
+    clave: "claridad",
+    titulo: "¿Fueron claras las preguntas del cuestionario?",
     icon: "",
   },
   {
     clave: "utilidad",
-    titulo: "¿Te sirvió de algo?",
+    titulo: "¿Consideras que las preguntas fueron adecuadas y pertinentes?",
     icon: "",
   },
   {
-    clave: "confianza",
-    titulo: "¿Te sentiste en confianza?",
+    clave: "fluidez",
+    titulo: "¿Pudiste responder el cuestionario sin dificultades?",
     icon: "",
   },
   {
-    clave: "recomendaria",
-    titulo: "¿Se lo recomendarías a un amigo?",
-    icon: "",
-  },
-  {
-    clave: "nivel_animo_post",
-    titulo: "¿Cómo te sientes después de la conversación?",
+    clave: "satisfaccion_general",
+    titulo: "¿Estás satisfecho con la experiencia de responder el cuestionario?",
     icon: "",
   },
 ];
@@ -62,7 +62,7 @@ function setVal(clave, v) {
 
 async function enviar() {
   error.value = "";
-  for (const p of preguntas.slice(0, 4)) {
+  for (const p of preguntas) {
     if (!respuestas.value[p.clave]) {
       error.value = "Por favor responde todas las preguntas.";
       return;
@@ -71,7 +71,6 @@ async function enviar() {
   enviando.value = true;
   try {
     const payload = { ...respuestas.value };
-    if (!payload.nivel_animo_post) payload.nivel_animo_post = null;
     if (!payload.comentario?.trim()) payload.comentario = null;
     await api.enviarSatisfaccion(payload);
     enviado.value = true;
@@ -90,8 +89,8 @@ async function enviar() {
     </button>
 
     <PageHeader
-      title="¿Qué tal te fue con"
-      accent="Sami?"
+      title="¿Qué tal te fue con el"
+      accent="cuestionario?"
       subtitle="Lo que respondas no lo ven tus compañeros. Nos sirve para mejorar."
       tone="peach"
     />
