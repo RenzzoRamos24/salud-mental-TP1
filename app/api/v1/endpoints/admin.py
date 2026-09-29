@@ -403,3 +403,52 @@ async def generar_codigos_piloto(
 
     nuevos = sum(1 for f in filas if f["estado"] == "nuevo")
     return {"plantilla_id": pl.id, "total": len(filas), "nuevos": nuevos, "filas": filas}
+
+
+class ResetPruebaIn(BaseModel):
+    codigo_acceso: str
+
+
+@router.post("/piloto/reset-aplicacion-prueba")
+async def reset_aplicacion_prueba(
+    payload: ResetPruebaIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """
+    Deshace una verificación de humo hecha sobre un código real del piloto:
+    borra respuestas, resultado y encuesta de satisfacción, y vuelve la
+    aplicación a 'pendiente' para que el alumno real la responda desde cero.
+    """
+    from app.models.bank import AplicacionCuestionario, RespuestaAplicacion, ResultadoFeedback
+    from app.models.satisfaction_survey import SatisfactionSurvey
+
+    codigo = payload.codigo_acceso.strip().upper()
+    alumno = db.query(User).filter_by(codigo_acceso=codigo).first()
+    if not alumno:
+        raise HTTPException(404, f"No existe alumno con código '{codigo}'.")
+
+    borradas_satisfaccion = (
+        db.query(SatisfactionSurvey).filter_by(user_id=alumno.id)
+        .delete(synchronize_session=False)
+    )
+
+    apps = db.query(AplicacionCuestionario).filter_by(estudiante_id=alumno.id).all()
+    reseteadas = []
+    for a in apps:
+        db.query(ResultadoFeedback).filter_by(aplicacion_id=a.id).delete(synchronize_session=False)
+        db.query(RespuestaAplicacion).filter_by(aplicacion_id=a.id).delete(synchronize_session=False)
+        a.estado = "pendiente"
+        a.iniciada_at = None
+        a.completada_at = None
+        a.resultado_json = None
+        a.riesgo_global = None
+        a.crisis_activada = False
+        reseteadas.append(a.id)
+
+    db.commit()
+    return {
+        "codigo": codigo,
+        "satisfaction_surveys_borradas": borradas_satisfaccion,
+        "aplicaciones_reseteadas": reseteadas,
+    }
