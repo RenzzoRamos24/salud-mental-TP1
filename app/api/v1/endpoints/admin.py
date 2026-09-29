@@ -472,3 +472,42 @@ async def quitar_consentimiento_codigos(
     )
     db.commit()
     return {"alumnos_con_codigo": len(ids_piloto), "consentimientos_borrados": borrados}
+
+
+class BorrarCodigoIn(BaseModel):
+    codigo_acceso: str
+
+
+@router.post("/piloto/borrar-codigo-prueba")
+async def borrar_codigo_prueba(
+    payload: BorrarCodigoIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """
+    Borra por completo una cuenta de prueba generada con codigo_acceso —
+    usuario, aplicaciones, respuestas, feedback, consentimiento y encuesta
+    de satisfacción. Solo actúa sobre cuentas CON codigo_acceso (nunca
+    sobre una cuenta normal por accidente).
+    """
+    from app.models.consent import Consent
+    from app.models.bank import AplicacionCuestionario, RespuestaAplicacion, ResultadoFeedback
+    from app.models.satisfaction_survey import SatisfactionSurvey
+
+    codigo = payload.codigo_acceso.strip().upper()
+    alumno = db.query(User).filter(
+        User.codigo_acceso == codigo,
+    ).first()
+    if not alumno:
+        raise HTTPException(404, f"No existe alumno con código '{codigo}'.")
+
+    db.query(SatisfactionSurvey).filter_by(user_id=alumno.id).delete(synchronize_session=False)
+    db.query(Consent).filter_by(user_id=alumno.id).delete(synchronize_session=False)
+    apps = db.query(AplicacionCuestionario).filter_by(estudiante_id=alumno.id).all()
+    for a in apps:
+        db.query(ResultadoFeedback).filter_by(aplicacion_id=a.id).delete(synchronize_session=False)
+        db.query(RespuestaAplicacion).filter_by(aplicacion_id=a.id).delete(synchronize_session=False)
+        db.delete(a)
+    db.delete(alumno)
+    db.commit()
+    return {"codigo": codigo, "borrado": True, "aplicaciones_borradas": len(apps)}
