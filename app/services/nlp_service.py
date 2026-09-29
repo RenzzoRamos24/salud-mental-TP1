@@ -16,10 +16,22 @@ import logging
 import threading
 import time
 from datetime import datetime
+import torch
 from transformers import pipeline
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Por defecto, PyTorch usa todos los cores de CPU para acelerar UNA inferencia
+# (paralelismo intra-op). Bajo carga concurrente eso es contraproducente: N
+# alumnos cerrando el cuestionario a la vez lanzan N llamadas que compiten
+# cada una por TODOS los cores, en vez de repartirse. El App Service de
+# producción (plan Basic B2) tiene solo 2 vCPU — con esa cantidad de cores,
+# 1 hilo por llamada es lo que más llamadas concurrentes deja repartirse sin
+# pisarse (2 hilos por llamada dejaría entrar solo 1 a la vez, casi como no
+# tener el fix). Cada llamada individual tarda un poco más así, pero eso es
+# preferible a que se bloqueen entre sí.
+torch.set_num_threads(1)
 
 
 # Categorías clínicamente alineadas con los instrumentos del sistema.

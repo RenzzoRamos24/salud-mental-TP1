@@ -7,6 +7,7 @@ Endpoints de aplicación de cuestionarios.
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -184,8 +185,14 @@ async def cerrar(
     if current_user.role != "estudiante":
         raise HTTPException(403, "Solo el alumno cierra el cuestionario.")
     try:
-        resultado = CuestionarioService.cerrar_y_evaluar(
-            db, current_user.id, aplicacion_id
+        # cerrar_y_evaluar corre BETO sobre las frases (CPU, ~1-3s) — es
+        # síncrono y pesado, así que se despacha a un hilo aparte. Si se
+        # llamara directo acá adentro, bloquearía el event loop de asyncio
+        # entero mientras corre: NINGÚN otro pedido (de cualquier alumno,
+        # a cualquier endpoint) se serviría en ese rato. Medido: 10 alumnos
+        # cerrando a la vez tardaban ~33s en fila en vez de correr en paralelo.
+        resultado = await run_in_threadpool(
+            CuestionarioService.cerrar_y_evaluar, db, current_user.id, aplicacion_id
         )
         # El alumno solo ve confirmación, no el reporte clínico.
         return {
