@@ -145,14 +145,15 @@ class CuestionarioService:
                         "texto": it.texto,
                     })
             elif b.tipo == "frases":
-                areas = (b.frases_areas or "").split(",")
-                areas = [a.strip() for a in areas if a.strip()]
+                numeros = [n.strip() for n in (b.frases_numeros or "").split(",") if n.strip()]
+                if numeros:
+                    filtro = BankFraseIncompleta.numero.in_([int(n) for n in numeros])
+                else:
+                    areas = [a.strip() for a in (b.frases_areas or "").split(",") if a.strip()]
+                    filtro = BankFraseIncompleta.area.in_(areas)
                 rows = (
                     db.query(BankFraseIncompleta)
-                    .filter(
-                        BankFraseIncompleta.area.in_(areas),
-                        BankFraseIncompleta.activo == 1,
-                    )
+                    .filter(filtro, BankFraseIncompleta.activo == 1)
                     .order_by(BankFraseIncompleta.numero)
                     .all()
                 )

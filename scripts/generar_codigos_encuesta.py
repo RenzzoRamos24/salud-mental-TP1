@@ -50,9 +50,22 @@ ROOT = Path(__file__).resolve().parent.parent
 SALIDA_CSV = ROOT / "docs" / "piloto_colegio" / "codigos_encuesta.csv"
 
 PLANTILLA_NOMBRE = "Re-encuesta colegio · PHQ-A + GAD-7 + frases"
-# Áreas de frases priorizadas para depresión/ansiedad (ver BANCO_INSTRUMENTOS.md
-# y la justificación vía Cognitive Triad de Beck discutida para el diseño).
-FRASES_AREAS = "emociones,futuro"
+# 10 frases seleccionadas cruzando las 8 áreas del banco (40 frases), con 3
+# criterios: Tríada Cognitiva de Beck (self/mundo/futuro), juicio clínico
+# experto (validado con la psicóloga supervisora) y validez discriminante
+# (la respuesta cambia entre perfil con síntomas y sin síntomas). Detalle de
+# qué se descartó y por qué: ver BANCO_INSTRUMENTOS.md.
+#  1  familia      "En mi casa yo…"
+#  6  autoconcepto "Yo soy…"
+# 11  escuela      "El colegio para mí…"
+# 13  escuela      "Cuando tengo un examen…"          (ansiedad de desempeño)
+# 17  pares        "Cuando estoy con otros chicos/as…"
+# 22  emociones    "Cuando estoy triste yo…"           (DSM-5: ánimo)
+# 23  emociones    "Cuando algo me hace feliz…"        (DSM-5: anhedonia)
+# 25  emociones    "Cuando algo me preocupa…"          (ansiedad/rumiación)
+# 28  miedos       "Cuando estoy solo/a…"
+# 31  futuro       "Dentro de 5 años…"
+FRASES_NUMEROS = "1,6,11,13,17,22,23,25,28,31"
 
 
 def _get_psicologa(db: Session, email: str) -> User:
@@ -104,7 +117,7 @@ def _asegurar_plantilla(db: Session, psi_id: str) -> PlantillaCuestionario:
         plantilla_id=pl.id, orden=2, tipo="instrumento", instrumento_id=gad7.id,
     ))
     db.add(PlantillaBloque(
-        plantilla_id=pl.id, orden=3, tipo="frases", frases_areas=FRASES_AREAS,
+        plantilla_id=pl.id, orden=3, tipo="frases", frases_numeros=FRASES_NUMEROS,
     ))
     db.commit()
     print(f"✅ Plantilla creada: '{PLANTILLA_NOMBRE}' (id={pl.id})")

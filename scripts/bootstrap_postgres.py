@@ -380,6 +380,28 @@ def _migrar_esquema(db) -> None:
         if any(c not in cols_sat for c in nuevas):
             print("  - satisfaction_surveys realineada a las 5 dimensiones nuevas")
 
+    # 4. plantilla_bloque.frases_numeros (subconjunto puntual de frases, cruza
+    #    áreas) + arreglo de datos: la plantilla del piloto del colegio se creó
+    #    originalmente con frases_areas="emociones,futuro" (10 frases de 2
+    #    áreas completas); el diseño final son 10 frases puntuales cruzando 7
+    #    áreas, validadas con la psicóloga supervisora. Ver BANCO_INSTRUMENTOS.md.
+    if "plantilla_bloque" in tablas:
+        cols_bloque = {c["name"] for c in inspector.get_columns("plantilla_bloque")}
+        if "frases_numeros" not in cols_bloque:
+            _ejecutar(
+                db,
+                "ALTER TABLE plantilla_bloque ADD COLUMN frases_numeros TEXT",
+                "agregar 'plantilla_bloque.frases_numeros'",
+            )
+            print("  - columna plantilla_bloque.frases_numeros (subset puntual)")
+        _ejecutar(
+            db,
+            "UPDATE plantilla_bloque SET frases_numeros = '1,6,11,13,17,22,23,25,28,31' "
+            "WHERE tipo = 'frases' AND frases_areas = 'emociones,futuro' "
+            "AND (frases_numeros IS NULL OR frases_numeros = '')",
+            "fijar las 10 frases del piloto del colegio",
+        )
+
     if "resultado_feedback" not in tablas:
         return      # create_all ya la habrá creado con el esquema al día
 

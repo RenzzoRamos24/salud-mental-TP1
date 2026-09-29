@@ -162,6 +162,10 @@ class PlantillaBloque(Base):
     bloque_custom_id = Column(Integer, ForeignKey("bloque_custom.id"), nullable=True)
     # Para 'frases': lista CSV de áreas activas (ej: "familia,autoconcepto,escuela")
     frases_areas = Column(Text, nullable=True)
+    # Para 'frases': lista CSV de números puntuales del banco (ej: "1,6,11").
+    # Si está presente, tiene prioridad sobre frases_areas — permite armar un
+    # subconjunto cruzando áreas en vez de traer el área completa.
+    frases_numeros = Column(Text, nullable=True)
 
     plantilla = relationship("PlantillaCuestionario", back_populates="bloques")
 
