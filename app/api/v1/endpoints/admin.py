@@ -298,3 +298,108 @@ async def scheduler_info(_admin=Depends(require_role("admin"))):
 async def scheduler_backup_ahora(_admin=Depends(require_role("admin"))):
     from app.services.scheduler_service import disparar_ahora
     return disparar_ahora()
+
+
+# ── Piloto: generación de códigos de acceso ─────────────────────────────────
+
+class GenerarCodigosIn(BaseModel):
+    psicologa_email: str
+    n_4to: int = 52
+    n_5to: int = 53
+
+
+@router.post("/piloto/generar-codigos")
+async def generar_codigos_piloto(
+    payload: GenerarCodigosIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """
+    Crea (si no existe) la plantilla 'Re-encuesta colegio' con PHQ-A + GAD-7 +
+    las 10 frases del piloto, y genera alumnos anónimos SAMI-{4TO,5TO}-NN con
+    su AplicacionCuestionario pendiente. Idempotente: código ya existente se
+    saltea. Ver scripts/generar_codigos_encuesta.py para la versión CLI
+    (equivalente, para correr contra la BD local).
+    """
+    import uuid
+    from datetime import datetime, timedelta
+    from app.core.security import hash_password
+    from app.config import settings
+    from app.models.consent import Consent
+    from app.models.bank import (
+        AplicacionCuestionario, BankInstrumento, PlantillaBloque, PlantillaCuestionario,
+    )
+
+    PLANTILLA_NOMBRE = "Re-encuesta colegio · PHQ-A + GAD-7 + frases"
+    FRASES_NUMEROS = "1,6,11,13,17,22,23,25,28,31"
+
+    psi = db.query(User).filter(
+        User.email == payload.psicologa_email.lower().strip(),
+        User.role == "psicologo",
+    ).first()
+    if not psi:
+        raise HTTPException(404, f"No existe psicólogo/a con email '{payload.psicologa_email}'.")
+
+    pl = db.query(PlantillaCuestionario).filter_by(nombre=PLANTILLA_NOMBRE).first()
+    if not pl:
+        phqa = db.query(BankInstrumento).filter_by(codigo="PHQ-A").first()
+        gad7 = db.query(BankInstrumento).filter_by(codigo="GAD-7").first()
+        if not phqa or not gad7:
+            raise HTTPException(500, "Falta PHQ-A o GAD-7 en el banco — correr seeds primero.")
+        pl = PlantillaCuestionario(
+            psicologo_id=psi.id, nombre=PLANTILLA_NOMBRE,
+            descripcion="PHQ-A + GAD-7 + 10 frases seleccionadas — re-encuesta 4to/5to.",
+            activa=1,
+        )
+        db.add(pl)
+        db.flush()
+        db.add(PlantillaBloque(plantilla_id=pl.id, orden=1, tipo="instrumento", instrumento_id=phqa.id))
+        db.add(PlantillaBloque(plantilla_id=pl.id, orden=2, tipo="instrumento", instrumento_id=gad7.id))
+        db.add(PlantillaBloque(plantilla_id=pl.id, orden=3, tipo="frases", frases_numeros=FRASES_NUMEROS))
+        db.commit()
+    else:
+        bloque_frases = db.query(PlantillaBloque).filter_by(plantilla_id=pl.id, tipo="frases").first()
+        if bloque_frases and bloque_frases.frases_numeros != FRASES_NUMEROS:
+            bloque_frases.frases_numeros = FRASES_NUMEROS
+            db.commit()
+
+    filas = []
+    for prefijo, grado, cantidad in (
+        ("4TO", "4to secundaria", payload.n_4to),
+        ("5TO", "5to secundaria", payload.n_5to),
+    ):
+        for i in range(1, cantidad + 1):
+            codigo = f"SAMI-{prefijo}-{i:02d}"
+            existente = db.query(User).filter_by(codigo_acceso=codigo).first()
+            if existente:
+                filas.append({"codigo": codigo, "grado": grado, "estado": "ya existía"})
+                continue
+            try:
+                alumno = User(
+                    id=str(uuid.uuid4()),
+                    email=f"{codigo.lower()}@piloto.sami.local",
+                    hashed_password=hash_password(str(uuid.uuid4())),
+                    nombre=f"Alumno {prefijo}", apellido=f"#{i:02d}",
+                    role="estudiante", activo=True,
+                    psicologo_id=psi.id, grado=grado,
+                    estado_caso="activo", codigo_acceso=codigo,
+                )
+                db.add(alumno)
+                db.flush()
+                db.add(Consent(
+                    user_id=alumno.id, version=settings.CONSENT_VERSION_ACTUAL,
+                    aceptado_en=datetime.utcnow(), ip_address="0.0.0.0",
+                ))
+                db.add(AplicacionCuestionario(
+                    plantilla_id=pl.id, estudiante_id=alumno.id, psicologo_id=psi.id,
+                    estado="pendiente", asignada_at=datetime.utcnow() - timedelta(minutes=1),
+                ))
+                db.commit()
+                filas.append({"codigo": codigo, "grado": grado, "estado": "nuevo"})
+            except Exception as e:
+                db.rollback()
+                logger.warning(f"Error generando {codigo}: {e}")
+                filas.append({"codigo": codigo, "grado": grado, "estado": f"error: {e}"})
+
+    nuevos = sum(1 for f in filas if f["estado"] == "nuevo")
+    return {"plantilla_id": pl.id, "total": len(filas), "nuevos": nuevos, "filas": filas}
