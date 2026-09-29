@@ -324,8 +324,6 @@ async def generar_codigos_piloto(
     import uuid
     from datetime import datetime, timedelta
     from app.core.security import hash_password
-    from app.config import settings
-    from app.models.consent import Consent
     from app.models.bank import (
         AplicacionCuestionario, BankInstrumento, PlantillaBloque, PlantillaCuestionario,
     )
@@ -386,10 +384,9 @@ async def generar_codigos_piloto(
                 )
                 db.add(alumno)
                 db.flush()
-                db.add(Consent(
-                    user_id=alumno.id, version=settings.CONSENT_VERSION_ACTUAL,
-                    aceptado_en=datetime.utcnow(), ip_address="0.0.0.0",
-                ))
+                # Sin Consent acá a propósito: el alumno tiene que aceptar
+                # los términos él mismo en /consent antes de ver el
+                # cuestionario, igual que cualquier otro usuario del sistema.
                 db.add(AplicacionCuestionario(
                     plantilla_id=pl.id, estudiante_id=alumno.id, psicologo_id=psi.id,
                     estado="pendiente", asignada_at=datetime.utcnow() - timedelta(minutes=1),
@@ -452,3 +449,26 @@ async def reset_aplicacion_prueba(
         "satisfaction_surveys_borradas": borradas_satisfaccion,
         "aplicaciones_reseteadas": reseteadas,
     }
+
+
+@router.post("/piloto/quitar-consentimiento-codigos")
+async def quitar_consentimiento_codigos(
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """
+    Corrección puntual: los alumnos generados por /piloto/generar-codigos
+    (antes de este cambio) quedaban con el consentimiento pre-aceptado por
+    el propio script. Ahora el alumno debe aceptarlo él mismo en /consent
+    antes de ver el cuestionario — esto borra el consentimiento ya puesto
+    a esas cuentas para que la pantalla les aparezca mañana.
+    """
+    from app.models.consent import Consent
+
+    ids_piloto = [u.id for u in db.query(User).filter(User.codigo_acceso.isnot(None)).all()]
+    borrados = (
+        db.query(Consent).filter(Consent.user_id.in_(ids_piloto))
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return {"alumnos_con_codigo": len(ids_piloto), "consentimientos_borrados": borrados}

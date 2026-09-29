@@ -35,7 +35,6 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.config import settings
 from app.database import SessionLocal
 from app.models.bank import (
     AplicacionCuestionario,
@@ -43,7 +42,6 @@ from app.models.bank import (
     PlantillaBloque,
     PlantillaCuestionario,
 )
-from app.models.consent import Consent
 from app.models.user import User
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -155,12 +153,8 @@ def _generar_seccion(
         db.add(alumno)
         db.flush()
 
-        db.add(Consent(
-            user_id=alumno.id,
-            version=settings.CONSENT_VERSION_ACTUAL,
-            aceptado_en=datetime.utcnow(),
-            ip_address="0.0.0.0",
-        ))
+        # Sin Consent acá a propósito: el alumno acepta los términos él
+        # mismo en /consent, dentro de la app, antes de ver el cuestionario.
 
         db.add(AplicacionCuestionario(
             plantilla_id=plantilla.id,

@@ -24,7 +24,20 @@ async function aceptar() {
       consentimiento_aceptado: true,
       consentimiento_version: VERSION,
     });
-    router.push("/menu");
+
+    // Si tiene un cuestionario pendiente (alumno que entró con código), va
+    // directo ahí en vez de al menú.
+    let destino = "/menu";
+    try {
+      const cuestionarios = await api.misCuestionarios();
+      const pendiente = cuestionarios.find(
+        (c) => c.estado === "pendiente" || c.estado === "en_progreso",
+      );
+      if (pendiente) destino = { name: "responder", params: { id: pendiente.id } };
+    } catch {
+      // si falla la consulta, entra igual al menú
+    }
+    router.push(destino);
   } catch (e) {
     error.value =
       e.response?.data?.detail || "Error registrando consentimiento";
