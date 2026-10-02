@@ -9,6 +9,11 @@ from app.models.configuracion import Configuracion
 from app.models.educational_content import EducationalContent
 from app.models.satisfaction_survey import SatisfactionSurvey
 from app.models.sos_event import SosEvent
+from app.models.etiquetado import (
+    MuestraEtiquetado,
+    EtiquetaFrase,
+    EtiquetaCaso,
+)
 from app.models.bank import (
     BankInstrumento,
     BankItem,
@@ -42,4 +47,7 @@ __all__ = [
     "PlantillaBloque",
     "AplicacionCuestionario",
     "RespuestaAplicacion",
+    "MuestraEtiquetado",
+    "EtiquetaFrase",
+    "EtiquetaCaso",
 ]

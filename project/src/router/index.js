@@ -19,6 +19,9 @@ import PsychologistDashboardView from "../views/PsychologistDashboardView.vue";
 import PsychologistStudentsView from "../views/PsychologistStudentsView.vue";
 import PsychologistAlertsView from "../views/PsychologistAlertsView.vue";
 import PsychologistEvaluacionesView from "../views/PsychologistEvaluacionesView.vue";
+import EtiquetadoFrasesView from "../views/EtiquetadoFrasesView.vue";
+import EtiquetadoCasosView from "../views/EtiquetadoCasosView.vue";
+import EtiquetadoMetricasView from "../views/EtiquetadoMetricasView.vue";
 import StudentHistoryView from "../views/StudentHistoryView.vue";
 import PsychologistBankView from "../views/PsychologistBankView.vue";
 import PsychologistTemplatesView from "../views/PsychologistTemplatesView.vue";
@@ -91,6 +94,24 @@ const routes = [
     path: "/psicologo/evaluaciones",
     name: "psicologo-evaluaciones",
     component: PsychologistEvaluacionesView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/etiquetado/frases",
+    name: "etiquetado-frases",
+    component: EtiquetadoFrasesView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/etiquetado/casos",
+    name: "etiquetado-casos",
+    component: EtiquetadoCasosView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/etiquetado/metricas",
+    name: "etiquetado-metricas",
+    component: EtiquetadoMetricasView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {

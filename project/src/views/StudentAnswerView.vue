@@ -2,6 +2,9 @@
 import { ref, reactive, computed, onMounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { api } from "../api";
+// Las etiquetas de las escalas se comparten con la pantalla de etiquetado
+// ciega del psicólogo — ver project/src/escalas.js.
+import { opciones } from "../escalas";
 
 const route = useRoute();
 const router = useRouter();
@@ -40,47 +43,6 @@ const BLOQUE_INSTRUCCIONES = {
   "UCLA-3": "Indica con qué frecuencia te sientes así.",
   FRASES: "Completa cada frase con lo primero que se te venga a la mente. No hay respuestas correctas.",
 };
-
-// ── Escalas Likert (etiquetas por opción) ────────────────────────────
-const OPCIONES = {
-  "0-3": [
-    { v: 0, label: "Nunca" },
-    { v: 1, label: "Algunos días" },
-    { v: 2, label: "Más de la mitad" },
-    { v: 3, label: "Casi todos los días" },
-  ],
-  "1-4": [
-    { v: 1, label: "Muy en desacuerdo" },
-    { v: 2, label: "En desacuerdo" },
-    { v: 3, label: "De acuerdo" },
-    { v: 4, label: "Muy de acuerdo" },
-  ],
-  "0-5": [
-    { v: 0, label: "En ningún momento" },
-    { v: 1, label: "Algunos días" },
-    { v: 2, label: "Menos de la mitad" },
-    { v: 3, label: "Más de la mitad" },
-    { v: 4, label: "La mayor parte" },
-    { v: 5, label: "Todo el tiempo" },
-  ],
-  "1-3": [
-    { v: 1, label: "Casi nunca" },
-    { v: 2, label: "A veces" },
-    { v: 3, label: "A menudo" },
-  ],
-  binaria: [
-    { v: 1, label: "Sí" },
-    { v: 0, label: "No" },
-  ],
-};
-
-function escalaKey(p) {
-  if (p.tipo === "binaria") return "binaria";
-  return `${p.likert_min}-${p.likert_max}`;
-}
-function opciones(p) {
-  return OPCIONES[escalaKey(p)] || [];
-}
 
 // ── Carga ────────────────────────────────────────────────────────────
 async function cargar() {

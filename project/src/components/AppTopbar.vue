@@ -45,6 +45,7 @@ const seccion = computed(() => {
   if (path.startsWith("/responder")) return "Cuestionario";
   if (path.startsWith("/perfil")) return "Cuenta";
   if (path.startsWith("/recursos")) return "Recursos";
+  if (path.startsWith("/etiquetado")) return "Etiquetado";
   if (path.startsWith("/psicologo")) return "Panel";
   if (path.startsWith("/admin")) return "Panel";
   return "";
@@ -70,6 +71,7 @@ const navActivoEst = computed(() => {
 const navClinico = [
   { id: "panel", label: "Panel", to: "/psicologo" },
   { id: "evaluaciones", label: "Evaluaciones", to: "/psicologo/evaluaciones" },
+  { id: "etiquetado", label: "Etiquetar", to: "/etiquetado/frases" },
   { id: "estudiantes", label: "Estudiantes", to: "/psicologo/estudiantes" },
   { id: "sos", label: "SOS", to: "/psicologo/sos" },
   { id: "citas", label: "Citas", to: "/psicologo/citas" },
@@ -79,6 +81,7 @@ const navClinico = [
 
 const navActivoPsi = computed(() => {
   const p = route?.path || "";
+  if (p.startsWith("/etiquetado")) return "etiquetado";
   if (p.startsWith("/psicologo/evaluaciones")) return "evaluaciones";
   if (p.startsWith("/psicologo/estudiantes")) return "estudiantes";
   if (p.startsWith("/psicologo/sos")) return "sos";

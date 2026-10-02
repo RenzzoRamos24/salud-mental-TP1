@@ -275,6 +275,53 @@ export const api = {
     });
     return data;
   },
+
+  // ─── ETIQUETADO CLÍNICO CIEGO ───
+  // Las colas devuelven 204 cuando no queda nada por etiquetar; axios no
+  // trae body en ese caso, así que se normaliza a null.
+  async etiquetadoProgreso() {
+    const { data } = await client.get("/etiquetado/progreso");
+    return data;
+  },
+  async etiquetadoGenerarMuestra({ n = 100, semilla = 20260910, reemplazar = false } = {}) {
+    const { data } = await client.post("/etiquetado/muestra/generar", {
+      n, semilla, reemplazar,
+    });
+    return data;
+  },
+  async etiquetadoSiguienteFrase() {
+    const r = await client.get("/etiquetado/frases/siguiente");
+    return r.status === 204 ? null : r.data;
+  },
+  async etiquetadoGuardarFrase(payload) {
+    const { data } = await client.post("/etiquetado/frases", payload);
+    return data;
+  },
+  async etiquetadoSiguienteCaso({ soloConSvm = false } = {}) {
+    const r = await client.get("/etiquetado/casos/siguiente", {
+      params: { solo_con_svm: soloConSvm },
+    });
+    return r.status === 204 ? null : r.data;
+  },
+  async etiquetadoGuardarCaso(payload) {
+    const { data } = await client.post("/etiquetado/casos", payload);
+    return data;
+  },
+  async etiquetadoMarcarUrgente(aplicacion_id, motivo) {
+    const { data } = await client.post("/etiquetado/urgente", {
+      aplicacion_id, motivo,
+    });
+    return data;
+  },
+  async etiquetadoMetricas({ soloMias = false } = {}) {
+    const { data } = await client.get("/etiquetado/metricas", {
+      params: { solo_mias: soloMias },
+    });
+    return data;
+  },
+  etiquetadoDatasetUrl(cual) {
+    return `${API_BASE}/etiquetado/dataset/${cual}.csv`;
+  },
   async historialEstudiante(student_id) {
     const { data } = await client.get(
       `/psychologist/students/${student_id}/history`,

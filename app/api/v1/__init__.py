@@ -11,6 +11,7 @@ from app.api.v1.endpoints.bank import router as bank_router
 from app.api.v1.endpoints.plantilla import router as plantilla_router
 from app.api.v1.endpoints.cuestionario import router as cuestionario_router
 from app.api.v1.endpoints.padre import router as padre_router
+from app.api.v1.endpoints.etiquetado import router as etiquetado_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
@@ -25,5 +26,6 @@ api_router.include_router(bank_router, prefix="/banco", tags=["banco"])
 api_router.include_router(plantilla_router, prefix="/plantillas", tags=["plantillas"])
 api_router.include_router(cuestionario_router, prefix="/cuestionarios", tags=["cuestionarios"])
 api_router.include_router(padre_router, prefix="/padre", tags=["padre"])
+api_router.include_router(etiquetado_router, prefix="/etiquetado", tags=["etiquetado"])
 
 __all__ = ["api_router"]
