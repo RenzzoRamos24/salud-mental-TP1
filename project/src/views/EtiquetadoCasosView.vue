@@ -15,10 +15,12 @@ const terminado = ref(false);
 const soloConSvm = ref(true);
 
 const riesgo = ref(null);
-const derivacion = ref(false);
+const derivacion = ref(null); // true | false — obligatorio
+const predominante = ref(null);
 const ideacion = ref(null); // true | false | null (no evaluable)
 const confianza = ref("alta");
 const comentario = ref("");
+const detallesAbiertos = ref(false);
 
 let t0 = Date.now();
 
@@ -34,7 +36,20 @@ const RIESGOS = [
   { v: "CRITICO", label: "Crítico", clase: "bg-red-50 border-red-300 text-red-800" },
 ];
 
-const puedeGuardar = computed(() => !!riesgo.value && !guardando.value);
+// Subescalas del DASS-21. El SVM de hoy es binario y no distingue entre
+// ellas, así que esto no se compara contra él: valida el desglose por
+// subescala que el panel ya muestra, y queda como objetivo de entrenamiento
+// si el SVM pasa a tener tres salidas.
+const PREDOMINANTES = [
+  { v: "depresion", label: "Depresión" },
+  { v: "ansiedad", label: "Ansiedad" },
+  { v: "estres", label: "Estrés" },
+  { v: "ninguno", label: "Ninguno" },
+];
+
+const puedeGuardar = computed(
+  () => !!riesgo.value && derivacion.value !== null && !guardando.value,
+);
 
 // Agrupo por bloque para que no sea una lista plana de 21 ítems.
 const bloques = computed(() => {
@@ -49,10 +64,12 @@ const bloques = computed(() => {
 
 function limpiar() {
   riesgo.value = null;
-  derivacion.value = false;
+  derivacion.value = null;
+  predominante.value = null;
   ideacion.value = null;
   confianza.value = "alta";
   comentario.value = "";
+  detallesAbiertos.value = false;
   urgenteAbierto.value = false;
   motivoUrgente.value = "";
   t0 = Date.now();
@@ -87,6 +104,7 @@ async function guardar() {
       aplicacion_id: caso.value.aplicacion_id,
       riesgo_clinico: riesgo.value,
       requiere_derivacion: derivacion.value,
+      predominante: predominante.value,
       ideacion_presente: ideacion.value,
       confianza: confianza.value,
       comentario: comentario.value.trim() || null,
@@ -215,10 +233,10 @@ const pct = computed(() => {
         </div>
 
         <!-- Formulario, pegado arriba -->
-        <div class="card p-5 grid gap-4 lg:sticky lg:top-4">
+        <div class="card p-5 grid gap-5 lg:sticky lg:top-4">
           <div>
             <p class="text-sm font-semibold text-green-900 mb-2">
-              Nivel de riesgo clínico
+              1. Nivel de riesgo clínico
             </p>
             <div class="grid gap-1.5">
               <button
@@ -237,57 +255,26 @@ const pct = computed(() => {
             </div>
           </div>
 
-          <label class="flex items-start gap-2 cursor-pointer">
-            <input v-model="derivacion" type="checkbox" class="mt-1" />
-            <span class="text-sm text-ink-700">
-              <strong class="text-green-900">Requiere derivación inmediata</strong>
-              <span class="block text-xs text-ink-500">
-                La decisión clínica concreta, no la etiqueta.
-              </span>
-            </span>
-          </label>
-
           <div>
             <p class="text-sm font-semibold text-green-900 mb-1">
-              ¿Hay ideación suicida en el caso?
+              2. ¿Requiere atención ahora?
+            </p>
+            <p class="text-xs text-ink-500 mb-2">
+              La decisión clínica concreta. Es contra esta respuesta que se mide
+              si el sistema sirve para priorizar.
             </p>
             <div class="flex gap-1.5">
               <button
                 class="btn-sm flex-1"
-                :class="ideacion === true ? 'btn-coral' : 'btn-ghost'"
-                @click="ideacion = true"
+                :class="derivacion === true ? 'btn-coral' : 'btn-ghost'"
+                @click="derivacion = true"
               >Sí</button>
               <button
                 class="btn-sm flex-1"
-                :class="ideacion === false ? 'btn-primary' : 'btn-ghost'"
-                @click="ideacion = false"
+                :class="derivacion === false ? 'btn-primary' : 'btn-ghost'"
+                @click="derivacion = false"
               >No</button>
-              <button
-                class="btn-sm flex-1"
-                :class="ideacion === null ? 'btn-mint' : 'btn-ghost'"
-                @click="ideacion = null"
-                title="El material no alcanza para opinar"
-              >No evaluable</button>
             </div>
-          </div>
-
-          <div>
-            <label class="text-xs text-ink-500">Confianza</label>
-            <select v-model="confianza" class="input">
-              <option value="alta">Alta</option>
-              <option value="media">Media</option>
-              <option value="baja">Baja</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-xs text-ink-500">Comentario</label>
-            <textarea
-              v-model="comentario"
-              class="input"
-              rows="3"
-              placeholder="Qué pesó en tu decisión. En los casos dudosos es lo que después explica el número."
-            />
           </div>
 
           <button class="btn-primary" :disabled="!puedeGuardar" @click="guardar">
@@ -295,10 +282,81 @@ const pct = computed(() => {
           </button>
 
           <button
+            class="btn-ghost btn-sm"
+            @click="detallesAbiertos = !detallesAbiertos"
+          >
+            {{ detallesAbiertos ? "Ocultar" : "Agregar" }} detalle opcional
+          </button>
+
+          <div v-if="detallesAbiertos" class="grid gap-4 pt-1 border-t border-cream-200">
+            <div>
+              <p class="text-xs font-semibold text-green-900 mb-1.5">
+                ¿Qué predomina?
+              </p>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="p in PREDOMINANTES"
+                  :key="p.v"
+                  class="btn-sm"
+                  :class="predominante === p.v ? 'btn-mint' : 'btn-ghost'"
+                  @click="predominante = predominante === p.v ? null : p.v"
+                >{{ p.label }}</button>
+              </div>
+              <p class="text-[11px] text-ink-400 mt-1">
+                No se compara con el SVM (que es binario). Sirve para validar el
+                desglose por subescala.
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-green-900 mb-1.5">
+                ¿Hay ideación suicida en el caso?
+              </p>
+              <div class="flex gap-1.5">
+                <button
+                  class="btn-sm flex-1"
+                  :class="ideacion === true ? 'btn-coral' : 'btn-ghost'"
+                  @click="ideacion = true"
+                >Sí</button>
+                <button
+                  class="btn-sm flex-1"
+                  :class="ideacion === false ? 'btn-primary' : 'btn-ghost'"
+                  @click="ideacion = false"
+                >No</button>
+                <button
+                  class="btn-sm flex-1"
+                  :class="ideacion === null ? 'btn-mint' : 'btn-ghost'"
+                  @click="ideacion = null"
+                  title="El material no alcanza para opinar"
+                >No evaluable</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs text-ink-500">Confianza</label>
+              <select v-model="confianza" class="input">
+                <option value="alta">Alta</option>
+                <option value="media">Media</option>
+                <option value="baja">Baja</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-xs text-ink-500">Comentario</label>
+              <textarea
+                v-model="comentario"
+                class="input"
+                rows="3"
+                placeholder="Qué pesó en tu decisión. En los casos dudosos es lo que después explica el número."
+              />
+            </div>
+          </div>
+
+          <button
             class="btn-ghost btn-sm text-red-700"
             @click="urgenteAbierto = !urgenteAbierto"
           >
-            Este caso es urgente
+            Este caso requiere atención ahora
           </button>
 
           <div v-if="urgenteAbierto" class="banner-warn grid gap-2">

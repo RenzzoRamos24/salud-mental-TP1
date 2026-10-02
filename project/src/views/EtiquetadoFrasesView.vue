@@ -2,9 +2,13 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { api } from "../api";
 
-// Una frase por pantalla, sin nada de lo que dijo el modelo. La ceguedad la
-// garantiza el backend (el payload no trae scores); acá no hay nada que
-// ocultar, y es a propósito.
+// Una frase por pantalla y dos preguntas. Nada más, porque son 100 frases y
+// cada campo extra se multiplica por 100.
+//
+// Son estas dos y no otras porque tienen que hablar el mismo idioma que el
+// modelo: BETO emite una categoría dominante (las 4 opciones de abajo) y una
+// bandera de crisis. Sin esas dos respuestas no hay nada que comparar; con
+// más de esas dos, se paga tiempo que no compra métrica.
 
 const frase = ref(null);
 const progreso = ref(null);
@@ -13,14 +17,13 @@ const guardando = ref(false);
 const error = ref("");
 const terminado = ref(false);
 
-// El formulario
-const ideacion = ref(null); // true | false
-const sufrimiento = ref(false);
 const categoria = ref(null);
+const ideacion = ref(null);
 const confianza = ref("alta");
 const comentario = ref("");
+const detallesAbiertos = ref(false);
 
-// Cuánto tardó en esta frase — detecta etiquetado apresurado y, al revés,
+// Cuánto tardó en esta frase. Detecta etiquetado apresurado y, al revés,
 // documenta que el trabajo fue serio.
 let t0 = Date.now();
 
@@ -29,20 +32,46 @@ const motivoUrgente = ref("");
 const avisoUrgente = ref("");
 
 const CATEGORIAS = [
-  { v: "depresion", label: "Depresión", tecla: "1" },
-  { v: "ansiedad", label: "Ansiedad", tecla: "2" },
-  { v: "adaptativo", label: "Adaptativo", tecla: "3" },
-  { v: "neutral", label: "Neutral", tecla: "4" },
+  {
+    v: "depresion",
+    label: "Depresión",
+    tecla: "1",
+    pista: "Tristeza profunda, desesperanza, vacío, inutilidad",
+    clase: "bg-indigo-50 border-indigo-300 text-indigo-800",
+  },
+  {
+    v: "ansiedad",
+    label: "Ansiedad",
+    tecla: "2",
+    pista: "Preocupación, nerviosismo, tensión, miedo",
+    clase: "bg-amber-50 border-amber-300 text-amber-800",
+  },
+  {
+    v: "adaptativo",
+    label: "Afrontamiento sano",
+    tecla: "3",
+    pista: "Metas, resiliencia, esfuerzo, autoconocimiento",
+    clase: "bg-green-50 border-green-300 text-green-800",
+  },
+  {
+    v: "neutral",
+    label: "Nada preocupante",
+    tecla: "4",
+    pista: "Cotidiano, hobbies, cansancio normal",
+    clase: "bg-gray-50 border-gray-300 text-gray-700",
+  },
 ];
 
-const puedeGuardar = computed(() => ideacion.value !== null && !guardando.value);
+const puedeGuardar = computed(
+  () => !!categoria.value && ideacion.value !== null && !guardando.value,
+);
 
 function limpiar() {
-  ideacion.value = null;
-  sufrimiento.value = false;
   categoria.value = null;
+  ideacion.value = null;
   confianza.value = "alta";
   comentario.value = "";
+  detallesAbiertos.value = false;
   urgenteAbierto.value = false;
   motivoUrgente.value = "";
   t0 = Date.now();
@@ -76,7 +105,6 @@ async function guardar() {
     await api.etiquetadoGuardarFrase({
       ref: frase.value.ref,
       ideacion_presente: ideacion.value,
-      sufrimiento_grave: sufrimiento.value,
       categoria: categoria.value,
       confianza: confianza.value,
       comentario: comentario.value.trim() || null,
@@ -107,18 +135,17 @@ async function enviarUrgente() {
   }
 }
 
-// ── Atajos de teclado ────────────────────────────────────────────────
-// Etiquetar 100 frases con el mouse es tortura; con el teclado son ~20 s
-// por frase. S/N marcan ideación, 1-4 la categoría, Enter guarda.
+// ── Teclado ──────────────────────────────────────────────────────────
+// 1-4 categoría, S/N ideación, Enter guarda. Con mouse son ~45 s por frase;
+// con teclado, ~15.
 function onKey(e) {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
   const k = e.key.toLowerCase();
-  if (k === "s") ideacion.value = true;
-  else if (k === "n") ideacion.value = false;
-  else if (k === "g") sufrimiento.value = !sufrimiento.value;
-  else if (["1", "2", "3", "4"].includes(k)) {
+  if (["1", "2", "3", "4"].includes(k)) {
     categoria.value = CATEGORIAS.find((c) => c.tecla === k).v;
-  } else if (k === "enter") guardar();
+  } else if (k === "s") ideacion.value = true;
+  else if (k === "n") ideacion.value = false;
+  else if (k === "enter") guardar();
   else return;
   e.preventDefault();
 }
@@ -158,22 +185,15 @@ const pct = computed(() => {
     </div>
 
     <template v-else-if="frase">
-      <!-- Progreso -->
       <div class="mb-4">
         <div class="flex items-center justify-between text-xs text-ink-500 mb-1">
           <span>{{ progreso.fase }}</span>
           <span>{{ progreso.hechas }} de {{ progreso.total }}</span>
         </div>
         <div class="h-1.5 bg-cream-200 rounded-full overflow-hidden">
-          <div
-            class="h-full bg-green-600 transition-all"
-            :style="{ width: pct + '%' }"
-          />
+          <div class="h-full bg-green-600 transition-all" :style="{ width: pct + '%' }" />
         </div>
-        <p
-          v-if="frase.fase === 'corpus'"
-          class="text-[11px] text-ink-400 mt-1"
-        >
+        <p v-if="frase.fase === 'corpus'" class="text-[11px] text-ink-400 mt-1">
           Esta frase ya no cuenta para las métricas — suma al conjunto de
           reentrenamiento.
         </p>
@@ -191,142 +211,137 @@ const pct = computed(() => {
         </p>
       </div>
 
-      <!-- Formulario -->
-      <div class="card p-6 grid gap-5">
-        <div>
-          <p class="text-sm font-semibold text-green-900 mb-1">
-            ¿Expresa ideación suicida?
-          </p>
-          <p class="text-xs text-ink-500 mb-2">
-            Deseo de morir, de no existir o de desaparecer; pensamientos sobre
-            la propia muerte; intención, plan o método con fin suicida.
-            Tristeza severa sin referencia a morir es <strong>No</strong>.
-          </p>
-          <div class="flex gap-2">
-            <button
-              class="btn-sm flex-1"
-              :class="ideacion === true ? 'btn-coral' : 'btn-ghost'"
-              @click="ideacion = true"
-            >
-              Sí <span class="opacity-50 text-[10px]">(S)</span>
-            </button>
-            <button
-              class="btn-sm flex-1"
-              :class="ideacion === false ? 'btn-primary' : 'btn-ghost'"
-              @click="ideacion = false"
-            >
-              No <span class="opacity-50 text-[10px]">(N)</span>
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label class="flex items-start gap-2 cursor-pointer">
-            <input v-model="sufrimiento" type="checkbox" class="mt-1" />
-            <span>
-              <span class="text-sm font-semibold text-green-900">
-                Sufrimiento clínico grave
-                <span class="opacity-50 text-[10px] font-normal">(G)</span>
-              </span>
-              <span class="block text-xs text-ink-500">
-                Desesperanza total sobre el futuro, o sentimientos profundos e
-                incapacitantes de inutilidad, fracaso o vacío — aunque no haya
-                referencia a morir.
-              </span>
-            </span>
-          </label>
-        </div>
-
-        <div>
-          <p class="text-sm font-semibold text-green-900 mb-2">
-            Categoría dominante
-            <span class="text-xs font-normal text-ink-400">(opcional)</span>
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="c in CATEGORIAS"
-              :key="c.v"
-              class="btn-sm"
-              :class="categoria === c.v ? 'btn-mint' : 'btn-ghost'"
-              @click="categoria = categoria === c.v ? null : c.v"
-            >
+      <!-- Pregunta 1 -->
+      <div class="card p-5 mb-3">
+        <p class="text-sm font-semibold text-green-900 mb-3">
+          1. ¿Qué expresa esta frase?
+        </p>
+        <div class="grid sm:grid-cols-2 gap-2">
+          <button
+            v-for="c in CATEGORIAS"
+            :key="c.v"
+            class="text-left px-3 py-2.5 rounded-lg border transition"
+            :class="
+              categoria === c.v
+                ? c.clase + ' font-semibold ring-2 ring-offset-1 ring-green-400'
+                : 'bg-white border-cream-300 hover:bg-cream-50'
+            "
+            @click="categoria = c.v"
+          >
+            <span class="text-sm">
               {{ c.label }}
-              <span class="opacity-50 text-[10px]">({{ c.tecla }})</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <label class="text-xs text-ink-500">Confianza en tu juicio</label>
-            <select v-model="confianza" class="input">
-              <option value="alta">Alta</option>
-              <option value="media">Media</option>
-              <option value="baja">Baja</option>
-            </select>
-            <p class="text-[11px] text-ink-400 mt-1">
-              Si dudás, marcá tu mejor juicio con confianza baja. Preferimos eso
-              a una frase sin etiquetar.
-            </p>
-          </div>
-          <div>
-            <label class="text-xs text-ink-500">Comentario (opcional)</label>
-            <textarea
-              v-model="comentario"
-              class="input"
-              rows="2"
-              placeholder="Por qué, si el caso es dudoso…"
-            />
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between gap-3 pt-1">
-          <button
-            class="btn-ghost btn-sm text-red-700"
-            @click="urgenteAbierto = !urgenteAbierto"
-          >
-            Esta frase es urgente
+              <span class="opacity-40 text-[10px] font-normal">({{ c.tecla }})</span>
+            </span>
+            <span class="block text-[11px] text-ink-500 mt-0.5">{{ c.pista }}</span>
           </button>
-          <button
-            class="btn-primary"
-            :disabled="!puedeGuardar"
-            @click="guardar"
-          >
-            {{ guardando ? "Guardando…" : "Guardar y siguiente" }}
-            <span class="opacity-50 text-[10px]">(Enter)</span>
-          </button>
-        </div>
-
-        <div v-if="urgenteAbierto" class="banner-warn grid gap-2">
-          <p class="text-sm">
-            Esto deja una nota en el expediente del alumno para la psicóloga a
-            cargo. No interrumpe el etiquetado y no te muestra nada del modelo.
-          </p>
-          <textarea
-            v-model="motivoUrgente"
-            class="input"
-            rows="2"
-            placeholder="Qué viste que requiere atención ahora."
-          />
-          <div class="flex gap-2">
-            <button
-              class="btn-coral btn-sm"
-              :disabled="!motivoUrgente.trim()"
-              @click="enviarUrgente"
-            >
-              Avisar
-            </button>
-            <button class="btn-ghost btn-sm" @click="urgenteAbierto = false">
-              Cancelar
-            </button>
-          </div>
         </div>
       </div>
 
-      <p class="text-[11px] text-ink-400 mt-4 text-center">
+      <!-- Pregunta 2 -->
+      <div class="card p-5 mb-3">
+        <p class="text-sm font-semibold text-green-900 mb-1">
+          2. ¿Expresa ideación suicida?
+        </p>
+        <p class="text-xs text-ink-500 mb-3">
+          Deseo de morir, de no existir o de desaparecer; pensamientos sobre la
+          propia muerte; intención, plan o método con fin suicida.
+          <strong>Tristeza severa sin referencia a morir es No.</strong>
+        </p>
+        <div class="flex gap-2">
+          <button
+            class="btn-sm flex-1"
+            :class="ideacion === true ? 'btn-coral' : 'btn-ghost'"
+            @click="ideacion = true"
+          >
+            Sí <span class="opacity-50 text-[10px]">(S)</span>
+          </button>
+          <button
+            class="btn-sm flex-1"
+            :class="ideacion === false ? 'btn-primary' : 'btn-ghost'"
+            @click="ideacion = false"
+          >
+            No <span class="opacity-50 text-[10px]">(N)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Guardar -->
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <button
+          class="btn-ghost btn-sm"
+          @click="detallesAbiertos = !detallesAbiertos"
+        >
+          {{ detallesAbiertos ? "Ocultar" : "Agregar" }} confianza o comentario
+        </button>
+        <button class="btn-primary" :disabled="!puedeGuardar" @click="guardar">
+          {{ guardando ? "Guardando…" : "Guardar y siguiente" }}
+          <span class="opacity-50 text-[10px]">(Enter)</span>
+        </button>
+      </div>
+
+      <!-- Opcional -->
+      <div v-if="detallesAbiertos" class="card p-5 grid md:grid-cols-2 gap-4 mb-3">
+        <div>
+          <label class="text-xs text-ink-500">Confianza en tu juicio</label>
+          <select v-model="confianza" class="input">
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+          </select>
+          <p class="text-[11px] text-ink-400 mt-1">
+            Si dudás, marcá tu mejor juicio con confianza baja. Preferimos eso a
+            una frase sin etiquetar.
+          </p>
+        </div>
+        <div>
+          <label class="text-xs text-ink-500">Comentario</label>
+          <textarea
+            v-model="comentario"
+            class="input"
+            rows="2"
+            placeholder="Por qué, si el caso es dudoso…"
+          />
+        </div>
+      </div>
+
+      <div class="text-center">
+        <button
+          class="btn-ghost btn-sm text-red-700"
+          @click="urgenteAbierto = !urgenteAbierto"
+        >
+          Esta frase requiere atención ahora
+        </button>
+      </div>
+
+      <div v-if="urgenteAbierto" class="banner-warn grid gap-2 mt-3">
+        <p class="text-sm">
+          Esto deja una nota en el expediente del alumno para la psicóloga a
+          cargo. No interrumpe el etiquetado y no te muestra nada del modelo.
+        </p>
+        <textarea
+          v-model="motivoUrgente"
+          class="input"
+          rows="2"
+          placeholder="Qué viste que requiere atención ahora."
+        />
+        <div class="flex gap-2">
+          <button
+            class="btn-coral btn-sm"
+            :disabled="!motivoUrgente.trim()"
+            @click="enviarUrgente"
+          >
+            Avisar
+          </button>
+          <button class="btn-ghost btn-sm" @click="urgenteAbierto = false">
+            Cancelar
+          </button>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-ink-400 mt-5 text-center">
         No vas a ver lo que predijo el sistema, y es deliberado: si etiquetaras
-        viendo su respuesta, la comparación posterior no valdría como
-        validación independiente.
+        viendo su respuesta, la comparación posterior no valdría como validación
+        independiente.
       </p>
     </template>
   </div>

@@ -47,6 +47,7 @@ from app.models.bank import (
 )
 from app.models.etiquetado import (
     CATEGORIAS,
+    PREDOMINANTES,
     CONFIANZAS,
     ESTRATOS,
     RIESGOS,
@@ -570,10 +571,16 @@ class EtiquetadoService:
         riesgo_clinico: str,
         requiere_derivacion: bool = False,
         ideacion_presente: bool | None = None,
+        predominante: str | None = None,
         confianza: str = "alta",
         comentario: str | None = None,
         segundos: int | None = None,
     ) -> dict:
+        if predominante and predominante not in PREDOMINANTES:
+            raise ValueError(
+                f"Predominante '{predominante}' inválido. Usá una de: "
+                f"{', '.join(PREDOMINANTES)}."
+            )
         if riesgo_clinico not in RIESGOS:
             raise ValueError(
                 f"Riesgo '{riesgo_clinico}' inválido. Usá: {', '.join(RIESGOS)}."
@@ -614,6 +621,7 @@ class EtiquetadoService:
         fila.riesgo_clinico = riesgo_clinico
         fila.requiere_derivacion = bool(requiere_derivacion)
         fila.ideacion_presente = ideacion_presente
+        fila.predominante = predominante
         fila.confianza = confianza
         fila.comentario = (comentario or "").strip() or None
         fila.segundos = segundos
@@ -734,6 +742,7 @@ class EtiquetadoService:
                 "y_ideacion": (
                     int(e.ideacion_presente) if e.ideacion_presente is not None else None
                 ),
+                "y_predominante": e.predominante,
                 "confianza": e.confianza,
                 "modelo_riesgo": e.modelo_riesgo,
                 "modelo_crisis": int(e.modelo_crisis) if e.modelo_crisis is not None else None,

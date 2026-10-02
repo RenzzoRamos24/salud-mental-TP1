@@ -262,9 +262,18 @@ class MetricasEtiquetadoService:
         #     'depresion' es compuesta: ideas de muerte O desesperanza total O
         #     sentimientos incapacitantes. Medirla solo contra ideación cuenta
         #     como falso positivo cada acierto sobre desesperanza severa.
+        # `categoria == 'depresion'` cuenta como positivo del criterio amplio.
+        # Eso permite que el formulario quede en dos preguntas: si el
+        # psicólogo clasificó la frase como depresión clínica, eso ya es el
+        # "sufrimiento grave" que la hipótesis declara detectar, y no hace
+        # falta un campo aparte para preguntarlo.
         pares_amplio = [
             (
-                int(e.ideacion_presente or e.sufrimiento_grave),
+                int(
+                    e.ideacion_presente
+                    or e.sufrimiento_grave
+                    or e.categoria == "depresion"
+                ),
                 int(bool(e.modelo_crisis)),
                 peso(e),
             )
@@ -279,9 +288,10 @@ class MetricasEtiquetadoService:
                 pares_ideacion,
             ),
             bloque_binario(
-                "Bandera de crisis vs. ideación o sufrimiento grave",
-                "Criterio amplio, que es lo que la hipótesis de 'depresion' "
-                "declara detectar.",
+                "Bandera de crisis vs. depresión clínica (criterio amplio)",
+                "Positivo = ideación, o la frase clasificada como depresión. "
+                "Es lo que la hipótesis declara detectar: ideas de muerte O "
+                "desesperanza total O inutilidad incapacitante.",
                 pares_amplio,
             ),
         ]

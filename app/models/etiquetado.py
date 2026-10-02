@@ -53,6 +53,13 @@ CONFIANZAS = ("alta", "media", "baja")
 # 8: la taxonomía de 8 se retiró en el commit 6850641. Pedirle al psicólogo
 # etiquetas que el modelo no emite haría la comparación imposible.
 CATEGORIAS = ("depresion", "ansiedad", "adaptativo", "neutral")
+# Subescalas del DASS-21. El SVM de hoy NO distingue entre ellas (su target
+# es binario: alguna subescala en Moderado o peor). Se le pregunta al
+# psicólogo igual porque es juicio clínico natural viendo las 21 respuestas,
+# valida el desglose por subescala que ya muestra el panel, y queda como
+# objetivo de entrenamiento si algún día el SVM pasa a tener 3 salidas.
+PREDOMINANTES = ("depresion", "ansiedad", "estres", "ninguno")
+
 ESTRATOS = (
     "clinica_alta",
     "clinica_media",
@@ -212,6 +219,9 @@ class EtiquetaCaso(Base):
     confianza = Column(String(8), nullable=False, default="alta")
     comentario = Column(Text, nullable=True)
     segundos = Column(Integer, nullable=True)
+    # Qué predomina clínicamente. Opcional y no comparable con el SVM actual
+    # —que es binario— pero sí con el desglose por subescala del DASS-21.
+    predominante = Column(String(12), nullable=True)
 
     # ── Congelado al momento de etiquetar ──────────────────────────────
     modelo_riesgo = Column(String(16), nullable=True)

@@ -152,6 +152,10 @@ class EtiquetaCasoIn(BaseModel):
     riesgo_clinico: str             # SIN_RIESGO|BAJO|MEDIO|ALTO|CRITICO
     requiere_derivacion: bool = False
     ideacion_presente: bool | None = None
+    # depresion|ansiedad|estres|ninguno. Opcional: el SVM de hoy es binario y
+    # no distingue, así que esto no se compara contra él — valida el desglose
+    # por subescala del DASS-21 y queda como objetivo de un SVM de 3 salidas.
+    predominante: str | None = None
     confianza: str = "alta"
     comentario: str | None = None
     segundos: int | None = None
@@ -171,6 +175,7 @@ async def guardar_caso(
             riesgo_clinico=payload.riesgo_clinico,
             requiere_derivacion=payload.requiere_derivacion,
             ideacion_presente=payload.ideacion_presente,
+            predominante=payload.predominante,
             confianza=payload.confianza,
             comentario=payload.comentario,
             segundos=payload.segundos,
