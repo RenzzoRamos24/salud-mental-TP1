@@ -25,7 +25,12 @@ reports/
 *.sqlite3
 
 # ─── Frontend ───
-project/node_modules/
+# Sin barra final a propósito. Con `project/node_modules/` git ignora solo el
+# DIRECTORIO, así que un symlink con ese nombre no quedaba cubierto: se
+# commiteó uno apuntando a sí mismo y al mergear reemplazó la carpeta real por
+# un enlace circular, dejando el frontend sin poder compilar.
+project/node_modules
+node_modules/
 project/dist/
 project/.vite/
 
