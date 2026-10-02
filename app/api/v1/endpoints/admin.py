@@ -157,6 +157,16 @@ class ReasignacionMasivaIn(BaseModel):
 
 class ReevaluarIn(BaseModel):
     filtro_plantilla_nombre: str = "%Pack C%"  # plantillas a re-evaluar
+    # Paginado. Re-evaluar implica correr BETO sobre cada frase, y en CPU eso
+    # son segundos por frase: 104 aplicaciones × 10 frases no entran en una
+    # sola petición HTTP, y encima bloquearían la app entera (gunicorn corre
+    # con workers=1 porque BETO es un singleton de 1.5 GB en memoria). Se
+    # avanza por tandas.
+    limite: int = 10
+    desde_id: int = 0
+    # Por defecto no rehace lo que ya tiene frases analizadas, así una tanda
+    # interrumpida se puede reintentar sin repetir trabajo.
+    solo_sin_frases: bool = False
 
 
 @router.post("/piloto/re-evaluar-beto")
@@ -165,21 +175,54 @@ async def re_evaluar_beto(
     db: Session = Depends(get_db),
     _admin=Depends(require_role("admin")),
 ):
-    """Re-evalúa aplicaciones ya cerradas con el modelo BETO actualizado.
-    Reescribe `resultado_json`, `riesgo_global` y `crisis_activada`.
+    """
+    Re-evalúa aplicaciones ya cerradas, por tandas.
+
+    Reescribe `resultado_json`, `riesgo_global` y `crisis_activada`. Hace
+    falta cuando cambia el clasificador, los umbrales, o cuando la evaluación
+    original salió incompleta — por ejemplo las aplicaciones de la re-encuesta,
+    que quedaron con `frases: []` porque el evaluador buscaba las frases por
+    área mientras la plantilla las define por número.
+
+    Devuelve `siguiente_desde_id` para encadenar la tanda siguiente, y
+    `quedan` para saber cuánto falta. Con `solo_sin_frases=true` procesa
+    únicamente las que no tienen análisis de frases.
     """
     from app.models.bank import AplicacionCuestionario, PlantillaCuestionario
     from app.services.evaluator_service import EvaluatorService
     import json as _json
 
-    apps = (
+    q = (
         db.query(AplicacionCuestionario)
         .join(PlantillaCuestionario)
-        .filter(PlantillaCuestionario.nombre.like(payload.filtro_plantilla_nombre))
-        .all()
+        .filter(
+            PlantillaCuestionario.nombre.like(payload.filtro_plantilla_nombre),
+            AplicacionCuestionario.id > payload.desde_id,
+            AplicacionCuestionario.completada_at.isnot(None),
+        )
+        .order_by(AplicacionCuestionario.id)
     )
-    ok, errores = 0, 0
-    for a in apps:
+    pendientes = q.all()
+
+    if payload.solo_sin_frases:
+        # Las que ya tienen frases analizadas se saltean: permite reintentar
+        # una tanda cortada sin volver a pagar el costo de BETO.
+        filtradas = []
+        for a in pendientes:
+            try:
+                if (_json.loads(a.resultado_json or "{}").get("frases") or []):
+                    continue
+            except (ValueError, TypeError):
+                pass
+            filtradas.append(a)
+        pendientes = filtradas
+
+    total_pendientes = len(pendientes)
+    tanda = pendientes[: max(1, payload.limite)]
+
+    ok, errores, frases_analizadas = 0, 0, 0
+    ultimo_id = payload.desde_id
+    for a in tanda:
         try:
             res = EvaluatorService.evaluar(db, a)
             a.resultado_json = _json.dumps(res, ensure_ascii=False)
@@ -187,12 +230,26 @@ async def re_evaluar_beto(
             a.crisis_activada = bool(res.get("crisis_activada"))
             db.commit()
             ok += 1
+            frases_analizadas += len(res.get("frases") or [])
+            ultimo_id = a.id
         except Exception as e:
             db.rollback()
             errores += 1
+            ultimo_id = a.id
             logger.warning(f"Re-eval error app_id={a.id}: {e}")
-    return {"aplicaciones_encontradas": len(apps),
-            "reevaluadas_ok": ok, "errores": errores}
+
+    quedan = max(0, total_pendientes - len(tanda))
+    return {
+        "pendientes_al_empezar": total_pendientes,
+        "procesadas_en_esta_tanda": len(tanda),
+        "reevaluadas_ok": ok,
+        "errores": errores,
+        "frases_analizadas": frases_analizadas,
+        "quedan": quedan,
+        # Para encadenar la siguiente tanda sin repetir.
+        "siguiente_desde_id": ultimo_id,
+        "listo": quedan == 0,
+    }
 
 
 @router.post("/piloto/reasignar-a-psicologo")

@@ -319,14 +319,45 @@ class EvaluatorService:
     def _evaluar_frases(db, bloque, resp_por_origen):
         from app.services.nlp_service import NLPService
 
-        areas = (bloque.frases_areas or "").split(",")
-        areas = [a.strip() for a in areas if a.strip()]
+        # MISMA lógica de selección que CuestionarioService.render_preguntas:
+        # `frases_numeros` tiene prioridad y `frases_areas` es el fallback.
+        #
+        # Esto estaba desalineado y rompió la evaluación en producción. La
+        # plantilla de la re-encuesta usa `frases_numeros` con `frases_areas`
+        # en NULL (commit 31885bb), así que el alumno veía y respondía sus 10
+        # frases, pero acá se consultaba `area.in_([])` — ninguna fila — y el
+        # resultado salía con `frases: []`. BETO nunca corrió sobre esa
+        # cohorte y nadie se enteró, porque una lista vacía no es un error.
+        #
+        # Si se vuelve a tocar el criterio de selección, hay que cambiarlo en
+        # los dos lugares o esto se repite.
+        numeros = [
+            n.strip() for n in (bloque.frases_numeros or "").split(",") if n.strip()
+        ]
+        if numeros:
+            try:
+                filtro = BankFraseIncompleta.numero.in_([int(n) for n in numeros])
+            except ValueError:
+                logger.warning(
+                    "frases_numeros ilegible en el bloque %s: %r",
+                    getattr(bloque, "id", "?"), bloque.frases_numeros,
+                )
+                return [], False
+        else:
+            areas = [
+                a.strip() for a in (bloque.frases_areas or "").split(",") if a.strip()
+            ]
+            if not areas:
+                logger.warning(
+                    "Bloque de frases %s sin `frases_numeros` ni `frases_areas`: "
+                    "no hay nada que evaluar.", getattr(bloque, "id", "?"),
+                )
+                return [], False
+            filtro = BankFraseIncompleta.area.in_(areas)
+
         rows = (
             db.query(BankFraseIncompleta)
-            .filter(
-                BankFraseIncompleta.area.in_(areas),
-                BankFraseIncompleta.activo == 1,
-            )
+            .filter(filtro, BankFraseIncompleta.activo == 1)
             .order_by(BankFraseIncompleta.numero)
             .all()
         )
