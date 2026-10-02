@@ -15,6 +15,29 @@ const esAdmin = computed(() => authStore.state.user?.role === "admin");
 const generando = ref(false);
 const avisoMuestra = ref("");
 
+// Corte de cohorte. La base de produccion acumula el piloto viejo y las
+// aplicaciones nuevas; sin corte se etiquetarian las dos juntas.
+const corteDesde = ref("");
+const guardandoCorte = ref(false);
+const avisoCorte = ref("");
+
+async function guardarCorte() {
+  guardandoCorte.value = true;
+  avisoCorte.value = "";
+  try {
+    const r = await api.etiquetadoFijarCorte(corteDesde.value || null);
+    avisoCorte.value = r.desde
+      ? `Se etiquetan solo las evaluaciones desde ${r.desde}: ` +
+        `${r.frases_en_corpus} frases de ${r.aplicaciones_con_frases} cuestionarios.`
+      : `Sin corte: entra todo el histórico (${r.frases_en_corpus} frases).`;
+    await cargar();
+  } catch (e) {
+    error.value = e?.response?.data?.detail || "No se pudo fijar el corte.";
+  } finally {
+    guardandoCorte.value = false;
+  }
+}
+
 async function cargar() {
   cargando.value = true;
   error.value = "";
@@ -25,6 +48,7 @@ async function cargar() {
     ]);
     datos.value = m;
     progreso.value = p;
+    corteDesde.value = p.corte_desde || "";
   } catch (e) {
     error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
@@ -121,6 +145,60 @@ function colorMeta(valor, meta) {
             {{ progreso.frases.ideacion_marcadas }} frases con ideación
           </p>
         </div>
+      </div>
+
+      <!-- Corte de cohorte -->
+      <div class="card p-5 mb-5">
+        <p class="font-semibold text-green-900 mb-1">
+          Qué cohorte se etiqueta
+        </p>
+        <p class="text-sm text-ink-500 mb-3">
+          La base acumula aplicaciones de distintas fechas. Con un corte, las
+          psicólogas solo ven las evaluaciones cerradas desde ese día — así el
+          etiquetado mide una sola cohorte y no promedia dos aplicaciones
+          distintas. Conviene fijarlo <strong>antes</strong> de generar la
+          muestra.
+        </p>
+        <div class="flex flex-wrap items-end gap-3">
+          <div>
+            <label class="text-xs text-ink-500">Etiquetar solo desde</label>
+            <input
+              v-model="corteDesde"
+              type="date"
+              class="input"
+              :disabled="!esAdmin"
+            />
+          </div>
+          <button
+            v-if="esAdmin"
+            class="btn-mint btn-sm"
+            :disabled="guardandoCorte"
+            @click="guardarCorte"
+          >
+            {{ guardandoCorte ? "Guardando…" : "Aplicar" }}
+          </button>
+          <button
+            v-if="esAdmin && corteDesde"
+            class="btn-ghost btn-sm"
+            :disabled="guardandoCorte"
+            @click="corteDesde = ''; guardarCorte()"
+          >
+            Quitar el corte
+          </button>
+        </div>
+        <p v-if="avisoCorte" class="text-xs text-green-700 mt-2">
+          {{ avisoCorte }}
+        </p>
+        <p v-else-if="progreso?.corte_desde" class="text-xs text-ink-500 mt-2">
+          Vigente: solo evaluaciones desde
+          <strong>{{ progreso.corte_desde }}</strong>.
+        </p>
+        <p v-else class="text-xs text-amber-700 mt-2">
+          Sin corte: se etiquetaría todo el histórico, cohortes mezcladas.
+        </p>
+        <p v-if="!esAdmin" class="text-[11px] text-ink-400 mt-1">
+          Lo fija un administrador.
+        </p>
       </div>
 
       <!-- Sin muestra todavía -->

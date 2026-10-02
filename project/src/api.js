@@ -283,6 +283,14 @@ export const api = {
     const { data } = await client.get("/etiquetado/progreso");
     return data;
   },
+  async etiquetadoVerCorte() {
+    const { data } = await client.get("/etiquetado/corte");
+    return data;
+  },
+  async etiquetadoFijarCorte(desde) {
+    const { data } = await client.post("/etiquetado/corte", { desde });
+    return data;
+  },
   async etiquetadoGenerarMuestra({ n = 100, semilla = 20260910, reemplazar = false } = {}) {
     const { data } = await client.post("/etiquetado/muestra/generar", {
       n, semilla, reemplazar,

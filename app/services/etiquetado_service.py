@@ -84,6 +84,57 @@ def _norm(t: str) -> str:
     return unicodedata.normalize("NFKC", t or "").strip().lower()
 
 
+# Clave en `configuraciones`. El corte vive en la BD y no en el código porque
+# la base de producción acumula cohortes: el piloto de julio (cargado como
+# alumnos ficticios) y las aplicaciones reales en el aula. Etiquetar las dos
+# juntas mezclaría dos instrumentos y dos momentos en una sola métrica.
+CLAVE_CORTE = "etiquetado_desde"
+
+
+def corte_desde(db: Session) -> str | None:
+    """Fecha (YYYY-MM-DD) desde la cual se etiqueta, o None para todo."""
+    from app.models.configuracion import Configuracion
+    row = (
+        db.query(Configuracion)
+        .filter(Configuracion.clave == CLAVE_CORTE)
+        .first()
+    )
+    if not row:
+        return None
+    try:
+        valor = json.loads(row.valor)
+    except (ValueError, TypeError):
+        return None
+    return valor or None
+
+
+def fijar_corte(db: Session, desde: str | None) -> str | None:
+    """Fija (o borra, con None) el corte de fecha del etiquetado."""
+    from app.models.configuracion import Configuracion
+
+    if desde:
+        try:
+            datetime.strptime(desde, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(
+                f"Fecha inválida '{desde}'. El formato es YYYY-MM-DD."
+            )
+    row = (
+        db.query(Configuracion)
+        .filter(Configuracion.clave == CLAVE_CORTE)
+        .first()
+    )
+    if row:
+        row.valor = json.dumps(desde, ensure_ascii=False)
+        row.updated_at = datetime.utcnow()
+    else:
+        db.add(Configuracion(
+            clave=CLAVE_CORTE, valor=json.dumps(desde, ensure_ascii=False)
+        ))
+    db.commit()
+    return desde
+
+
 def _svm_instalado() -> bool:
     """¿Existe el .joblib en este servidor? En Azure no: el paquete de deploy
     (ver DEPLOY.md) no incluye `models/`."""
@@ -113,12 +164,16 @@ class EtiquetadoService:
         pueden comparar contra la regla de crisis actual. Para incluirlas hay
         que re-evaluarlas con `POST /admin/piloto/re-evaluar-beto`.
         """
-        filas = (
-            db.query(AplicacionCuestionario.id, AplicacionCuestionario.resultado_json)
-            .filter(AplicacionCuestionario.resultado_json.isnot(None))
-            .order_by(AplicacionCuestionario.id)
-            .all()
-        )
+        q = db.query(
+            AplicacionCuestionario.id, AplicacionCuestionario.resultado_json
+        ).filter(AplicacionCuestionario.resultado_json.isnot(None))
+        desde = corte_desde(db)
+        if desde:
+            q = q.filter(
+                AplicacionCuestionario.completada_at
+                >= datetime.strptime(desde, "%Y-%m-%d")
+            )
+        filas = q.order_by(AplicacionCuestionario.id).all()
         out = []
         descartadas_modelo_viejo = 0
         for apl_id, rj in filas:
@@ -219,9 +274,15 @@ class EtiquetadoService:
 
         frases = EtiquetadoService.corpus_frases(db)
         if not frases:
+            desde = corte_desde(db)
+            extra = (
+                f" El corte de fecha vigente es {desde}: puede que ninguna "
+                "aplicación de esa cohorte tenga frases respondidas."
+                if desde else ""
+            )
             raise ValueError(
                 "No hay frases con scores del modelo vigente. Corré primero "
-                "las aplicaciones con frases, o re-evaluá con BETO."
+                "las aplicaciones con frases, o re-evaluá con BETO." + extra
             )
 
         estratos = EtiquetadoService._estratificar(frases)
@@ -277,6 +338,7 @@ class EtiquetadoService:
             "n": len(muestra),
             "n_corpus": len(frases),
             "semilla": semilla,
+            "corte_desde": corte_desde(db),
             "estratos": resumen,
         }
 
@@ -473,12 +535,16 @@ class EtiquetadoService:
             .filter(EtiquetaCaso.evaluador_id == evaluador_id).all()
         }
 
-        candidatas = (
-            db.query(AplicacionCuestionario)
-            .filter(AplicacionCuestionario.resultado_json.isnot(None))
-            .order_by(AplicacionCuestionario.id)
-            .all()
+        q = db.query(AplicacionCuestionario).filter(
+            AplicacionCuestionario.resultado_json.isnot(None)
         )
+        desde = corte_desde(db)
+        if desde:
+            q = q.filter(
+                AplicacionCuestionario.completada_at
+                >= datetime.strptime(desde, "%Y-%m-%d")
+            )
+        candidatas = q.order_by(AplicacionCuestionario.id).all()
 
         pendientes = []
         for a in candidatas:
@@ -657,11 +723,16 @@ class EtiquetadoService:
         )
         mis_muestra = [e for e in mis_frases if e.es_muestra_metrica]
 
-        n_casos_total = (
-            db.query(AplicacionCuestionario)
-            .filter(AplicacionCuestionario.resultado_json.isnot(None))
-            .count()
+        desde = corte_desde(db)
+        q_casos = db.query(AplicacionCuestionario).filter(
+            AplicacionCuestionario.resultado_json.isnot(None)
         )
+        if desde:
+            q_casos = q_casos.filter(
+                AplicacionCuestionario.completada_at
+                >= datetime.strptime(desde, "%Y-%m-%d")
+            )
+        n_casos_total = q_casos.count()
         mis_casos = (
             db.query(EtiquetaCaso)
             .filter(EtiquetaCaso.evaluador_id == evaluador_id)
@@ -681,6 +752,8 @@ class EtiquetadoService:
             # está en el servidor. En producción no se cumple ninguna de las
             # dos, así que el filtro "solo con SVM" dejaría la cola vacía.
             "svm_instalado": _svm_instalado(),
+            # Qué cohorte se está etiquetando. Si es None, entra todo.
+            "corte_desde": desde,
             "evaluadores_activos": (
                 db.query(func.count(func.distinct(EtiquetaFrase.evaluador_id))).scalar()
                 or 0

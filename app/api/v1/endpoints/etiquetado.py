@@ -42,6 +42,56 @@ async def progreso(
     return EtiquetadoService.progreso(db, current_user.id)
 
 
+class CorteIn(BaseModel):
+    # None borra el corte y vuelve a entrar todo el histórico.
+    desde: str | None = None
+
+
+@router.get("/corte")
+async def ver_corte(
+    _psi=Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Desde qué fecha se etiqueta hoy."""
+    from app.services.etiquetado_service import corte_desde
+    return {"desde": corte_desde(db)}
+
+
+@router.post("/corte")
+async def fijar_corte_fecha(
+    payload: CorteIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """
+    Limita el etiquetado a las aplicaciones cerradas desde esta fecha.
+
+    Hace falta porque la base de producción acumula cohortes: el piloto de
+    julio cargado como alumnos ficticios (DASS-21, frases SSCT) conviviendo
+    con las aplicaciones reales en el aula (PHQ-A + GAD-7 + 10 frases).
+    Etiquetar las dos juntas mezclaría dos instrumentos y dos momentos en una
+    sola métrica, y el número no querría decir nada.
+
+    Conviene fijarlo ANTES de generar la muestra: el muestreo se sortea sobre
+    el corpus que el corte deja visible.
+    """
+    from app.services.etiquetado_service import fijar_corte, EtiquetadoService
+
+    try:
+        desde = fijar_corte(db, payload.desde)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+    # Devuelvo el tamaño del corpus resultante para que se vea el efecto
+    # antes de sortear la muestra.
+    frases = EtiquetadoService.corpus_frases(db)
+    return {
+        "desde": desde,
+        "frases_en_corpus": len(frases),
+        "aplicaciones_con_frases": len({f["aplicacion_id"] for f in frases}),
+    }
+
+
 class GenerarMuestraIn(BaseModel):
     n: int = Field(100, ge=10, le=600)
     semilla: int = 20260910
