@@ -228,10 +228,16 @@ function colorMeta(valor, meta) {
         </p>
       </div>
 
-      <label class="flex items-center gap-2 text-xs text-ink-600 mb-4">
+      <label v-if="esAdmin" class="flex items-center gap-2 text-xs text-ink-600 mb-4">
         <input v-model="soloMias" type="checkbox" @change="cargar" />
         Solo mis etiquetas
       </label>
+      <div v-else class="banner-info mb-4 text-sm">
+        Estás viendo <strong>solo tus propias etiquetas</strong>. Lo que puso
+        la otra evaluadora no se muestra acá, ni caso por caso ni agregado: si
+        pudieras leer su criterio antes de terminar, el acuerdo entre ustedes
+        dejaría de medir acuerdo. La vista completa la tiene el administrador.
+      </div>
 
       <!-- ── BETO ───────────────────────────────────────────────── -->
       <section class="mb-8">
@@ -561,7 +567,7 @@ function colorMeta(valor, meta) {
 
           <!-- Adjudicación -->
           <div
-            v-if="casos.adjudicacion_discrepancias.n_discrepancias_etiquetadas"
+            v-if="casos.adjudicacion_discrepancias?.n_discrepancias_etiquetadas"
             class="card p-5"
           >
             <p class="font-semibold text-green-900">
@@ -622,7 +628,10 @@ function colorMeta(valor, meta) {
         <h2 class="text-lg font-semibold text-green-900 mb-1">
           Acuerdo entre evaluadores
         </h2>
-        <div class="card p-5 text-sm">
+        <div v-if="inter.visible === false" class="card p-5 text-sm text-ink-500">
+          {{ inter.nota }}
+        </div>
+        <div v-else class="card p-5 text-sm">
           <p class="text-ink-600 mb-2">
             {{ inter.n_evaluadores }} evaluador(es).
             {{ inter.frases_solapadas }} frases y

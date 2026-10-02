@@ -200,16 +200,46 @@ def matriz_nxn(pares: list[tuple[str, str]], categorias: list[str]) -> dict:
 class MetricasEtiquetadoService:
 
     @staticmethod
-    def metricas(db: Session, evaluador_id: str | None = None) -> dict:
+    def metricas(
+        db: Session,
+        evaluador_id: str | None = None,
+        incluir_cruzado: bool = True,
+    ) -> dict:
         """
         Reporte completo. Con `evaluador_id` se restringe a un etiquetador;
         sin él se usan todas las etiquetas (y si hay más de uno, la primera
         por frase, para no contar dos veces).
+
+        `incluir_cruzado=False` quita todo lo que exponga el juicio de OTRA
+        persona: el acuerdo inter-evaluador y la adjudicación de
+        discrepancias, que lista el riesgo y el comentario textual por caso.
+        Se usa para los evaluadores: si una psicóloga pudiera leer lo que
+        puso la otra antes de terminar, su criterio dejaría de ser
+        independiente y el κ entre ellas no mediría nada. El filtro vive acá
+        y no en el endpoint para que no se pueda olvidar.
         """
+        casos = MetricasEtiquetadoService._casos(db, evaluador_id)
+        if not incluir_cruzado:
+            casos.pop("adjudicacion_discrepancias", None)
+
         return {
             "frases_beto": MetricasEtiquetadoService._frases(db, evaluador_id),
-            "casos_reglas_svm": MetricasEtiquetadoService._casos(db, evaluador_id),
-            "inter_evaluador": MetricasEtiquetadoService._inter_evaluador(db),
+            "casos_reglas_svm": casos,
+            "inter_evaluador": (
+                MetricasEtiquetadoService._inter_evaluador(db)
+                if incluir_cruzado else
+                {
+                    "visible": False,
+                    "nota": (
+                        "El acuerdo entre evaluadores solo lo ve un "
+                        "administrador: incluye el juicio de la otra persona, "
+                        "y verlo antes de terminar contaminaría tu criterio."
+                    ),
+                }
+            ),
+            "alcance": (
+                "todas las etiquetas" if incluir_cruzado else "solo tus etiquetas"
+            ),
             "nota_metodologica": (
                 "La muestra es estratificada: el recall se lee tal cual, pero "
                 "prevalencia y precisión sobre la muestra están infladas a "

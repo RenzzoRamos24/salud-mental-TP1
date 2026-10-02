@@ -294,7 +294,8 @@ async def marcar_urgente(
 @router.get("/metricas")
 async def metricas(
     solo_mias: bool = Query(
-        False, description="Restringir a las etiquetas de este evaluador"
+        False,
+        description="Ignorado para rol psicologo, que siempre ve solo lo suyo",
     ),
     current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
@@ -302,12 +303,20 @@ async def metricas(
     """
     Cuánto se equivocó el modelo, contra las etiquetas humanas.
 
+    Un evaluador ve **solo sus propias** etiquetas, sin importar qué pida: el
+    agregado y la adjudicación de discrepancias exponen el juicio y el
+    comentario de la otra persona caso por caso, y leerlos antes de terminar
+    rompería la independencia entre las dos evaluadoras — que es justo lo que
+    el κ inter-evaluador tiene que medir. La vista completa es del admin.
+
     Conviene mirarlo **después** de cerrar el etiquetado. Consultarlo a mitad
-    de camino y seguir etiquetando es tocar el resultado: el criterio deja de
-    ser independiente de lo que uno ya vio que le conviene.
+    de camino y seguir etiquetando es tocar el resultado.
     """
+    es_admin = current_user.role == "admin"
     return MetricasEtiquetadoService.metricas(
-        db, evaluador_id=current_user.id if solo_mias else None
+        db,
+        evaluador_id=None if (es_admin and not solo_mias) else current_user.id,
+        incluir_cruzado=es_admin,
     )
 
 
