@@ -12,7 +12,11 @@ const cargando = ref(true);
 const guardando = ref(false);
 const error = ref("");
 const terminado = ref(false);
-const soloConSvm = ref(true);
+// Arranca APAGADO. El SVM solo opina si la plantilla trae DASS-21 y el
+// .joblib está en el servidor; en producción no se cumple ninguna de las dos,
+// así que con el filtro encendido la cola saldría vacía y parecería un bug.
+const soloConSvm = ref(false);
+const svmInstalado = ref(null);
 
 const riesgo = ref(null);
 const derivacion = ref(null); // true | false — obligatorio
@@ -80,6 +84,13 @@ async function cargar() {
   error.value = "";
   terminado.value = false;
   try {
+    if (svmInstalado.value === null) {
+      try {
+        svmInstalado.value = (await api.etiquetadoProgreso()).svm_instalado;
+      } catch {
+        svmInstalado.value = false;
+      }
+    }
     const c = await api.etiquetadoSiguienteCaso({ soloConSvm: soloConSvm.value });
     if (c === null) {
       terminado.value = true;
@@ -155,12 +166,25 @@ const pct = computed(() => {
         Las respuestas tal como las marcó el alumno. Sin puntajes, sin
         severidades, sin lo que calculó el sistema.
       </p>
+      <p v-if="svmInstalado === false" class="text-xs text-ink-400 mt-1">
+        En esta instalación tu juicio valida los cortes de PHQ-A y GAD-7, la
+        bandera de crisis y el riesgo compuesto. El SVM no corre acá.
+      </p>
     </header>
 
     <div class="card p-3 mb-4 flex items-center justify-between flex-wrap gap-2">
       <label class="flex items-center gap-2 text-xs text-ink-600">
-        <input v-model="soloConSvm" type="checkbox" @change="cargar" />
-        Solo casos con DASS-21 (los únicos donde el SVM opina)
+        <input
+          v-model="soloConSvm"
+          type="checkbox"
+          :disabled="svmInstalado === false"
+          @change="cargar"
+        />
+        Solo casos con DASS-21
+        <span v-if="svmInstalado === false" class="text-ink-400">
+          — el SVM no está instalado en este servidor, así que no hay ninguno
+        </span>
+        <span v-else class="text-ink-400">(los únicos donde el SVM opina)</span>
       </label>
       <p v-if="caso" class="text-xs text-ink-500">
         {{ caso.progreso.hechas }} de {{ caso.progreso.total }}

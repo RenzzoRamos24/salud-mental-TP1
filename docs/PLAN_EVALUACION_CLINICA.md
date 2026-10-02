@@ -14,7 +14,7 @@ Todos los números de este documento salen de la base del piloto
 
 ---
 
-## 1. Antes del diseño: tres cosas que encontré y que lo condicionan
+## 1. Antes del diseño: cuatro cosas que encontré y que lo condicionan
 
 ### 1.1 La validación actual del SVM es circular
 
@@ -64,7 +64,79 @@ regla `ideación ≥ 0.40`. Eso ya no existe. Consecuencias concretas:
 - **(c)** Dejar la discrepancia. No lo recomiendo: es la primera cosa que
   encuentra quien compare el código con el documento.
 
-### 1.3 Los packs del piloto son disjuntos
+### 1.3 El SVM no está en producción — y no es solo que no se use
+
+Verificado el 2026-10-02 sobre la instalación de Azure
+(`sami-app-9921877`). **El SVM no puede opinar en producción, por dos razones
+independientes:**
+
+**1. El `.joblib` no se despliega.** El paquete de deploy (`DEPLOY.md:57`)
+incluye exactamente:
+
+```python
+INCLUDES = ['app', 'project/dist', 'scripts/seed_admin.py',
+            'scripts/bootstrap_postgres.py', 'startup.sh', 'requirements.txt']
+```
+
+`models/` no está en esa lista, y `startup.sh` no lo descarga ni lo restaura
+(cero menciones). Entonces `models/svm_dass21.joblib` no existe en el
+servidor, y `SVMService._cargar()` entra por esta rama:
+
+```python
+if not cls._ruta.exists():
+    logger.warning("SVM no disponible: falta %s. El sistema sigue "
+                   "funcionando con reglas + BETO.", cls._ruta)
+    return None
+```
+
+Degrada en silencio. No hay error visible: simplemente
+`svm_segunda_opinion` sale `null` en **todas** las aplicaciones, incluso en
+una que traiga DASS-21 completo.
+
+**2. El cuestionario de producción no tiene DASS-21.** La plantilla que se
+aplica es `Re-encuesta colegio · PHQ-A + GAD-7 + frases`: 9 + 7 ítems y 10
+frases. El instrumento DASS-21 sí queda sembrado en el banco por
+`bootstrap_postgres.py`, así que está disponible para armar una plantilla,
+pero ninguna lo usa.
+
+Consecuencia importante para el piloto ya cargado: las 39 aplicaciones del
+Pack B existen también en Azure, pero **allá no tienen salida del SVM**. Las
+14 discrepancias y el 100 % de §1.1 son resultados de la base local, no del
+sistema en producción.
+
+#### Qué se puede validar en producción, entonces
+
+| Componente | ¿Corre en Azure? | ¿Validable con el etiquetado? |
+|---|---|---|
+| Cortes de PHQ-A y GAD-7 | Sí | **Sí** — pantalla de casos |
+| Bandera de crisis (PHQ-A #9 ≥ 1) | Sí | **Sí** — pantalla de casos |
+| Riesgo compuesto (capa 3) | Sí | **Sí** — pantalla de casos |
+| BETO sobre las frases | Sí | **Sí** — pantalla de frases |
+| SVM | **No** | No hay nada que validar |
+
+#### Las dos salidas, y cuál recomiendo
+
+**(a) Sacar el SVM del relato de producción.** Validar lo que de verdad
+corre: reglas PHQ-A/GAD-7 + BETO. El SVM queda como experimento *offline*
+sobre el Pack B del piloto, declarado explícitamente como no desplegado.
+
+**(b) Ponerlo en producción.** Requiere las dos cosas: agregar `'models'` a
+`INCLUDES` **y** meter DASS-21 en la plantilla. Lo primero son dos minutos;
+lo segundo lleva el cuestionario de 16 a 37 ítems.
+
+**Recomiendo (a)**, y no por comodidad: la guía de las psicólogas pide
+cuestionarios **cortos, de 15 a 20 ítems**. PHQ-A + GAD-7 son 16 — justo en
+el rango. Agregar DASS-21 lo duplicaría y rompería el criterio clínico que
+ellas mismas fijaron. O sea que la restricción que descarta el SVM de
+producción no es técnica, es clínica, y eso es defendible en la tesis: *el
+SVM se entrenó y evaluó sobre DASS-21, instrumento que el equipo clínico
+descartó para la aplicación en aula por extensión.*
+
+Si se elige (a), hay que corregir `docs/defensa_beto.md`, que hoy afirma que
+«el aporte técnico central de Sami como sistema de tamizaje es el SVM».
+En producción el aporte son las reglas con cortes publicados + BETO.
+
+### 1.4 Los packs del piloto son disjuntos
 
 Ningún alumno rindió la batería completa:
 
@@ -131,7 +203,7 @@ uso real" — pero no es la validación.
 
 ---
 
-## 4. Pista A — evaluación a nivel de caso (valida reglas + SVM)
+## 4. Pista A — evaluación a nivel de caso (valida reglas, y el SVM solo en local)
 
 ### 4.1 Qué ve el psicólogo
 

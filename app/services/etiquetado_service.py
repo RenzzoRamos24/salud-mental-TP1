@@ -84,6 +84,13 @@ def _norm(t: str) -> str:
     return unicodedata.normalize("NFKC", t or "").strip().lower()
 
 
+def _svm_instalado() -> bool:
+    """¿Existe el .joblib en este servidor? En Azure no: el paquete de deploy
+    (ver DEPLOY.md) no incluye `models/`."""
+    from app.services.svm_service import SVMService
+    return SVMService.disponible()
+
+
 def _codigo_estable(aplicacion_id: int, numero: int) -> str:
     """Código opaco y determinista para frases fuera de la muestra."""
     h = hashlib.md5(f"{aplicacion_id}:{numero}".encode()).hexdigest()
@@ -670,6 +677,10 @@ class EtiquetadoService:
                 "ideacion_marcadas": sum(1 for e in mis_frases if e.ideacion_presente),
             },
             "casos": {"hechas": mis_casos, "total": n_casos_total},
+            # El SVM solo opina si la plantilla trae DASS-21 **y** el .joblib
+            # está en el servidor. En producción no se cumple ninguna de las
+            # dos, así que el filtro "solo con SVM" dejaría la cola vacía.
+            "svm_instalado": _svm_instalado(),
             "evaluadores_activos": (
                 db.query(func.count(func.distinct(EtiquetaFrase.evaluador_id))).scalar()
                 or 0

@@ -440,7 +440,18 @@ function colorMeta(valor, meta) {
               SVM contra el juicio clínico
               <span class="text-xs font-normal text-ink-500">(n = {{ casos.svm.n }})</span>
             </p>
-            <p v-if="!casos.svm.listo" class="text-sm text-ink-500 mt-2">
+            <p
+              v-if="!casos.svm.listo && casos.svm.instalado === false"
+              class="text-sm text-ink-600 mt-2"
+            >
+              <strong>El SVM no está instalado en este servidor.</strong>
+              El paquete de deploy no incluye <code>models/</code>, así que el
+              archivo <code>svm_dass21.joblib</code> no está acá y el
+              clasificador nunca opinó — en ninguna aplicación, ni siquiera en
+              una con DASS-21. No hay nada que validar de él en esta
+              instalación.
+            </p>
+            <p v-else-if="!casos.svm.listo" class="text-sm text-ink-500 mt-2">
               Todavía no hay casos con DASS-21 etiquetados — son los únicos
               donde el SVM opina.
             </p>

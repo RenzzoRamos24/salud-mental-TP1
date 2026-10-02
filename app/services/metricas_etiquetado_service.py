@@ -476,8 +476,15 @@ class MetricasEtiquetadoService:
         }
 
         # ── SVM vs. psicólogo ─────────────────────────────────────────
+        # Si el .joblib no está en el servidor, el SVM no opinó nunca y no va
+        # a opinar: conviene decirlo en vez de mostrar "todavía no hay datos",
+        # que sugiere que falta etiquetar. En Azure el paquete de deploy no
+        # incluye `models/`, así que ahí está desinstalado.
+        from app.services.svm_service import SVMService
+        svm_instalado = SVMService.disponible()
+
         con_svm = [e for e in filas if e.modelo_svm_clase]
-        svm = {"n": len(con_svm), "listo": False}
+        svm = {"n": len(con_svm), "listo": False, "instalado": svm_instalado}
         if con_svm:
             pares_svm = [
                 (
@@ -498,6 +505,7 @@ class MetricasEtiquetadoService:
             svm = {
                 "n": len(con_svm),
                 "listo": True,
+                "instalado": svm_instalado,
                 "vs_riesgo_medio_o_peor": bloque_binario(
                     "SVM vs. psicólogo (riesgo ≥ MEDIO)",
                     "Primera validación del SVM contra un patrón que NO sale "
