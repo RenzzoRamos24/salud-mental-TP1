@@ -38,6 +38,7 @@ import sys
 import urllib.error
 import urllib.request
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 API_DEFAULT = "https://sami-app-9921877.azurewebsites.net/api/v1"
 
@@ -89,6 +90,12 @@ def main() -> None:
     ap.add_argument("--admin-password", default=os.environ.get("SAMI_ADMIN_PASSWORD"))
     ap.add_argument("--rapido", action="store_true",
                     help="solo el dashboard, sin abrir cada resultado")
+    ap.add_argument("--desde", metavar="YYYY-MM-DD",
+                    help="solo alumnos cuya última evaluación es de esta fecha "
+                         "en adelante. Sirve para aislar la cohorte nueva del "
+                         "piloto viejo, que conviven en la misma base.")
+    ap.add_argument("--hilos", type=int, default=8,
+                    help="peticiones concurrentes (default 8)")
     ap.add_argument("--salida", help="volcar el detalle crudo a este JSON")
     args = ap.parse_args()
 
@@ -130,8 +137,31 @@ def main() -> None:
     # ── Detalle por aplicación ────────────────────────────────────────
     alumnos = pedir(f"{args.api}/psychologist/students", T) or []
     con_eval = [a for a in alumnos if a.get("ultima_evaluacion")]
-    print(f"\nAbriendo los resultados de {len(con_eval)} alumnos con "
-          f"evaluación… (esto tarda un minuto)\n")
+
+    # La base acumula cohortes de distintas fechas. Antes de abrir nada,
+    # muestro cómo se reparten para que quede claro qué se está midiendo.
+    por_mes = Counter(a["ultima_evaluacion"][:7] for a in con_eval)
+    print("\n" + "=" * 62)
+    print("COHORTES PRESENTES EN LA BASE (por mes de la última evaluación)")
+    print("=" * 62)
+    tot_mes = sum(por_mes.values()) or 1
+    for mes, n in sorted(por_mes.items()):
+        print(f"  {mes}  {n:4d} alumnos  {barra(n, tot_mes)}")
+
+    if args.desde:
+        antes = len(con_eval)
+        con_eval = [a for a in con_eval
+                    if a["ultima_evaluacion"][:10] >= args.desde]
+        print(f"\n  Filtro --desde {args.desde}: {len(con_eval)} de {antes} alumnos")
+    else:
+        print("\n  Sin --desde: se mide TODO junto, piloto viejo incluido.")
+
+    if not con_eval:
+        print("\nNingún alumno pasa el filtro. Nada que medir.")
+        return
+
+    print(f"\nAbriendo los resultados de {len(con_eval)} alumnos "
+          f"({args.hilos} en paralelo)…\n")
 
     plantillas = Counter()
     instrumentos = Counter()
@@ -145,67 +175,82 @@ def main() -> None:
     scores_dep = []
     detalle = []
 
-    for i, a in enumerate(con_eval, 1):
-        if i % 20 == 0:
-            print(f"  … {i}/{len(con_eval)}", flush=True)
+    def bajar(a):
+        """Trae las aplicaciones completadas de un alumno. Solo GET."""
         h = pedir(f"{args.api}/psychologist/students/{a['id']}/history", T) or {}
+        salida = []
         for apl in (h.get("aplicaciones") or []):
             if not apl.get("completada_at"):
                 continue
-            res = pedir(f"{args.api}/cuestionarios/aplicacion/{apl['id']}/resultado", T)
-            if not res:
+            if args.desde and apl["completada_at"][:10] < args.desde:
                 continue
-            r = res.get("resultado") or res
-            # `/plantillas` filtra por psicólogo, así que como admin no
-            # devuelve nombres. Agrupo por composición de instrumentos, que es
-            # lo que de verdad describe qué se aplicó y no depende de nombres.
-            pid = r.get("plantilla_id") or apl.get("plantilla_id")
-            codigos_bloques = [b.get("codigo") for b in (r.get("bloques") or [])]
-            if r.get("frases"):
-                codigos_bloques.append("FRASES")
-            nombre_pl = (" + ".join(codigos_bloques) or "(sin bloques)")
-            nombre_pl += f"   [plantilla #{pid}]"
-            plantillas[nombre_pl] += 1
-            riesgos[(r.get("riesgo_global") or "?").upper().replace("Í", "I")] += 1
-            if r.get("crisis_activada"):
-                n_crisis += 1
-            if r.get("svm_segunda_opinion"):
-                n_svm += 1
-            for b in (r.get("bloques") or []):
-                cod = b.get("codigo")
-                instrumentos[cod] += 1
-                if isinstance(b.get("puntaje"), (int, float)):
-                    puntajes[cod].append(b["puntaje"])
-                    if cod == "PHQ-A":
-                        severidades[cod][severidad(b["puntaje"], PHQA_CORTES)] += 1
-                    elif cod == "GAD-7":
-                        severidades[cod][severidad(b["puntaje"], GAD7_CORTES)] += 1
-            fr = r.get("frases") or []
-            frases_total += len(fr)
-            for f in fr:
-                if f.get("crisis"):
-                    frases_crisis += 1
-                dominantes[f.get("dominante")] += 1
-                sc = f.get("scores") or {}
-                if "depresion" in sc:
-                    scores_dep.append(float(sc["depresion"]))
-            detalle.append({
-                "aplicacion_id": apl["id"],
-                "codigo_alumno": a.get("codigo_acceso"),
-                "completada_at": apl["completada_at"],
-                "plantilla": nombre_pl,
-                "riesgo": r.get("riesgo_global"),
-                "crisis": bool(r.get("crisis_activada")),
-                "bloques": [
-                    {"codigo": b.get("codigo"), "puntaje": b.get("puntaje"),
-                     "severidad": b.get("severidad"),
-                     "bandera_crisis": bool(b.get("bandera_crisis"))}
-                    for b in (r.get("bloques") or [])
-                ],
-                "n_frases": len(fr),
-                "n_frases_crisis": sum(1 for f in fr if f.get("crisis")),
-                "svm": r.get("svm_segunda_opinion"),
-            })
+            res = pedir(
+                f"{args.api}/cuestionarios/aplicacion/{apl['id']}/resultado", T)
+            if res:
+                salida.append((a, apl, res))
+        return salida
+
+    hecho = 0
+    with ThreadPoolExecutor(max_workers=max(1, args.hilos)) as pool:
+        lotes = []
+        for lote in pool.map(bajar, con_eval):
+            hecho += 1
+            if hecho % 25 == 0:
+                print(f"  … {hecho}/{len(con_eval)}", flush=True)
+            lotes.extend(lote)
+
+    for a, apl, res in lotes:
+        r = res.get("resultado") or res
+        # `/plantillas` filtra por psicólogo, así que como admin no
+        # devuelve nombres. Agrupo por composición de instrumentos, que es
+        # lo que de verdad describe qué se aplicó y no depende de nombres.
+        pid = r.get("plantilla_id") or apl.get("plantilla_id")
+        codigos_bloques = [b.get("codigo") for b in (r.get("bloques") or [])]
+        if r.get("frases"):
+            codigos_bloques.append("FRASES")
+        nombre_pl = (" + ".join(codigos_bloques) or "(sin bloques)")
+        nombre_pl += f"   [plantilla #{pid}]"
+        plantillas[nombre_pl] += 1
+        riesgos[(r.get("riesgo_global") or "?").upper().replace("Í", "I")] += 1
+        if r.get("crisis_activada"):
+            n_crisis += 1
+        if r.get("svm_segunda_opinion"):
+            n_svm += 1
+        for b in (r.get("bloques") or []):
+            cod = b.get("codigo")
+            instrumentos[cod] += 1
+            if isinstance(b.get("puntaje"), (int, float)):
+                puntajes[cod].append(b["puntaje"])
+                if cod == "PHQ-A":
+                    severidades[cod][severidad(b["puntaje"], PHQA_CORTES)] += 1
+                elif cod == "GAD-7":
+                    severidades[cod][severidad(b["puntaje"], GAD7_CORTES)] += 1
+        fr = r.get("frases") or []
+        frases_total += len(fr)
+        for f in fr:
+            if f.get("crisis"):
+                frases_crisis += 1
+            dominantes[f.get("dominante")] += 1
+            sc = f.get("scores") or {}
+            if "depresion" in sc:
+                scores_dep.append(float(sc["depresion"]))
+        detalle.append({
+            "aplicacion_id": apl["id"],
+            "codigo_alumno": a.get("codigo_acceso"),
+            "completada_at": apl["completada_at"],
+            "plantilla": nombre_pl,
+            "riesgo": r.get("riesgo_global"),
+            "crisis": bool(r.get("crisis_activada")),
+            "bloques": [
+                {"codigo": b.get("codigo"), "puntaje": b.get("puntaje"),
+                 "severidad": b.get("severidad"),
+                 "bandera_crisis": bool(b.get("bandera_crisis"))}
+                for b in (r.get("bloques") or [])
+            ],
+            "n_frases": len(fr),
+            "n_frases_crisis": sum(1 for f in fr if f.get("crisis")),
+            "svm": r.get("svm_segunda_opinion"),
+        })
 
     print("\n" + "=" * 62)
     print("QUÉ SE APLICÓ  (agrupado por composición real del cuestionario)")
