@@ -63,6 +63,15 @@ logger = logging.getLogger(__name__)
 
 SEMILLA_DEFAULT = 20260910
 
+# El orden de las colas se mezcla con esta sal, igual para todos los
+# evaluadores. Mezclado para que la secuencia no insinúe nada (no va por
+# riesgo ni por fecha), pero COMPARTIDO a propósito: si cada evaluador
+# recibiera su propio orden, dos psicólogas que no terminan el corpus
+# completo se solaparían en muy pocos casos y el κ inter-evaluador quedaría
+# calculado sobre un puñado de filas. Con orden común, el solapamiento es
+# siempre igual al mínimo de lo que avanzó cada una.
+SAL_ORDEN = "sami-etiquetado-v1"
+
 CLINICAS = ("depresion", "ansiedad")
 NO_CLINICAS = ("adaptativo", "neutral")
 
@@ -409,9 +418,10 @@ class EtiquetadoService:
         if not resto:
             return None
 
-        # Mezcla determinista: misma semilla por evaluador → mismo orden.
+        # Mezcla determinista y compartida: las dos evaluadoras recorren el
+        # resto del corpus en el mismo orden, así lo que hagan se solapa.
         resto.sort(key=lambda f: hashlib.md5(
-            f"{evaluador_id}:{f['aplicacion_id']}:{f['frase_numero']}".encode()
+            f"{SAL_ORDEN}:{f['aplicacion_id']}:{f['frase_numero']}".encode()
         ).hexdigest())
         f = resto[0]
         total_resto = len(corpus) - len(claves_plan)
@@ -568,10 +578,11 @@ class EtiquetadoService:
         if not pendientes:
             return None
 
-        # Orden determinista por evaluador — no por riesgo ni por fecha, para
-        # que la secuencia no insinúe nada.
+        # Orden determinista y compartido entre evaluadores — mezclado para
+        # que la secuencia no insinúe nada, pero igual para los dos para que
+        # el acuerdo inter-evaluador se pueda calcular desde el primer caso.
         pendientes.sort(key=lambda a: hashlib.md5(
-            f"{evaluador_id}:{a.id}".encode()
+            f"{SAL_ORDEN}:{a.id}".encode()
         ).hexdigest())
         apl = pendientes[0]
 
