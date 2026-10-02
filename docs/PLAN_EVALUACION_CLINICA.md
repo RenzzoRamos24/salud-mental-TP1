@@ -238,37 +238,96 @@ Entonces se reportan las dos cosas, separadas y honestas:
 Esa distinción es defendible y además te protege: cualquier precisión baja en
 la primera queda explicada por la segunda.
 
-### 5.3 Muestreo — acá sí hay una decisión fina
+### 5.3 Muestreo — ya está hecho, no hay que diseñarlo
 
-535 frases con texto; 520 con el modelo vigente. La ideación es **rara**: la
-bandera de crisis se activó en **14 de 520 (2.7 %)**. Un muestreo aleatorio
-simple de 200 frases traería ~5 positivos, y con 5 positivos no se puede
-estimar un recall. Por eso hay que estratificar por el score de `depresion`:
+**Corrección a la primera versión de este documento.** Yo había propuesto un
+muestreo estratificado nuevo (14 marcadas + 46 frontera + 140 al azar). Es
+redundante: el repo **ya tiene el pipeline completo de etiquetado de frases**,
+construido el 2026-09-10 y mejor armado que mi propuesta. No hay que escribir
+nada.
 
-| Estrato | Frases | A etiquetar | Por qué |
+| Pieza | Qué es |
+|---|---|
+| `scripts/muestrear_frases_ideacion.py` | Muestreo estratificado con semilla fija (20260910) sobre las 510 frases del Pack C. **Usa los scores del modelo actual de 4 categorías**, no los viejos. Deduplica frases textualmente idénticas y asigna IDs opacos desordenados para que no se pueda reconstruir qué frases vienen del mismo alumno. |
+| `docs/piloto_colegio/etiquetado_ideacion/frases_para_etiquetar.csv` | **Las 100 frases ya sorteadas, ciegas, esperando etiquetas.** Columnas `id, texto, ideacion_presente, confianza`. Hoy tiene 0 de 100 etiquetadas. |
+| `_clave_muestra.json` | Clave privada: id → frase, estrato, scores de BETO, peso de muestreo. No se entrega. |
+| `INSTRUCCIONES_ETIQUETADO.md` | El criterio clínico ya redactado, con los cuatro supuestos que cuentan como ideación y la instrucción explícita de que tristeza severa sin referencia a morir es `0`. |
+| `scripts/eval_ideacion_recall.py` | Cruza el CSV devuelto con la clave y calcula la matriz de confusión, recall, precisión, especificidad, VPN y F1 — sobre la muestra **y proyectados a las 510 frases** con los pesos del estrato. |
+
+Los 5 estratos y sus pesos (de `_clave_muestra.json`):
+
+| Estrato | N | n muestreado | Peso |
 |---|---|---|---|
-| Marcadas (`dep ≥ 0.55`, domina) | 14 | **14 (censo)** | Mide precisión y tasa de falsos positivos directo, sin ponderar |
-| Frontera (`0.35 ≤ dep < 0.55`) | 46 | **46 (censo)** | Son los *casi*. Los falsos negativos se concentran acá |
-| Resto (`dep < 0.35`) | 460 | **140 al azar** | Acota los falsos negativos lejanos; peso 460/140 = 3.29 |
-| | **520** | **200** | ~1.5 h a 20 s/frase |
+| `clinica_alta` (max(dep,ans) ≥ 0.40) | 71 | 30 | 2.37 |
+| `clinica_media` (0.25–0.40) | 91 | 15 | 6.07 |
+| `benigna_confiada` (no clínica domina ≥ 0.55) | 126 | 20 | 6.30 |
+| `baja_todas` (ningún score llega a 0.40) | 43 | 15 | 2.87 |
+| `aleatoria_simple` | 179 | 20 | 8.95 |
 
-Precisión y FP se leen directo del primer estrato. El recall se estima
-ponderando el tercero:
+Y hace algo que yo no había previsto: con **un solo etiquetado** mide **tres
+configuraciones** del clasificador —
 
+- **(a)** la config del piloto (8 hipótesis, `multi_label=True`, ideación
+  ≥ 0.40), reconstruida ejecutando el `nlp_service.py` del commit `dd4df28`,
+  así que no depende de ninguna transcripción a mano;
+- **(b)** la config vigente (4 hipótesis, softmax, `depresion` domina y
+  ≥ 0.55), desde los scores ya guardados en `resultado_json`;
+- **(b')** la vigente sin la regla de dominancia.
+
+Eso permite decir en la tesis "el clasificador mejoró de X a Y entre la
+aplicación del piloto y la versión final", con los dos números medidos contra
+el mismo ground truth.
+
+### 5.3.1 ⚠ `reports/ideacion_ground_truth.md` hoy contiene números falsos
+
+El reporte existe y parece un resultado: *recall 0.1429, 7 frases con
+ideación*. **No lo es.** El campo `fuente_etiquetas` del JSON apunta a
+`/tmp/.../scratchpad/fake_labels.csv`: fue una prueba de humo para verificar
+que el script corre. Se nota en el detalle — marca como ideación
+*"Lo que más me da miedo es… los insectos"* y *"Lo que define quién soy es…
+mi personalidad"*.
+
+Hay que borrarlo o renombrarlo a `_smoke_test` **antes** de que alguien lo
+cite. Un archivo en `reports/` con una tabla de recall es exactamente lo que
+termina copiado en un capítulo.
+
+### 5.3.2 Asimetría de entrada: BETO no ve el estímulo
+
+`EvaluatorService._evaluar_frases` le pasa a BETO **solo `valor_texto`**, la
+respuesta del alumno. El CSV, en cambio, le muestra a la psicóloga
+`estímulo + respuesta`, que es lo correcto clínicamente: *"morir a manos de
+alguien"* solo se puede juzgar sabiendo que la frase era *"Lo que más me da
+miedo es…"*.
+
+O sea: el humano juzga con más información que el modelo. Eso infla los falsos
+negativos y es parte de la explicación de cualquier recall bajo que salga.
+`eval_ideacion_recall.py` ya trae `--texto-completo` como análisis de
+sensibilidad para la config (a). Dos consecuencias:
+
+1. Reportar las dos variantes y declarar la asimetría.
+2. Es una **mejora concreta y barata del sistema**: pasarle a BETO
+   `f"{estimulo} {respuesta}"` en producción. Si el análisis de sensibilidad
+   muestra que sube el recall, es un hallazgo del trabajo, no una corrección
+   vergonzante.
+
+### 5.3.3 Lo que sí hay que decidir
+
+El tamaño. Con n=100 y prevalencia baja, si la psicóloga encuentra ~5-8
+frases con ideación, el recall se estima sobre 5-8 casos: el número es
+defendible pero con intervalo de confianza **ancho**, y hay que publicarlo
+con el IC, no pelado.
+
+Si querés apretarlo, el error es ampliar `clinica_alta`: los **falsos
+negativos viven en los estratos bajos**, porque ahí es donde el modelo no
+marcó. Lo que conviene es volver a correr el muestreo subiendo las cuotas de
+`baja_todas`, `benigna_confiada` y `aleatoria_simple`:
+
+```bash
+venv/bin/python -m scripts.muestrear_frases_ideacion --n 200 --seed 20260910
 ```
-VP_ponderado = VP_estrato1 + VP_estrato2 + 0 · 3.29
-FN_ponderado = FN_estrato1 + FN_estrato2 + FN_estrato3 · 3.29
-recall       = VP_ponderado / (VP_ponderado + FN_ponderado)
-```
 
-(Un VP en el estrato 3 es imposible por construcción: si `dep < 0.35` la
-bandera no se activó.)
-
-**Alternativa sin estadística que explicar: censo de las 520** (~3 h). Si
-preferís que el capítulo de métricas no tenga ni una ponderación, es el
-camino. Es más trabajo humano y menos trabajo de redacción.
-
-**[decidir]** Estratificado 200 con ponderación, o censo de 520.
+Ojo: eso **regenera** el CSV y la clave. Hay que decidirlo *antes* de que la
+psicóloga empiece, no después.
 
 ### 5.4 Las 15 frases del modelo viejo
 
@@ -458,10 +517,14 @@ Por etapas, cada una utilizable sola:
 2. Decidir §1.2 (4 vs 8 categorías) y actualizar los 3 documentos
    desactualizados. Bloquea a la pista B: sin eso el formulario no se puede
    escribir.
-3. Re-evaluar las 15 frases viejas de la aplicación #1.
+3. Re-evaluar las 15 frases viejas de la aplicación #1, y borrar o
+   renombrar `reports/ideacion_ground_truth.md`, que hoy publica el
+   resultado de una prueba de humo con etiquetas falsas (§5.3.1).
 4. Pista A: tablas, endpoints, pantalla de casos, calibración. Arrancar por
    los 38 del Pack B — es donde está el valor.
-5. Pista B: pantalla de frases con atajos + muestreo estratificado.
+5. Pista B: **no requiere construir nada** — entregarle el CSV que ya
+   existe (§5.3). La pantalla in-app con atajos de teclado es una comodidad
+   posterior, no un prerrequisito.
 6. Servicio de métricas + pantalla + export CSV.
 7. Segundo evaluador, si se consigue.
 
