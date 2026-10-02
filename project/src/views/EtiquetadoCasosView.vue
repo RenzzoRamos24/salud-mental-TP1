@@ -17,6 +17,7 @@ const terminado = ref(false);
 // así que con el filtro encendido la cola saldría vacía y parecería un bug.
 const soloConSvm = ref(false);
 const svmInstalado = ref(null);
+const esPrueba = ref(false);
 
 const riesgo = ref(null);
 const derivacion = ref(null); // true | false — obligatorio
@@ -86,7 +87,9 @@ async function cargar() {
   try {
     if (svmInstalado.value === null) {
       try {
-        svmInstalado.value = (await api.etiquetadoProgreso()).svm_instalado;
+        const p = await api.etiquetadoProgreso();
+        svmInstalado.value = p.svm_instalado;
+        esPrueba.value = !!p.es_cuenta_prueba;
       } catch {
         svmInstalado.value = false;
       }
@@ -171,6 +174,13 @@ const pct = computed(() => {
         bandera de crisis y el riesgo compuesto. El SVM no corre acá.
       </p>
     </header>
+
+      <div v-if="esPrueba" class="banner-warn mb-4 text-sm">
+        <strong>Cuenta de prueba.</strong> Podés recorrer todo el flujo y tus
+        etiquetas se guardan, pero quedan fuera de las métricas — no son
+        juicio clínico. Para la validación real hay que usar un código
+        <code>SAMI-PSI-NN</code>.
+      </div>
 
     <div class="card p-3 mb-4 flex items-center justify-between flex-wrap gap-2">
       <label class="flex items-center gap-2 text-xs text-ink-600">

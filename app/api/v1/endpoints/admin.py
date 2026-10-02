@@ -522,6 +522,10 @@ class CodigoPsicologoIn(BaseModel):
     # quedan visibles para el nuevo código. Si no, el evaluador ve lo suyo.
     hereda_alumnos_de_email: Optional[str] = None
     sufijo: Optional[str] = None  # SAMI-PSI-<sufijo>; si no, numera NN.
+    # Cuenta para ensayar el flujo. Guarda etiquetas igual (así se ve el
+    # recorrido completo) pero quedan fuera de todas las métricas, porque no
+    # son juicio clínico. Se reconocen por el prefijo del código.
+    es_prueba: bool = False
 
 
 @router.post("/psicologo/generar-codigo")
@@ -551,9 +555,27 @@ async def generar_codigo_psicologo(
     if not nombre:
         raise HTTPException(400, "El nombre es obligatorio.")
 
-    if payload.sufijo:
+    from app.services.etiquetado_service import PREFIJO_PRUEBA
+
+    if payload.es_prueba:
+        # Numerado aparte para poder emitir varias sin pisar la primera.
+        codigo = None
+        for i in range(1, 100):
+            tentativo = PREFIJO_PRUEBA if i == 1 else f"{PREFIJO_PRUEBA}-{i:02d}"
+            if not db.query(User).filter_by(codigo_acceso=tentativo).first():
+                codigo = tentativo
+                break
+        if codigo is None:
+            raise HTTPException(409, "Se agotaron los códigos de prueba.")
+    elif payload.sufijo:
         sufijo = payload.sufijo.strip().upper().replace(" ", "")
         codigo = f"SAMI-PSI-{sufijo}"
+        if codigo.startswith(PREFIJO_PRUEBA):
+            raise HTTPException(
+                400,
+                f"El prefijo '{PREFIJO_PRUEBA}' está reservado para cuentas de "
+                "prueba. Usá es_prueba=true en su lugar.",
+            )
         if db.query(User).filter_by(codigo_acceso=codigo).first():
             raise HTTPException(409, f"El código '{codigo}' ya existe.")
     else:
@@ -613,7 +635,13 @@ async def generar_codigo_psicologo(
         "nombre": f"{evaluador.nombre} {evaluador.apellido}",
         "alumnos_heredados": alumnos_heredados,
         "aplicaciones_heredadas": aplicaciones_heredadas,
+        "es_prueba": bool(payload.es_prueba),
         "nota": (
+            "Cuenta de PRUEBA: etiqueta igual que una real y recorre el mismo "
+            "flujo, pero sus etiquetas quedan fuera de todas las métricas. "
+            "Hay que aceptar el acuerdo de confidencialidad en /consent la "
+            "primera vez."
+            if payload.es_prueba else
             "El evaluador debe aceptar el acuerdo de confidencialidad en "
             "/consent la primera vez que entra."
         ),
@@ -640,6 +668,7 @@ async def listar_codigos_psicologo(
             "codigo_acceso": e.codigo_acceso,
             "nombre": f"{e.nombre} {e.apellido}",
             "activo": bool(e.activo),
+            "es_prueba": (e.codigo_acceso or "").startswith("SAMI-PSI-PRUEBA"),
             "alumnos": db.query(User).filter(
                 User.role == "estudiante", User.psicologo_id == e.id
             ).count(),

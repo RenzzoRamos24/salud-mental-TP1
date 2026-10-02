@@ -16,6 +16,7 @@ const cargando = ref(true);
 const guardando = ref(false);
 const error = ref("");
 const terminado = ref(false);
+const esPrueba = ref(false);
 
 const categoria = ref(null);
 const ideacion = ref(null);
@@ -81,6 +82,11 @@ async function cargar() {
   cargando.value = true;
   error.value = "";
   try {
+    try {
+      esPrueba.value = !!(await api.etiquetadoProgreso()).es_cuenta_prueba;
+    } catch {
+      /* si falla, se sigue sin el aviso */
+    }
     const f = await api.etiquetadoSiguienteFrase();
     if (f === null) {
       terminado.value = true;
@@ -170,6 +176,13 @@ const pct = computed(() => {
         Frases <span class="hero-mint">incompletas</span>
       </h1>
     </header>
+
+      <div v-if="esPrueba" class="banner-warn mb-4 text-sm">
+        <strong>Cuenta de prueba.</strong> Podés recorrer todo el flujo y tus
+        etiquetas se guardan, pero quedan fuera de las métricas — no son
+        juicio clínico. Para la validación real hay que usar un código
+        <code>SAMI-PSI-NN</code>.
+      </div>
 
     <div v-if="cargando" class="card p-8 text-center text-ink-500">Cargando…</div>
 

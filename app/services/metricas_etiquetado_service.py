@@ -221,10 +221,17 @@ class MetricasEtiquetadoService:
 
     @staticmethod
     def _frases(db: Session, evaluador_id: str | None) -> dict:
+        from app.services.etiquetado_service import ids_evaluadores_prueba
+
         q = db.query(EtiquetaFrase)
         if evaluador_id:
             q = q.filter(EtiquetaFrase.evaluador_id == evaluador_id)
         todas = q.order_by(EtiquetaFrase.created_at).all()
+        # Las cuentas de prueba etiquetan para ensayar el flujo; sus etiquetas
+        # no son juicio clínico y arruinarían cualquier métrica.
+        prueba = ids_evaluadores_prueba(db)
+        n_prueba = sum(1 for e in todas if e.evaluador_id in prueba)
+        todas = [e for e in todas if e.evaluador_id not in prueba]
 
         # Una etiqueta por frase: si hay dos evaluadores, la primera. El
         # acuerdo entre ellos se reporta aparte, no se promedia acá.
@@ -242,6 +249,7 @@ class MetricasEtiquetadoService:
             return {
                 "n_etiquetadas": len(filas),
                 "n_muestra_metrica": 0,
+                "n_descartadas_prueba": n_prueba,
                 "listo": False,
                 "motivo": (
                     "Todavía no hay etiquetas de la muestra de medición. Las "
@@ -299,6 +307,7 @@ class MetricasEtiquetadoService:
         return {
             "n_etiquetadas": len(filas),
             "n_muestra_metrica": len(muestra),
+            "n_descartadas_prueba": n_prueba,
             "listo": True,
             "umbral_objetivo_recall": 0.90,
             "bloques": bloques,
@@ -410,10 +419,14 @@ class MetricasEtiquetadoService:
 
     @staticmethod
     def _casos(db: Session, evaluador_id: str | None) -> dict:
+        from app.services.etiquetado_service import ids_evaluadores_prueba
+
         q = db.query(EtiquetaCaso)
         if evaluador_id:
             q = q.filter(EtiquetaCaso.evaluador_id == evaluador_id)
         todas = q.order_by(EtiquetaCaso.created_at).all()
+        prueba = ids_evaluadores_prueba(db)
+        todas = [e for e in todas if e.evaluador_id not in prueba]
 
         vistas: set[int] = set()
         filas = []
@@ -595,8 +608,13 @@ class MetricasEtiquetadoService:
         esto, el patrón de oro es un criterio individual y hay que declararlo
         como limitación.
         """
+        from app.services.etiquetado_service import ids_evaluadores_prueba
+        prueba = ids_evaluadores_prueba(db)
+
         por_frase: dict[tuple[int, int], dict[str, int]] = {}
         for e in db.query(EtiquetaFrase).all():
+            if e.evaluador_id in prueba:
+                continue
             por_frase.setdefault(
                 (e.aplicacion_id, e.frase_numero), {}
             )[e.evaluador_id] = int(e.ideacion_presente)
@@ -613,6 +631,8 @@ class MetricasEtiquetadoService:
 
         por_caso: dict[int, dict[str, str]] = {}
         for e in db.query(EtiquetaCaso).all():
+            if e.evaluador_id in prueba:
+                continue
             por_caso.setdefault(e.aplicacion_id, {})[e.evaluador_id] = e.riesgo_clinico
         solapados_caso = [v for v in por_caso.values() if len(v) >= 2]
         casos_kappa = None
@@ -626,11 +646,11 @@ class MetricasEtiquetadoService:
                 **kappa_ponderado_lineal(pares),
             }
 
-        n_evaluadores = len({
+        n_evaluadores = len(({
             e[0] for e in db.query(EtiquetaFrase.evaluador_id).distinct().all()
         } | {
             e[0] for e in db.query(EtiquetaCaso.evaluador_id).distinct().all()
-        })
+        }) - prueba)
         return {
             "n_evaluadores": n_evaluadores,
             "frases_solapadas": len(solapadas),

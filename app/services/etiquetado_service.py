@@ -99,9 +99,30 @@ def _norm(t: str) -> str:
 # juntas mezclaría dos instrumentos y dos momentos en una sola métrica.
 CLAVE_CORTE = "etiquetado_desde"
 
+# Frontera entre cohortes. El piloto del colegio se digitalizó el 2026-07-02 y
+# quedó cargado en la base como alumnos ficticios; las aplicaciones reales en
+# el aula son de fines de septiembre en adelante. Este default hace que el
+# etiquetado arranque mirando solo la cohorte nueva **sin que nadie tenga que
+# configurar nada**, que es lo que se pidió: el piloto queda como registro
+# histórico, consultable en el panel, pero fuera de la validación.
+#
+# Se puede mover desde la pantalla de admin (POST /etiquetado/corte), y
+# `"todo"` lo desactiva si alguna vez hiciera falta volver a incluir julio.
+CORTE_DEFAULT_COHORTE = "2026-09-01"
+
+# Prefijo reservado para cuentas de prueba. Sus etiquetas se guardan igual
+# —así se puede ensayar el flujo completo— pero quedan fuera de las métricas.
+PREFIJO_PRUEBA = "SAMI-PSI-PRUEBA"
+
 
 def corte_desde(db: Session) -> str | None:
-    """Fecha (YYYY-MM-DD) desde la cual se etiqueta, o None para todo."""
+    """
+    Fecha (YYYY-MM-DD) desde la cual se etiqueta.
+
+    Si nadie configuró nada devuelve `CORTE_DEFAULT_COHORTE`, no None: la
+    base de producción tiene las dos cohortes y el default seguro es mirar
+    solo la nueva. Para incluir todo hay que pedirlo explícitamente.
+    """
     from app.models.configuracion import Configuracion
     row = (
         db.query(Configuracion)
@@ -109,12 +130,26 @@ def corte_desde(db: Session) -> str | None:
         .first()
     )
     if not row:
-        return None
+        return CORTE_DEFAULT_COHORTE
     try:
         valor = json.loads(row.valor)
     except (ValueError, TypeError):
-        return None
+        return CORTE_DEFAULT_COHORTE
+    # `None` guardado a propósito = sin corte, entra todo el histórico.
     return valor or None
+
+
+def ids_evaluadores_prueba(db: Session) -> set[str]:
+    """Cuentas de prueba, por prefijo del código de acceso."""
+    filas = (
+        db.query(User.id)
+        .filter(
+            User.role == "psicologo",
+            User.codigo_acceso.like(f"{PREFIJO_PRUEBA}%"),
+        )
+        .all()
+    )
+    return {f[0] for f in filas}
 
 
 def fijar_corte(db: Session, desde: str | None) -> str | None:
@@ -765,10 +800,11 @@ class EtiquetadoService:
             "svm_instalado": _svm_instalado(),
             # Qué cohorte se está etiquetando. Si es None, entra todo.
             "corte_desde": desde,
-            "evaluadores_activos": (
-                db.query(func.count(func.distinct(EtiquetaFrase.evaluador_id))).scalar()
-                or 0
-            ),
+            # Para que la pantalla avise que las etiquetas no van a contar.
+            "es_cuenta_prueba": evaluador_id in ids_evaluadores_prueba(db),
+            "evaluadores_activos": len({
+                f[0] for f in db.query(EtiquetaFrase.evaluador_id).distinct().all()
+            } - ids_evaluadores_prueba(db)),
             "muestra_generada": n_plan > 0,
         }
 
@@ -791,6 +827,9 @@ class EtiquetadoService:
             .order_by(EtiquetaFrase.aplicacion_id, EtiquetaFrase.frase_numero)
             .all()
         )
+        # No se filtran: se marcan. Quien entrene decide si las usa, pero la
+        # columna evita que entren sin que nadie lo note.
+        prueba = ids_evaluadores_prueba(db)
         out = []
         for e in filas:
             try:
@@ -801,6 +840,7 @@ class EtiquetadoService:
                 "aplicacion_id": e.aplicacion_id,
                 "frase_numero": e.frase_numero,
                 "evaluador_id": e.evaluador_id,
+                "es_cuenta_prueba": int(e.evaluador_id in prueba),
                 "estimulo": e.texto_estimulo,
                 "respuesta": e.texto_respuesta,
                 # La frase completa es la unidad clínica. Ojo: en producción
