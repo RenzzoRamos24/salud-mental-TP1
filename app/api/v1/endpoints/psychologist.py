@@ -45,6 +45,31 @@ async def dashboard_stats(
     )
 
 
+# ── Últimas evaluaciones (bandeja de revisión) ──────────────────────────────
+
+@router.get("/evaluaciones-recientes")
+async def evaluaciones_recientes(
+    limite: int = 100,
+    solo_sin_revisar: bool = False,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Todas las evaluaciones ya calculadas por el sistema, de la más reciente a
+    la más antigua: puntajes por bloque, bandera de crisis, riesgo compuesto,
+    veredicto del SVM y cuántas frases marcó BETO.
+
+    El psicólogo ve las de sus alumnos; el admin ve las de todo el sistema.
+    """
+    return PsychologistService.evaluaciones_recientes(
+        db,
+        psicologo_id=current_user.id,
+        es_admin=(current_user.role == "admin"),
+        limite=limite,
+        solo_sin_revisar=solo_sin_revisar,
+    )
+
+
 # ── Listado de estudiantes ──────────────────────────────────────────────────
 
 @router.get("/students", response_model=List[EstudianteResumen])

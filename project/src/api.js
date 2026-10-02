@@ -269,6 +269,12 @@ export const api = {
     const { data } = await client.get("/psychologist/students");
     return data;
   },
+  async evaluacionesRecientes({ limite = 100, soloSinRevisar = false } = {}) {
+    const { data } = await client.get("/psychologist/evaluaciones-recientes", {
+      params: { limite, solo_sin_revisar: soloSinRevisar },
+    });
+    return data;
+  },
   async historialEstudiante(student_id) {
     const { data } = await client.get(
       `/psychologist/students/${student_id}/history`,

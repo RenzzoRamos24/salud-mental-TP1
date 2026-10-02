@@ -511,3 +511,140 @@ async def borrar_codigo_prueba(
     db.delete(alumno)
     db.commit()
     return {"codigo": codigo, "borrado": True, "aplicaciones_borradas": len(apps)}
+
+
+# ── Código de acceso para psicólogo evaluador ───────────────────────────────
+
+class CodigoPsicologoIn(BaseModel):
+    nombre: str
+    apellido: str = "Evaluador/a"
+    # Si se pasa, todos los alumnos (y sus aplicaciones) de este psicólogo
+    # quedan visibles para el nuevo código. Si no, el evaluador ve lo suyo.
+    hereda_alumnos_de_email: Optional[str] = None
+    sufijo: Optional[str] = None  # SAMI-PSI-<sufijo>; si no, numera NN.
+
+
+@router.post("/psicologo/generar-codigo")
+async def generar_codigo_psicologo(
+    payload: CodigoPsicologoIn,
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """
+    Crea una cuenta de rol `psicologo` que entra por código (`/codigo`), sin
+    contraseña, y cae en la bandeja de últimas evaluaciones.
+
+    Pensado para el/la psicólogo/a externo/a que viene a revisar los casos
+    del piloto: no hay que crearle credenciales ni mandarle un correo, se le
+    entrega un código tipo `SAMI-PSI-01` y entra.
+
+    Con `hereda_alumnos_de_email` los alumnos de esa psicóloga se reasignan
+    al nuevo evaluador, que es lo que hace que vea las evaluaciones ya
+    cargadas. Sin ese campo, la cuenta arranca vacía.
+    """
+    import uuid
+
+    from app.core.security import hash_password
+    from app.models.bank import AplicacionCuestionario
+
+    nombre = payload.nombre.strip()
+    if not nombre:
+        raise HTTPException(400, "El nombre es obligatorio.")
+
+    if payload.sufijo:
+        sufijo = payload.sufijo.strip().upper().replace(" ", "")
+        codigo = f"SAMI-PSI-{sufijo}"
+        if db.query(User).filter_by(codigo_acceso=codigo).first():
+            raise HTTPException(409, f"El código '{codigo}' ya existe.")
+    else:
+        codigo = None
+        for i in range(1, 100):
+            tentativo = f"SAMI-PSI-{i:02d}"
+            if not db.query(User).filter_by(codigo_acceso=tentativo).first():
+                codigo = tentativo
+                break
+        if codigo is None:
+            raise HTTPException(409, "Se agotaron los códigos SAMI-PSI-01..99.")
+
+    evaluador = User(
+        id=str(uuid.uuid4()),
+        email=f"{codigo.lower()}@evaluador.sami.local",
+        hashed_password=hash_password(str(uuid.uuid4())),
+        nombre=nombre,
+        apellido=payload.apellido.strip() or "Evaluador/a",
+        role="psicologo",
+        activo=True,
+        codigo_acceso=codigo,
+    )
+    db.add(evaluador)
+    db.flush()
+
+    alumnos_heredados = 0
+    aplicaciones_heredadas = 0
+    if payload.hereda_alumnos_de_email:
+        origen = db.query(User).filter(
+            User.email == payload.hereda_alumnos_de_email.lower().strip(),
+            User.role == "psicologo",
+        ).first()
+        if not origen:
+            db.rollback()
+            raise HTTPException(
+                404,
+                f"No existe psicólogo/a con email "
+                f"'{payload.hereda_alumnos_de_email}'.",
+            )
+        alumnos_heredados = (
+            db.query(User)
+            .filter(User.role == "estudiante", User.psicologo_id == origen.id)
+            .update({"psicologo_id": evaluador.id}, synchronize_session=False)
+        )
+        aplicaciones_heredadas = (
+            db.query(AplicacionCuestionario)
+            .filter(AplicacionCuestionario.psicologo_id == origen.id)
+            .update({"psicologo_id": evaluador.id}, synchronize_session=False)
+        )
+
+    db.commit()
+    logger.info("Código de psicólogo generado: %s", codigo)
+    return {
+        "codigo_acceso": codigo,
+        "entrar_en": "/codigo",
+        "psicologo_id": evaluador.id,
+        "nombre": f"{evaluador.nombre} {evaluador.apellido}",
+        "alumnos_heredados": alumnos_heredados,
+        "aplicaciones_heredadas": aplicaciones_heredadas,
+        "nota": (
+            "El evaluador debe aceptar el acuerdo de confidencialidad en "
+            "/consent la primera vez que entra."
+        ),
+    }
+
+
+@router.get("/psicologo/codigos")
+async def listar_codigos_psicologo(
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    """Códigos de psicólogo emitidos, con cuántos alumnos ve cada uno."""
+    from app.models.bank import AplicacionCuestionario
+
+    filas = []
+    evaluadores = (
+        db.query(User)
+        .filter(User.role == "psicologo", User.codigo_acceso.isnot(None))
+        .order_by(User.codigo_acceso)
+        .all()
+    )
+    for e in evaluadores:
+        filas.append({
+            "codigo_acceso": e.codigo_acceso,
+            "nombre": f"{e.nombre} {e.apellido}",
+            "activo": bool(e.activo),
+            "alumnos": db.query(User).filter(
+                User.role == "estudiante", User.psicologo_id == e.id
+            ).count(),
+            "aplicaciones": db.query(AplicacionCuestionario).filter(
+                AplicacionCuestionario.psicologo_id == e.id
+            ).count(),
+        })
+    return {"total": len(filas), "codigos": filas}

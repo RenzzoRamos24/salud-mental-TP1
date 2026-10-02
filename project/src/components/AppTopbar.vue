@@ -69,6 +69,7 @@ const navActivoEst = computed(() => {
 // ─── Nav para psicólogo ──────────────────────────────────────────────
 const navClinico = [
   { id: "panel", label: "Panel", to: "/psicologo" },
+  { id: "evaluaciones", label: "Evaluaciones", to: "/psicologo/evaluaciones" },
   { id: "estudiantes", label: "Estudiantes", to: "/psicologo/estudiantes" },
   { id: "sos", label: "SOS", to: "/psicologo/sos" },
   { id: "citas", label: "Citas", to: "/psicologo/citas" },
@@ -78,6 +79,7 @@ const navClinico = [
 
 const navActivoPsi = computed(() => {
   const p = route?.path || "";
+  if (p.startsWith("/psicologo/evaluaciones")) return "evaluaciones";
   if (p.startsWith("/psicologo/estudiantes")) return "estudiantes";
   if (p.startsWith("/psicologo/sos")) return "sos";
   if (p.startsWith("/psicologo/citas")) return "citas";

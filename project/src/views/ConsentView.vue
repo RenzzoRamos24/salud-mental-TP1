@@ -25,6 +25,13 @@ async function aceptar() {
       consentimiento_version: VERSION,
     });
 
+    // El psicólogo evaluador va a su bandeja, no al menú del alumno.
+    const rol = authStore.state.user?.role;
+    if (rol === "psicologo" || rol === "admin") {
+      router.push({ name: rol === "admin" ? "admin" : "psicologo-evaluaciones" });
+      return;
+    }
+
     // Si tiene un cuestionario pendiente (alumno que entró con código), va
     // directo ahí en vez de al menú.
     let destino = "/menu";

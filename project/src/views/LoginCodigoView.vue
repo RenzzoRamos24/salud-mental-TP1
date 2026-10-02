@@ -32,6 +32,13 @@ async function entrar() {
       return;
     }
 
+    // Un código de psicólogo (SAMI-PSI-NN) no responde cuestionarios: entra
+    // directo a la bandeja con las últimas evaluaciones del sistema.
+    if (data.user.role === "psicologo" || data.user.role === "admin") {
+      router.push({ name: "psicologo-evaluaciones" });
+      return;
+    }
+
     // Va directo al cuestionario pendiente, sin pasar por el menú.
     let destino = "/menu";
     try {

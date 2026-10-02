@@ -18,6 +18,7 @@ import StudentAnswerView from "../views/StudentAnswerView.vue";
 import PsychologistDashboardView from "../views/PsychologistDashboardView.vue";
 import PsychologistStudentsView from "../views/PsychologistStudentsView.vue";
 import PsychologistAlertsView from "../views/PsychologistAlertsView.vue";
+import PsychologistEvaluacionesView from "../views/PsychologistEvaluacionesView.vue";
 import StudentHistoryView from "../views/StudentHistoryView.vue";
 import PsychologistBankView from "../views/PsychologistBankView.vue";
 import PsychologistTemplatesView from "../views/PsychologistTemplatesView.vue";
@@ -84,6 +85,12 @@ const routes = [
     path: "/psicologo/alertas",
     name: "psicologo-alertas",
     component: PsychologistAlertsView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/evaluaciones",
+    name: "psicologo-evaluaciones",
+    component: PsychologistEvaluacionesView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {

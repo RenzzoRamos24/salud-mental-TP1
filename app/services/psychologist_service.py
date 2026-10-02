@@ -185,3 +185,164 @@ class PsychologistService:
                 for a in aplicaciones
             ],
         }
+
+    # ── Últimas evaluaciones (bandeja de revisión) ──────────────────────────
+
+    @staticmethod
+    def evaluaciones_recientes(
+        db: Session,
+        psicologo_id: str | None = None,
+        es_admin: bool = False,
+        limite: int = 100,
+        solo_sin_revisar: bool = False,
+    ) -> dict:
+        """
+        Una fila por aplicación ya evaluada, de la más reciente a la más
+        antigua. Es la bandeja de trabajo del psicólogo: qué salió del
+        sistema, qué dijo el SVM, qué dijo BETO y qué falta revisar.
+
+        No es un listado de alumnos (eso es `listar_estudiantes`): acá puede
+        haber varias filas del mismo alumno, una por cuestionario rendido.
+        """
+        import json
+
+        from app.models.bank import PlantillaCuestionario, ResultadoFeedback
+
+        q = (
+            db.query(AplicacionCuestionario)
+            .filter(AplicacionCuestionario.resultado_json.isnot(None))
+            .order_by(
+                desc(AplicacionCuestionario.completada_at),
+                desc(AplicacionCuestionario.id),
+            )
+        )
+        if not es_admin and psicologo_id:
+            q = q.filter(AplicacionCuestionario.psicologo_id == psicologo_id)
+        if solo_sin_revisar:
+            q = q.filter(AplicacionCuestionario.revisada_at.is_(None))
+
+        aplicaciones = q.limit(max(1, min(limite, 500))).all()
+        if not aplicaciones:
+            return {"total": 0, "resumen": _resumen_vacio(), "evaluaciones": []}
+
+        # Tres queries en bloque en lugar de N por fila.
+        ids_alumnos = {a.estudiante_id for a in aplicaciones}
+        alumnos = {
+            u.id: u for u in db.query(User).filter(User.id.in_(ids_alumnos)).all()
+        }
+        ids_plantillas = {a.plantilla_id for a in aplicaciones}
+        plantillas = {
+            p.id: p
+            for p in db.query(PlantillaCuestionario)
+            .filter(PlantillaCuestionario.id.in_(ids_plantillas))
+            .all()
+        }
+        ids_apl = [a.id for a in aplicaciones]
+        veredictos = {
+            f.aplicacion_id: f
+            for f in db.query(ResultadoFeedback)
+            .filter(ResultadoFeedback.aplicacion_id.in_(ids_apl))
+            .all()
+        }
+
+        filas = []
+        for a in aplicaciones:
+            try:
+                resultado = json.loads(a.resultado_json)
+            except (ValueError, TypeError):
+                logger.warning("resultado_json ilegible en aplicación %s", a.id)
+                resultado = {}
+
+            alumno = alumnos.get(a.estudiante_id)
+            plantilla = plantillas.get(a.plantilla_id)
+            fb = veredictos.get(a.id)
+            frases = resultado.get("frases") or []
+            svm = resultado.get("svm_segunda_opinion")
+
+            filas.append({
+                "aplicacion_id": a.id,
+                "estudiante_id": a.estudiante_id,
+                # El código de acceso es el identificador del piloto; si no
+                # hay, cae al nombre. Permite trabajar pseudonimizado.
+                "codigo_alumno": getattr(alumno, "codigo_acceso", None) if alumno else None,
+                "nombre": alumno.nombre if alumno else "(alumno borrado)",
+                "apellido": alumno.apellido if alumno else "",
+                "grado": getattr(alumno, "grado", None) if alumno else None,
+                "plantilla": plantilla.nombre if plantilla else f"#{a.plantilla_id}",
+                "estado": a.estado,
+                "completada_at": a.completada_at.isoformat() if a.completada_at else None,
+                "revisada_at": a.revisada_at.isoformat() if a.revisada_at else None,
+                "riesgo_global": resultado.get("riesgo_global") or a.riesgo_global,
+                "crisis_activada": bool(
+                    resultado.get("crisis_activada", a.crisis_activada)
+                ),
+                "n_senales": resultado.get("n_senales"),
+                "bloques": [
+                    {
+                        "codigo": b.get("codigo"),
+                        "nombre": b.get("nombre"),
+                        "puntaje": b.get("puntaje"),
+                        "rango_max": b.get("rango_max"),
+                        "severidad": b.get("severidad"),
+                        "severidad_alerta": bool(b.get("severidad_alerta")),
+                        "bandera_crisis": bool(b.get("bandera_crisis")),
+                    }
+                    for b in (resultado.get("bloques") or [])
+                ],
+                "n_frases": len(frases),
+                "n_frases_crisis": sum(1 for f in frases if f.get("crisis")),
+                "svm": (
+                    {
+                        "clase": svm.get("clase"),
+                        "probabilidad": svm.get("probabilidad"),
+                        "confianza": svm.get("confianza"),
+                        "discrepancia_con_reglas": bool(
+                            svm.get("discrepancia_con_reglas")
+                        ),
+                    }
+                    if svm
+                    else None
+                ),
+                "veredicto_psicologo": fb.veredicto if fb else None,
+            })
+
+        return {
+            "total": len(filas),
+            "resumen": _resumen_evaluaciones(filas),
+            "evaluaciones": filas,
+        }
+
+
+def _resumen_vacio() -> dict:
+    return {
+        "por_riesgo": {
+            "CRITICO": 0, "ALTO": 0, "MEDIO": 0, "BAJO": 0, "SIN_RIESGO": 0,
+        },
+        "con_crisis": 0,
+        "sin_revisar": 0,
+        "con_svm": 0,
+        "svm_discrepante": 0,
+        "con_frases": 0,
+        "juzgadas": 0,
+    }
+
+
+def _resumen_evaluaciones(filas: list) -> dict:
+    out = _resumen_vacio()
+    for f in filas:
+        clave = (f["riesgo_global"] or "").upper().replace("Í", "I")
+        if clave in out["por_riesgo"]:
+            out["por_riesgo"][clave] += 1
+        if f["crisis_activada"]:
+            out["con_crisis"] += 1
+        if not f["revisada_at"]:
+            out["sin_revisar"] += 1
+        if f["svm"]:
+            out["con_svm"] += 1
+            if f["svm"]["discrepancia_con_reglas"]:
+                out["svm_discrepante"] += 1
+        if f["n_frases"]:
+            out["con_frases"] += 1
+        if f["veredicto_psicologo"]:
+            out["juzgadas"] += 1
+    return out
