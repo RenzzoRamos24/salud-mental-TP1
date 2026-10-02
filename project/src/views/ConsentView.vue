@@ -1,10 +1,17 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 import { authStore } from "../store/auth";
 
 const router = useRouter();
+
+// El consentimiento del alumno y el acuerdo del evaluador son textos
+// distintos: a una psicóloga externa no se le puede mostrar "no lo ven tus
+// compañeros ni tus profesores". Se decide por rol.
+const esEvaluador = computed(() =>
+  ["psicologo", "admin"].includes(authStore.state.user?.role),
+);
 
 const VERSION = "1.0";
 const aceptado = ref(false);
@@ -63,7 +70,7 @@ async function aceptar() {
           <p class="sami-wordmark">Sami</p>
         </div>
         <h1 class="hero-serif text-[28px] sm:text-[37px] mt-5">
-          Antes de empezar
+          {{ esEvaluador ? "Acuerdo de confidencialidad" : "Antes de empezar" }}
         </h1>
         <p class="text-ink-400 text-[13px] mt-3">
           Léelo con calma. Versión {{ VERSION }}.
@@ -71,7 +78,68 @@ async function aceptar() {
       </div>
 
       <div class="card-hero p-7 sm:p-9">
-        <div class="space-y-4 text-ink-700 leading-relaxed text-[15px]">
+        <!-- ── Evaluador clínico ─────────────────────────────────── -->
+        <div
+          v-if="esEvaluador"
+          class="space-y-4 text-ink-700 leading-relaxed text-[15px]"
+        >
+          <p>
+            Vas a acceder a respuestas de cuestionarios de salud mental de
+            estudiantes menores de edad. Antes de entrar, tres compromisos.
+          </p>
+
+          <div class="card-mint p-5">
+            <p class="label-kicker">01</p>
+            <h3 class="gb text-[17px] font-semibold text-green-900 mt-1.5 mb-1.5">
+              Confidencialidad
+            </h3>
+            <p class="text-[14px] text-ink-700">
+              Lo que leas acá no sale del sistema: ni nombres, ni respuestas, ni
+              casos concretos. No se comparte con el colegio, con las familias
+              ni con colegas que no participen de la evaluación.
+            </p>
+          </div>
+
+          <div class="card-mint p-5">
+            <p class="label-kicker">02</p>
+            <h3 class="gb text-[17px] font-semibold text-green-900 mt-1.5 mb-1.5">
+              Uso exclusivo de evaluación
+            </h3>
+            <ul class="text-[14px] text-ink-700 space-y-1.5">
+              <li>· Tu criterio clínico se usa para validar el sistema.</li>
+              <li>· Queda registrado con tu usuario y la fecha.</li>
+              <li>
+                · No vas a ver lo que calculó el modelo antes de emitir tu
+                juicio, y es deliberado: si lo vieras, la comparación posterior
+                no valdría.
+              </li>
+              <li>
+                · Tampoco vas a ver el juicio de la otra evaluadora, por lo
+                mismo.
+              </li>
+            </ul>
+            <p class="text-[12px] text-ink-400 mt-3 leading-relaxed">
+              Tratamiento de datos conforme a la <strong>Ley N° 29733</strong>
+              de Protección de Datos Personales del Perú.
+            </p>
+          </div>
+
+          <div class="card-mint p-5">
+            <p class="label-kicker">03</p>
+            <h3 class="gb text-[17px] font-semibold text-green-900 mt-1.5 mb-1.5">
+              Si ves algo urgente
+            </h3>
+            <p class="text-[14px] text-ink-700">
+              En cada caso hay un botón para avisar. Deja una nota en el
+              expediente del alumno para la psicóloga a cargo, sin interrumpir
+              tu trabajo. Usalo sin dudar: el estudio nunca está por encima de
+              un chico en riesgo.
+            </p>
+          </div>
+        </div>
+
+        <!-- ── Estudiante ────────────────────────────────────────── -->
+        <div v-else class="space-y-4 text-ink-700 leading-relaxed text-[15px]">
           <p>
             Este es tu espacio para escribir cómo te sientes. Antes de empezar,
             tres cosas.

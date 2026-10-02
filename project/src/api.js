@@ -305,6 +305,14 @@ export const api = {
     const { data } = await client.post("/etiquetado/frases", payload);
     return data;
   },
+  async etiquetadoEstudiantes() {
+    const { data } = await client.get("/etiquetado/estudiantes");
+    return data;
+  },
+  async etiquetadoCaso(aplicacion_id) {
+    const { data } = await client.get(`/etiquetado/casos/${aplicacion_id}`);
+    return data;
+  },
   async etiquetadoSiguienteCaso({ soloConSvm = false } = {}) {
     const r = await client.get("/etiquetado/casos/siguiente", {
       params: { solo_con_svm: soloConSvm },

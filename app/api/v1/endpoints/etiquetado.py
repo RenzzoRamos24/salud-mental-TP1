@@ -176,6 +176,25 @@ async def guardar_frase(
 # ── Cola de casos ───────────────────────────────────────────────────────────
 
 
+@router.get("/estudiantes")
+async def estudiantes_de_la_cohorte(
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Los alumnos a evaluar, con el estado de etiquetado de quien pregunta.
+
+    No filtra por `psicologo_id`, al revés del listado del panel clínico. Una
+    cuenta de evaluador no es la psicóloga titular de nadie, así que con el
+    filtro normal le aparecería la lista vacía; y reasignarle los alumnos los
+    sacaría del panel de quien sí los atiende.
+
+    No trae el riesgo que calculó el sistema: la idea es abrir cada caso sin
+    saber de antemano qué dijo el modelo.
+    """
+    return EtiquetadoService.estudiantes_de_la_cohorte(db, current_user.id)
+
+
 @router.get("/casos/siguiente")
 async def siguiente_caso(
     solo_con_svm: bool = Query(
@@ -195,6 +214,27 @@ async def siguiente_caso(
     if caso is None:
         return Response(status_code=204)
     return caso
+
+
+# Va DESPUÉS de /casos/siguiente a propósito: FastAPI resuelve por orden
+# de declaración, y si esta ruta fuera primero "siguiente" entraría como
+# `aplicacion_id` y devolvería 422 en vez de servir la cola.
+@router.get("/casos/{aplicacion_id}")
+async def caso_por_id(
+    aplicacion_id: int,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Un caso concreto: las respuestas crudas, mi etiqueta si ya lo juzgué, y
+    —solo en ese caso— el análisis del sistema para poder comparar.
+
+    Mientras no haya etiqueta propia, `analisis_sistema` viene en `null`.
+    """
+    try:
+        return EtiquetadoService.caso_por_id(db, current_user.id, aplicacion_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 class EtiquetaCasoIn(BaseModel):

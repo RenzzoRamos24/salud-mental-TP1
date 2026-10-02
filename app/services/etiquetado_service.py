@@ -621,6 +621,20 @@ class EtiquetadoService:
         ).hexdigest())
         apl = pendientes[0]
 
+        datos = EtiquetadoService._render_caso(db, apl)
+        datos["progreso"] = {"hechas": total - len(pendientes), "total": total}
+        return datos
+
+    @staticmethod
+    def _render_caso(db: Session, apl: AplicacionCuestionario) -> dict:
+        """
+        Las respuestas crudas de una aplicación, sin ningún cálculo.
+
+        Lo usan la cola secuencial y la vista de un caso puntual, así que las
+        dos muestran exactamente lo mismo.
+        """
+        from app.services.cuestionario_service import CuestionarioService
+
         plantilla = (
             db.query(PlantillaCuestionario)
             .filter(PlantillaCuestionario.id == apl.plantilla_id)
@@ -664,15 +678,15 @@ class EtiquetadoService:
         alumno = db.query(User).filter(User.id == apl.estudiante_id).first()
         return {
             "aplicacion_id": apl.id,
-            # Pseudónimo: el evaluador no necesita el nombre, y sin él juzga
-            # el material y no a la persona.
             "codigo": f"CASO-{apl.id:03d}",
+            "codigo_alumno": getattr(alumno, "codigo_acceso", None) if alumno else None,
+            "nombre": f"{alumno.nombre} {alumno.apellido}".strip() if alumno else None,
             "grado": getattr(alumno, "grado", None) if alumno else None,
+            "completada_at": apl.completada_at.isoformat() if apl.completada_at else None,
             "instrumentos": sorted({
                 i["bloque"] for i in items if i["tipo"] != "texto"
             }),
             "items": items,
-            "progreso": {"hechas": total - len(pendientes), "total": total},
         }
 
     @staticmethod
@@ -681,6 +695,188 @@ class EtiquetadoService:
             return bool(json.loads(apl.resultado_json).get("svm_segunda_opinion"))
         except (ValueError, TypeError):
             return False
+
+    @staticmethod
+    def estudiantes_de_la_cohorte(db: Session, evaluador_id: str) -> dict:
+        """
+        Los alumnos de la cohorte vigente, con el estado de etiquetado de
+        ESTE evaluador.
+
+        No filtra por `psicologo_id` a propósito. El listado normal del panel
+        clínico sí lo hace, y por eso una cuenta de evaluador recién creada
+        aparecía sin ningún alumno: no es la psicóloga titular de nadie. La
+        alternativa —reasignarle los alumnos— los sacaría del panel de quien
+        sí los atiende, que es peor.
+
+        No incluye el riesgo que calculó el sistema: la idea es que la
+        psicóloga abra el caso sin saber de antemano qué dijo el modelo.
+        """
+        desde = corte_desde(db)
+        q = (
+            db.query(AplicacionCuestionario)
+            .filter(AplicacionCuestionario.resultado_json.isnot(None))
+        )
+        if desde:
+            q = q.filter(
+                AplicacionCuestionario.completada_at
+                >= datetime.strptime(desde, "%Y-%m-%d")
+            )
+        aplicaciones = q.order_by(
+            AplicacionCuestionario.completada_at.desc()
+        ).all()
+        if not aplicaciones:
+            return {"corte_desde": desde, "total": 0, "etiquetados": 0,
+                    "estudiantes": []}
+
+        alumnos = {
+            u.id: u for u in db.query(User)
+            .filter(User.id.in_({a.estudiante_id for a in aplicaciones})).all()
+        }
+        mias = {
+            e.aplicacion_id: e for e in db.query(EtiquetaCaso)
+            .filter(EtiquetaCaso.evaluador_id == evaluador_id).all()
+        }
+        prueba = ids_evaluadores_prueba(db)
+        # Cuántos evaluadores reales ya juzgaron cada caso — sin decir QUÉ
+        # juzgaron, que sería la fuga que ya cerramos.
+        otros: dict[int, int] = {}
+        for e in db.query(EtiquetaCaso).all():
+            if e.evaluador_id == evaluador_id or e.evaluador_id in prueba:
+                continue
+            otros[e.aplicacion_id] = otros.get(e.aplicacion_id, 0) + 1
+
+        filas = []
+        for a in aplicaciones:
+            al = alumnos.get(a.estudiante_id)
+            mi = mias.get(a.id)
+            filas.append({
+                "aplicacion_id": a.id,
+                "codigo": f"CASO-{a.id:03d}",
+                "codigo_alumno": getattr(al, "codigo_acceso", None) if al else None,
+                "nombre": f"{al.nombre} {al.apellido}".strip() if al else "(alumno borrado)",
+                "grado": getattr(al, "grado", None) if al else None,
+                "completada_at": a.completada_at.isoformat() if a.completada_at else None,
+                "mi_etiqueta": (
+                    {
+                        "riesgo_clinico": mi.riesgo_clinico,
+                        "requiere_derivacion": bool(mi.requiere_derivacion),
+                        "predominante": mi.predominante,
+                        "actualizada_at": (
+                            mi.updated_at.isoformat() if mi.updated_at else None
+                        ),
+                    }
+                    if mi else None
+                ),
+                "otros_evaluadores": otros.get(a.id, 0),
+            })
+
+        return {
+            "corte_desde": desde,
+            "total": len(filas),
+            "etiquetados": sum(1 for f in filas if f["mi_etiqueta"]),
+            "estudiantes": filas,
+        }
+
+    @staticmethod
+    def caso_por_id(
+        db: Session, evaluador_id: str, aplicacion_id: int
+    ) -> dict:
+        """
+        Un caso concreto, ciego, más mi etiqueta si ya lo juzgué.
+
+        Si ya hay etiqueta propia se adjunta `analisis_sistema`: una vez
+        emitido el juicio ya no hay nada que contaminar, y es justo lo que la
+        psicóloga quiere ver para comparar.
+        """
+        apl = (
+            db.query(AplicacionCuestionario)
+            .filter(AplicacionCuestionario.id == aplicacion_id)
+            .first()
+        )
+        if apl is None or not apl.resultado_json:
+            raise ValueError(f"La aplicación #{aplicacion_id} no está evaluada.")
+
+        desde = corte_desde(db)
+        if desde and apl.completada_at and apl.completada_at < datetime.strptime(
+            desde, "%Y-%m-%d"
+        ):
+            raise ValueError(
+                f"La aplicación #{aplicacion_id} es de una cohorte anterior al "
+                f"corte vigente ({desde}). Queda como registro, no se etiqueta."
+            )
+
+        datos = EtiquetadoService._render_caso(db, apl)
+
+        mi = (
+            db.query(EtiquetaCaso)
+            .filter(
+                EtiquetaCaso.aplicacion_id == aplicacion_id,
+                EtiquetaCaso.evaluador_id == evaluador_id,
+            )
+            .first()
+        )
+        datos["mi_etiqueta"] = (
+            {
+                "riesgo_clinico": mi.riesgo_clinico,
+                "requiere_derivacion": bool(mi.requiere_derivacion),
+                "ideacion_presente": mi.ideacion_presente,
+                "predominante": mi.predominante,
+                "confianza": mi.confianza,
+                "comentario": mi.comentario,
+                "actualizada_at": mi.updated_at.isoformat() if mi.updated_at else None,
+            }
+            if mi else None
+        )
+        datos["analisis_sistema"] = (
+            EtiquetadoService.analisis_sistema(apl) if mi else None
+        )
+        return datos
+
+    @staticmethod
+    def analisis_sistema(apl: AplicacionCuestionario) -> dict | None:
+        """
+        Lo que calculó el sistema, para mostrarlo DESPUÉS del juicio humano.
+
+        Se entrega solo cuando ya hay etiqueta propia. Antes de eso el
+        endpoint devuelve None — si viajara en el payload se vería abriendo el
+        inspector, y la concordancia dejaría de medir concordancia.
+        """
+        try:
+            r = json.loads(apl.resultado_json or "{}")
+        except (ValueError, TypeError):
+            return None
+        frases = r.get("frases") or []
+        svm = r.get("svm_segunda_opinion")
+        return {
+            "riesgo_global": r.get("riesgo_global"),
+            "crisis_activada": bool(r.get("crisis_activada")),
+            "n_senales": r.get("n_senales"),
+            "bloques": [
+                {
+                    "codigo": b.get("codigo"),
+                    "nombre": b.get("nombre"),
+                    "puntaje": b.get("puntaje"),
+                    "rango_max": b.get("rango_max"),
+                    "severidad": b.get("severidad"),
+                    "severidad_alerta": bool(b.get("severidad_alerta")),
+                    "bandera_crisis": bool(b.get("bandera_crisis")),
+                }
+                for b in (r.get("bloques") or [])
+            ],
+            "frases": [
+                {
+                    "pregunta": f.get("pregunta"),
+                    "respuesta": f.get("respuesta"),
+                    "dominante": f.get("dominante"),
+                    "crisis": bool(f.get("crisis")),
+                    "score_depresion": (f.get("scores") or {}).get("depresion"),
+                }
+                for f in frases
+            ],
+            "n_frases": len(frases),
+            "n_frases_crisis": sum(1 for f in frases if f.get("crisis")),
+            "svm": svm,
+        }
 
     @staticmethod
     def guardar_etiqueta_caso(
@@ -751,7 +947,13 @@ class EtiquetadoService:
 
         db.commit()
         db.refresh(fila)
-        return {"id": fila.id, "guardada": True}
+        return {
+            "id": fila.id,
+            "guardada": True,
+            # Recién acá se devuelve lo que calculó el sistema: el juicio ya
+            # está emitido y guardado, así que mostrarlo no lo contamina.
+            "analisis_sistema": EtiquetadoService.analisis_sistema(apl),
+        }
 
     # ══════════════════════════════════════════════════════════════════
     # Progreso

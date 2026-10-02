@@ -21,6 +21,8 @@ import PsychologistAlertsView from "../views/PsychologistAlertsView.vue";
 import PsychologistEvaluacionesView from "../views/PsychologistEvaluacionesView.vue";
 import EtiquetadoFrasesView from "../views/EtiquetadoFrasesView.vue";
 import EtiquetadoCasosView from "../views/EtiquetadoCasosView.vue";
+import EtiquetadoEstudiantesView from "../views/EtiquetadoEstudiantesView.vue";
+import EtiquetadoCasoView from "../views/EtiquetadoCasoView.vue";
 import EtiquetadoMetricasView from "../views/EtiquetadoMetricasView.vue";
 import StudentHistoryView from "../views/StudentHistoryView.vue";
 import PsychologistBankView from "../views/PsychologistBankView.vue";
@@ -94,6 +96,19 @@ const routes = [
     path: "/psicologo/evaluaciones",
     name: "psicologo-evaluaciones",
     component: PsychologistEvaluacionesView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    // La entrada principal: la lista de alumnos por evaluar.
+    path: "/etiquetado",
+    name: "etiquetado",
+    component: EtiquetadoEstudiantesView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/etiquetado/caso/:id",
+    name: "etiquetado-caso",
+    component: EtiquetadoCasoView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {

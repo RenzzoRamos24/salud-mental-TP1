@@ -71,7 +71,7 @@ const navActivoEst = computed(() => {
 const navClinico = [
   { id: "panel", label: "Panel", to: "/psicologo" },
   { id: "evaluaciones", label: "Evaluaciones", to: "/psicologo/evaluaciones" },
-  { id: "etiquetado", label: "Etiquetar", to: "/etiquetado/frases" },
+  { id: "etiquetado", label: "Evaluar", to: "/etiquetado" },
   { id: "estudiantes", label: "Estudiantes", to: "/psicologo/estudiantes" },
   { id: "sos", label: "SOS", to: "/psicologo/sos" },
   { id: "citas", label: "Citas", to: "/psicologo/citas" },
