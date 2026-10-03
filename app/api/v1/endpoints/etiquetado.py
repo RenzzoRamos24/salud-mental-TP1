@@ -248,10 +248,10 @@ async def caso_por_id(
     db: Session = Depends(get_db),
 ):
     """
-    Un caso concreto: las respuestas crudas, mi etiqueta si ya lo juzgué, y
-    —solo en ese caso— el análisis del sistema para poder comparar.
+    Un caso concreto: las respuestas crudas y mi etiqueta si ya lo juzgué.
 
-    Mientras no haya etiqueta propia, `analisis_sistema` viene en `null`.
+    No incluye nada de lo que calculó el sistema, ni antes ni después del
+    juicio. La comparación se mira al final, en la pantalla de resultados.
     """
     try:
         return EtiquetadoService.caso_por_id(db, current_user.id, aplicacion_id)

@@ -823,9 +823,12 @@ class EtiquetadoService:
         """
         Un caso concreto, ciego, más mi etiqueta si ya lo juzgué.
 
-        Si ya hay etiqueta propia se adjunta `analisis_sistema`: una vez
-        emitido el juicio ya no hay nada que contaminar, y es justo lo que la
-        psicóloga quiere ver para comparar.
+        Nunca devuelve lo que calculó el sistema, ni siquiera después de
+        emitido el juicio. Un primer diseño lo mostraba al guardar, para
+        comparar en el momento; el problema es que la psicóloga evalúa 104
+        casos seguidos, y lo que ve en el caso 1 le queda puesto para el 2.
+        Eso contamina todo lo que viene y es invisible en los números. La
+        comparación se hace al final, en la pantalla de resultados.
         """
         apl = (
             db.query(AplicacionCuestionario)
@@ -866,19 +869,16 @@ class EtiquetadoService:
             }
             if mi else None
         )
-        datos["analisis_sistema"] = (
-            EtiquetadoService.analisis_sistema(apl) if mi else None
-        )
         return datos
 
     @staticmethod
     def analisis_sistema(apl: AplicacionCuestionario) -> dict | None:
         """
-        Lo que calculó el sistema, para mostrarlo DESPUÉS del juicio humano.
+        Lo que calculó el sistema sobre una aplicación.
 
-        Se entrega solo cuando ya hay etiqueta propia. Antes de eso el
-        endpoint devuelve None — si viajara en el payload se vería abriendo el
-        inspector, y la concordancia dejaría de medir concordancia.
+        NO se expone a quien está evaluando, en ningún momento: ni antes ni
+        después de su juicio. Queda para los reportes y la pantalla de
+        resultados, que se miran una vez cerrado el etiquetado.
         """
         try:
             r = json.loads(apl.resultado_json or "{}")
@@ -986,13 +986,7 @@ class EtiquetadoService:
 
         db.commit()
         db.refresh(fila)
-        return {
-            "id": fila.id,
-            "guardada": True,
-            # Recién acá se devuelve lo que calculó el sistema: el juicio ya
-            # está emitido y guardado, así que mostrarlo no lo contamina.
-            "analisis_sistema": EtiquetadoService.analisis_sistema(apl),
-        }
+        return {"id": fila.id, "guardada": True}
 
     # ══════════════════════════════════════════════════════════════════
     # Progreso
