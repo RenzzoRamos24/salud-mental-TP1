@@ -28,14 +28,12 @@ const riesgo = ref(null);
 const derivacion = ref(null);
 const predominante = ref(null);
 const ideacion = ref(null);
+// El selector se sacó de la pantalla; se sigue mandando "alta" para no
+// cambiar el contrato del endpoint ni el esquema de la tabla.
 const confianza = ref("alta");
 const comentario = ref("");
 
 let t0 = Date.now();
-
-const urgenteAbierto = ref(false);
-const motivoUrgente = ref("");
-const avisoUrgente = ref("");
 
 const RIESGOS = [
   { v: "SIN_RIESGO", label: "Sin riesgo", clase: "bg-gray-50 border-gray-300 text-gray-700" },
@@ -44,10 +42,13 @@ const RIESGOS = [
   { v: "ALTO", label: "Alto", clase: "bg-orange-50 border-orange-300 text-orange-800" },
   { v: "CRITICO", label: "Crítico", clase: "bg-red-50 border-red-300 text-red-800" },
 ];
+// Sin "Estrés" a propósito: en esta aplicación corren PHQ-A (depresión) y
+// GAD-7 (ansiedad), y nada mide estrés. Ofrecer una opción que ningún
+// instrumento respalda produce una etiqueta que después no se puede comparar
+// contra nada. (La subescala de estrés es del DASS-21, que no se aplica acá.)
 const PREDOMINANTES = [
   { v: "depresion", label: "Depresión" },
   { v: "ansiedad", label: "Ansiedad" },
-  { v: "estres", label: "Estrés" },
   { v: "ninguno", label: "Ninguno" },
 ];
 
@@ -123,19 +124,6 @@ async function guardar() {
   }
 }
 
-async function enviarUrgente() {
-  if (!motivoUrgente.value.trim()) return;
-  try {
-    await api.etiquetadoMarcarUrgente(aplicacionId.value, motivoUrgente.value.trim());
-    avisoUrgente.value =
-      "Avisado. Queda una nota en el expediente del alumno para la psicóloga a cargo.";
-    urgenteAbierto.value = false;
-    motivoUrgente.value = "";
-  } catch (e) {
-    error.value = e?.response?.data?.detail || "No se pudo avisar.";
-  }
-}
-
 function colorRiesgo(r) {
   const k = (r || "").toUpperCase();
   if (k.startsWith("C")) return "text-red-700 bg-red-50 border-red-200";
@@ -197,8 +185,6 @@ const coincidencia = computed(() => {
     <div v-else-if="error" class="banner-danger">{{ error }}</div>
 
     <template v-else-if="caso">
-      <div v-if="avisoUrgente" class="banner-success mb-4">{{ avisoUrgente }}</div>
-
       <div class="grid lg:grid-cols-[1fr_340px] gap-4 items-start">
         <!-- Respuestas crudas -->
         <div class="grid gap-3">
@@ -315,15 +301,6 @@ const coincidencia = computed(() => {
           </div>
 
           <div>
-            <label class="text-xs text-ink-500">Confianza</label>
-            <select v-model="confianza" class="input">
-              <option value="alta">Alta</option>
-              <option value="media">Media</option>
-              <option value="baja">Baja</option>
-            </select>
-          </div>
-
-          <div>
             <label class="text-xs text-ink-500">
               Tu evaluación / observaciones
             </label>
@@ -343,28 +320,6 @@ const coincidencia = computed(() => {
             para que tu criterio sea independiente.
           </p>
 
-          <button
-            class="btn-ghost btn-sm text-red-700"
-            @click="urgenteAbierto = !urgenteAbierto"
-          >
-            Este caso requiere atención ahora
-          </button>
-          <div v-if="urgenteAbierto" class="banner-warn grid gap-2">
-            <p class="text-xs">
-              Deja una nota para la psicóloga a cargo. No interrumpe tu trabajo.
-            </p>
-            <textarea v-model="motivoUrgente" class="input" rows="2" />
-            <div class="flex gap-2">
-              <button
-                class="btn-coral btn-sm"
-                :disabled="!motivoUrgente.trim()"
-                @click="enviarUrgente"
-              >Avisar</button>
-              <button class="btn-ghost btn-sm" @click="urgenteAbierto = false">
-                Cancelar
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
