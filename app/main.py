@@ -101,11 +101,31 @@ DIST_ASSETS = DIST / "assets"
 
 if DIST.exists():
     logger.info(f"Sirviendo frontend desde {DIST}")
+
+    # Los archivos de /assets llevan hash en el nombre (index-B8AdhOwx.js), así
+    # que un cambio produce un nombre nuevo y se pueden cachear para siempre.
     app.mount("/assets", StaticFiles(directory=str(DIST_ASSETS)), name="assets")
+
+    # El index.html es lo contrario: su nombre nunca cambia y adentro está la
+    # referencia al bundle con hash. Si el navegador lo cachea, sigue pidiendo
+    # el bundle VIEJO aunque el nuevo ya esté desplegado — y el usuario ve la
+    # aplicación anterior sin entender por qué. Pasó: tras varios deploys
+    # seguía apareciendo el menú de antes.
+    #
+    # Azure no agregaba ningún Cache-Control, así que el navegador aplicaba su
+    # heurística y lo guardaba. Se fuerza a revalidar siempre.
+    NO_CACHE = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    }
+
+    def _index() -> FileResponse:
+        return FileResponse(str(DIST / "index.html"), headers=NO_CACHE)
 
     @app.get("/", include_in_schema=False)
     async def root_spa() -> FileResponse:
-        return FileResponse(str(DIST / "index.html"))
+        return _index()
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str) -> FileResponse:
@@ -113,13 +133,13 @@ if DIST.exists():
         # index.html para que Vue Router maneje la navegación.
         if full_path.startswith("api/") or full_path.startswith("assets/"):
             return FileResponse(
-                str(DIST / "index.html"), status_code=404
+                str(DIST / "index.html"), status_code=404, headers=NO_CACHE
             )
         # Sirve archivos estáticos sueltos (favicon, .svg, etc.) si existen.
         candidato = DIST / full_path
         if candidato.is_file():
             return FileResponse(str(candidato))
-        return FileResponse(str(DIST / "index.html"))
+        return _index()
 
 else:
     logger.info(

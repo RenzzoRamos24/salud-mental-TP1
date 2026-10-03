@@ -20,7 +20,6 @@ import PsychologistStudentsView from "../views/PsychologistStudentsView.vue";
 import PsychologistAlertsView from "../views/PsychologistAlertsView.vue";
 import PsychologistEvaluacionesView from "../views/PsychologistEvaluacionesView.vue";
 import EtiquetadoFrasesView from "../views/EtiquetadoFrasesView.vue";
-import EtiquetadoCasosView from "../views/EtiquetadoCasosView.vue";
 import EtiquetadoEstudiantesView from "../views/EtiquetadoEstudiantesView.vue";
 import EtiquetadoCasoView from "../views/EtiquetadoCasoView.vue";
 import EtiquetadoMetricasView from "../views/EtiquetadoMetricasView.vue";
@@ -116,12 +115,6 @@ const routes = [
     path: "/etiquetado/frases",
     name: "etiquetado-frases",
     component: EtiquetadoFrasesView,
-    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
-  },
-  {
-    path: "/etiquetado/casos",
-    name: "etiquetado-casos",
-    component: EtiquetadoCasosView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {

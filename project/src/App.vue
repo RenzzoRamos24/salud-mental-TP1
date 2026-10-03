@@ -25,7 +25,6 @@ const PSICO_ROUTES = [
   "etiquetado",
   "etiquetado-caso",
   "etiquetado-frases",
-  "etiquetado-casos",
   "etiquetado-metricas",
   "psicologo-evaluaciones",
   "psicologo",
