@@ -68,7 +68,19 @@ const navActivoEst = computed(() => {
 });
 
 // ─── Nav para psicólogo ──────────────────────────────────────────────
-const navClinico = [
+// Una cuenta de evaluador ve un menú acotado. De las ocho secciones del panel
+// clínico, cuatro no le sirven (SOS, Citas, Banco, Plantillas) y dos le
+// mostrarían el riesgo que calculó el sistema antes de que emita su juicio
+// (Panel y Evaluaciones), que es justo lo que la validación no puede
+// permitir. Le quedan las dos suyas.
+const esEvaluador = computed(() => !!authStore.state.user?.es_evaluador);
+
+const navEvaluador = [
+  { id: "etiquetado", label: "Evaluar", to: "/etiquetado" },
+  { id: "resultados", label: "Resultados", to: "/etiquetado/metricas" },
+];
+
+const navClinicoCompleto = [
   { id: "panel", label: "Panel", to: "/psicologo" },
   { id: "evaluaciones", label: "Evaluaciones", to: "/psicologo/evaluaciones" },
   { id: "etiquetado", label: "Evaluar", to: "/etiquetado" },
@@ -79,8 +91,13 @@ const navClinico = [
   { id: "plantillas", label: "Plantillas", to: "/psicologo/plantillas" },
 ];
 
+const navClinico = computed(() =>
+  esEvaluador.value ? navEvaluador : navClinicoCompleto,
+);
+
 const navActivoPsi = computed(() => {
   const p = route?.path || "";
+  if (p.startsWith("/etiquetado/metricas")) return "resultados";
   if (p.startsWith("/etiquetado")) return "etiquetado";
   if (p.startsWith("/psicologo/evaluaciones")) return "evaluaciones";
   if (p.startsWith("/psicologo/estudiantes")) return "estudiantes";
@@ -102,7 +119,9 @@ const navActivoPsi = computed(() => {
 const alertasCrit = ref(0);
 
 async function refrescarAlertas() {
-  if (!esPsicologo.value) return;
+  // El evaluador no tiene cola de alertas: no es titular de ningún alumno y
+  // además el conteo le adelantaría cuántos casos marcó el sistema.
+  if (!esPsicologo.value || esEvaluador.value) return;
   try {
     const data = await api.dashboardStats();
     alertasCrit.value = (data?.estudiantes_en_alerta || []).filter(
@@ -167,7 +186,11 @@ function irAMenu() {
     v-else-if="authStore.isAuthenticated.value && !enConsent && esPsicologo"
     class="topbar"
   >
-    <button class="wordmark" type="button" @click="router.push('/psicologo')">
+    <button
+      class="wordmark"
+      type="button"
+      @click="router.push(esEvaluador ? '/etiquetado' : '/psicologo')"
+    >
       <img src="/sentir-isotipo.svg" class="topbar-logo" alt="SENTIR" />
       <span>Sami <span class="sub">· Clínico</span></span>
     </button>

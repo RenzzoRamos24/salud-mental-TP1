@@ -33,9 +33,15 @@ async function aceptar() {
     });
 
     // El psicólogo evaluador va a su bandeja, no al menú del alumno.
-    const rol = authStore.state.user?.role;
-    if (rol === "psicologo" || rol === "admin") {
-      router.push({ name: rol === "admin" ? "admin" : "psicologo-evaluaciones" });
+    const u = authStore.state.user;
+    if (u?.role === "psicologo" || u?.role === "admin") {
+      router.push({
+        name: u.es_evaluador
+          ? "etiquetado"
+          : u.role === "admin"
+            ? "admin"
+            : "psicologo-evaluaciones",
+      });
       return;
     }
 

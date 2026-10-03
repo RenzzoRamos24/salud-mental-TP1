@@ -101,6 +101,12 @@ class UserPublic(BaseModel):
     created_at: datetime
     consentimiento_aceptado: bool = False
     consentimiento_version: Optional[str] = None
+    # Cuenta de evaluador (código SAMI-PSI-…). La usa el frontend para
+    # mostrarle un menú acotado: las secciones del panel clínico no le sirven
+    # y algunas le revelarían el riesgo que calculó el sistema antes de que
+    # emita su juicio.
+    es_evaluador: bool = False
+    es_cuenta_prueba: bool = False
 
     model_config = {"from_attributes": True}
 

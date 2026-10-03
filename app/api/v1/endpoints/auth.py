@@ -41,6 +41,10 @@ def _user_a_publico(user: User, db: Session) -> dict:
         "created_at": user.created_at,
         "consentimiento_aceptado": consent is not None,
         "consentimiento_version": consent.version if consent else None,
+        "es_evaluador": (user.codigo_acceso or "").startswith("SAMI-PSI"),
+        "es_cuenta_prueba": (user.codigo_acceso or "").startswith(
+            "SAMI-PSI-PRUEBA"
+        ),
     }
 
 

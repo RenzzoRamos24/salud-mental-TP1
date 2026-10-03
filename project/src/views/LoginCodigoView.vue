@@ -32,10 +32,16 @@ async function entrar() {
       return;
     }
 
-    // Un código de psicólogo (SAMI-PSI-NN) no responde cuestionarios: entra
-    // directo a la bandeja con las últimas evaluaciones del sistema.
+    // Un código de psicólogo no responde cuestionarios. Si es cuenta de
+    // evaluador va a Evaluar —la lista de alumnos por juzgar—, no a la
+    // bandeja clínica: esa filtra por psicólogo titular y a un evaluador le
+    // sale vacía, que es justo lo que pasaba.
     if (data.user.role === "psicologo" || data.user.role === "admin") {
-      router.push({ name: "psicologo-evaluaciones" });
+      router.push(
+        data.user.es_evaluador
+          ? { name: "etiquetado" }
+          : { name: "psicologo-evaluaciones" },
+      );
       return;
     }
 
