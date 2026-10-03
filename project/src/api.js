@@ -255,6 +255,10 @@ export const api = {
     );
     return data;
   },
+  async satisfaccionAlumnos() {
+    const { data } = await client.get("/psychologist/satisfaccion");
+    return data;
+  },
   async metricasClasificador() {
     const { data } = await client.get("/psychologist/metricas-clasificador");
     return data;

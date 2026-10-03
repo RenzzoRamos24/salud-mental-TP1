@@ -18,6 +18,16 @@ const STUDENT_ROUTES = [
 ];
 
 const PSICO_ROUTES = [
+  // Las pantallas de evaluación entran acá: sin esto caían en el fallback
+  // sin shell, y el topbar se renderizaba sin estilos (sus reglas viven bajo
+  // `body.sami-mode`, que solo se activa para el alumno). Se veía el menú
+  // como texto plano apilado arriba a la izquierda.
+  "etiquetado",
+  "etiquetado-caso",
+  "etiquetado-frases",
+  "etiquetado-casos",
+  "etiquetado-metricas",
+  "psicologo-evaluaciones",
   "psicologo",
   "psicologo-estudiantes",
   "psicologo-alertas",
@@ -27,6 +37,7 @@ const PSICO_ROUTES = [
   "psicologo-plantillas",
   "asignar-cuestionario",
   "psicologo-resultado",
+  "psicologo-satisfaccion",
   "psicologo-sos",
   "psicologo-citas",
   "psicologo-firma",

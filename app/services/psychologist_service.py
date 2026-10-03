@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.models.user import User
 from app.models.bank import AplicacionCuestionario
+from app.models.clinical_note import ClinicalNote
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,64 @@ class PsychologistService:
                     "aplicacion_id": ultima.id,
                 })
 
+        # ── Marcados urgentes por un evaluador ─────────────────────────
+        # El botón "este caso requiere atención ahora" deja una nota clínica
+        # etiquetada `alerta`. Sin esto la nota quedaba enterrada en el
+        # expediente y el equipo solo la veía si abría a ese alumno — que es
+        # justo lo que no puede pasar cuando alguien marcó a un chico como
+        # urgente. Acá sube a la cola de alertas.
+        ids_est = [e.id for e in estudiantes]
+        if ids_est:
+            notas_urgentes = (
+                db.query(ClinicalNote)
+                .filter(
+                    ClinicalNote.estudiante_id.in_(ids_est),
+                    ClinicalNote.etiqueta == "alerta",
+                )
+                .order_by(desc(ClinicalNote.timestamp))
+                .all()
+            )
+            ya_en_alerta = {a["id"] for a in alertas}
+            vistos_urg = set()
+            por_id = {e.id: e for e in estudiantes}
+            for nota in notas_urgentes:
+                if nota.estudiante_id in vistos_urg:
+                    continue
+                vistos_urg.add(nota.estudiante_id)
+                est = por_id.get(nota.estudiante_id)
+                if est is None:
+                    continue
+                if nota.estudiante_id in ya_en_alerta:
+                    # Ya estaba en la cola por riesgo: solo se le agrega el
+                    # motivo, para que se vea que además alguien lo marcó.
+                    for a in alertas:
+                        if a["id"] == nota.estudiante_id:
+                            a["marcado_urgente"] = True
+                            a["motivo_urgente"] = nota.texto
+                            a["marcado_urgente_at"] = nota.timestamp.isoformat()
+                    continue
+                ultima = _ultima_aplicacion_revisada(db, est.id)
+                alertas.append({
+                    "id": est.id,
+                    "nombre": est.nombre,
+                    "apellido": est.apellido,
+                    "email": est.email,
+                    "riesgo_global": ultima.riesgo_global if ultima else None,
+                    "crisis_activada": bool(ultima.crisis_activada) if ultima else False,
+                    "fecha_evaluacion": (
+                        ultima.completada_at.isoformat()
+                        if ultima and ultima.completada_at else None
+                    ),
+                    "aplicacion_id": ultima.id if ultima else None,
+                    "marcado_urgente": True,
+                    "motivo_urgente": nota.texto,
+                    "marcado_urgente_at": nota.timestamp.isoformat(),
+                })
+
         alertas.sort(key=lambda x: (
+            # Un marcado urgente por una persona va antes que cualquier
+            # cálculo del sistema: alguien lo leyó y decidió avisar.
+            0 if x.get("marcado_urgente") else 1,
             0 if (x["riesgo_global"] or "").upper().startswith("C") else 1,
             -(datetime.fromisoformat(x["fecha_evaluacion"]).timestamp() if x["fecha_evaluacion"] else 0),
         ))
@@ -85,6 +143,9 @@ class PsychologistService:
             "total_estudiantes": total,
             "distribucion_riesgo": distribucion,
             "estudiantes_en_alerta": alertas,
+            "marcados_urgentes": sum(
+                1 for a in alertas if a.get("marcado_urgente")
+            ),
             "total_cuestionarios_asignados": aplicaciones_q.count(),
             "total_cuestionarios_completados": aplicaciones_q
                 .filter(AplicacionCuestionario.completada_at.isnot(None)).count(),

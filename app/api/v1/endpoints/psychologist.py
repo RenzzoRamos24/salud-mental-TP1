@@ -448,6 +448,30 @@ async def descargar_reporte_mensual(
     return Response(content=pdf, media_type="application/pdf", headers=headers)
 
 
+# ── Encuesta de satisfacción de los alumnos ─────────────────────────────────
+
+
+@router.get("/satisfaccion")
+async def satisfaccion(
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """
+    Cómo vivieron los alumnos la aplicación del cuestionario.
+
+    Devuelve la distribución por pregunta —no solo el promedio, que esconde
+    si las respuestas están partidas— la tasa de respuesta sobre los alumnos
+    que efectivamente rindieron, y todos los comentarios.
+    """
+    from app.services.survey_service import SurveyService
+
+    return SurveyService.resumen_para_psicologo(
+        db,
+        psicologo_id=current_user.id,
+        es_admin=(current_user.role == "admin"),
+    )
+
+
 # ── Métricas del clasificador BETO ──────────────────────────────────────────
 
 

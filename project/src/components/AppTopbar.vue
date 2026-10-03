@@ -86,6 +86,7 @@ const navClinicoCompleto = [
   { id: "etiquetado", label: "Evaluar", to: "/etiquetado" },
   { id: "estudiantes", label: "Estudiantes", to: "/psicologo/estudiantes" },
   { id: "sos", label: "SOS", to: "/psicologo/sos" },
+  { id: "satisfaccion", label: "Satisfacción", to: "/psicologo/satisfaccion" },
   { id: "citas", label: "Citas", to: "/psicologo/citas" },
   { id: "banco", label: "Banco", to: "/psicologo/banco" },
   { id: "plantillas", label: "Plantillas", to: "/psicologo/plantillas" },
@@ -102,6 +103,7 @@ const navActivoPsi = computed(() => {
   if (p.startsWith("/psicologo/evaluaciones")) return "evaluaciones";
   if (p.startsWith("/psicologo/estudiantes")) return "estudiantes";
   if (p.startsWith("/psicologo/sos")) return "sos";
+  if (p.startsWith("/psicologo/satisfaccion")) return "satisfaccion";
   if (p.startsWith("/psicologo/citas")) return "citas";
   if (
     p.startsWith("/psicologo/banco") ||

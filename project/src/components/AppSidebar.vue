@@ -66,8 +66,21 @@ async function refrescarBadges() {
 onMounted(refrescarBadges);
 watch(() => route.path, refrescarBadges);
 
+// Una cuenta de evaluador no atiende alumnos: no es titular de nadie y las
+// secciones del panel clínico le mostrarían el riesgo que calculó el sistema
+// antes de que emita su juicio. Le quedan las suyas.
+const esEvaluador = computed(() => !!authStore.state.user?.es_evaluador);
+
+const itemsEvaluador = computed(() => [
+  { to: "/etiquetado", label: "Evaluar alumnos", icon: iconStudents() },
+  { to: "/etiquetado/frases", label: "Evaluar frases", icon: iconBook() },
+  { to: "/etiquetado/metricas", label: "Resultados", icon: iconSend() },
+  { to: "/perfil", label: "Mi cuenta", icon: iconUser() },
+]);
+
 const itemsPsicologo = computed(() => [
   { to: "/psicologo", label: "Panel clínico", icon: iconHome() },
+  { to: "/etiquetado", label: "Evaluación clínica", icon: iconStudents() },
   { to: "/psicologo/estudiantes", label: "Estudiantes", icon: iconStudents() },
   {
     to: "/psicologo/alertas",
@@ -81,6 +94,7 @@ const itemsPsicologo = computed(() => [
     icon: iconHelp(),
     badge: sosAbiertos.value || null,
   },
+  { to: "/psicologo/satisfaccion", label: "Satisfacción", icon: iconLifebuoy() },
   { to: "/psicologo/citas", label: "Citas", icon: iconCalendar() },
   { to: "/psicologo/banco", label: "Banco", icon: iconBook() },
   { to: "/psicologo/plantillas", label: "Plantillas", icon: iconLayers() },
@@ -100,14 +114,20 @@ const itemsAdmin = computed(() => [
   { to: "/perfil", label: "Mi cuenta", icon: iconUser() },
 ]);
 
-const items = computed(() =>
-  rol.value === "admin" ? itemsAdmin.value : itemsPsicologo.value,
-);
+const items = computed(() => {
+  if (rol.value === "admin") return itemsAdmin.value;
+  return esEvaluador.value ? itemsEvaluador.value : itemsPsicologo.value;
+});
 
 function esActivo(to) {
   const p = route.path;
   if (to === "/psicologo") return p === "/psicologo";
   if (to === "/admin") return p === "/admin";
+  // `/etiquetado` es prefijo de las otras dos, así que sin esto "Evaluar
+  // alumnos" quedaría marcado como activo también en frases y resultados.
+  if (to === "/etiquetado") {
+    return p === "/etiquetado" || p.startsWith("/etiquetado/caso");
+  }
   if (to === "/recursos") return p.startsWith("/recursos");
   if (to === "/perfil") return p.startsWith("/perfil");
   return p.startsWith(to);

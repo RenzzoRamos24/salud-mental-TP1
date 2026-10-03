@@ -31,6 +31,7 @@ import PsychologistCustomBlockView from "../views/PsychologistCustomBlockView.vu
 import PsychologistAssignView from "../views/PsychologistAssignView.vue";
 import PsychologistResultView from "../views/PsychologistResultView.vue";
 import PsychologistSOSView from "../views/PsychologistSOSView.vue";
+import PsychologistSatisfaccionView from "../views/PsychologistSatisfaccionView.vue";
 import PsychologistAppointmentsView from "../views/PsychologistAppointmentsView.vue";
 
 import PadreHomeView from "../views/PadreHomeView.vue";
@@ -163,6 +164,12 @@ const routes = [
     path: "/psicologo/resultado/:id",
     name: "psicologo-resultado",
     component: PsychologistResultView,
+    meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
+  },
+  {
+    path: "/psicologo/satisfaccion",
+    name: "psicologo-satisfaccion",
+    component: PsychologistSatisfaccionView,
     meta: { requiereAuth: true, requiereConsent: true, roles: ["psicologo", "admin"] },
   },
   {
