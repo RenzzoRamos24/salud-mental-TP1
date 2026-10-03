@@ -276,36 +276,71 @@ class EtiquetadoService:
         return estratos
 
     @staticmethod
+    def plan_de(db: Session, evaluador_id: str) -> list:
+        """
+        El plan de muestreo que le toca a este evaluador: el propio si lo
+        tiene, y si no el compartido.
+        """
+        propio = (
+            db.query(MuestraEtiquetado)
+            .filter(MuestraEtiquetado.evaluador_id == evaluador_id)
+            .order_by(MuestraEtiquetado.orden)
+            .all()
+        )
+        if propio:
+            return propio
+        return (
+            db.query(MuestraEtiquetado)
+            .filter(MuestraEtiquetado.evaluador_id.is_(None))
+            .order_by(MuestraEtiquetado.orden)
+            .all()
+        )
+
+    @staticmethod
     def generar_muestra(
         db: Session,
         n: int = 100,
         semilla: int = SEMILLA_DEFAULT,
         reemplazar: bool = False,
+        evaluador_id: str | None = None,
     ) -> dict:
         """
-        Sortea la muestra de medición y la persiste.
+        Sortea una muestra de medición y la persiste.
 
-        Idempotente por diseño: si ya hay un plan, no lo toca salvo
-        `reemplazar=True`, y ni así si ya existen etiquetas de la muestra —
-        regenerar el plan después de empezar a etiquetar invalidaría los pesos
-        y, con ellos, todas las métricas proyectadas.
+        Con `evaluador_id` la muestra es de esa persona: cada psicóloga puede
+        tener su propio sorteo y producir así una prueba de BETO
+        independiente, con sus propios pesos. Sin `evaluador_id` la muestra es
+        compartida y la usan todos los que no tengan una propia.
+
+        Idempotente por diseño: si ya hay plan para ese alcance no lo toca
+        salvo `reemplazar=True`, y ni así si ya hay etiquetas suyas de la
+        muestra — rehacer el sorteo después de empezar invalidaría los pesos
+        y, con ellos, las métricas proyectadas.
         """
-        existentes = db.query(MuestraEtiquetado).count()
+        alcance = (
+            MuestraEtiquetado.evaluador_id == evaluador_id
+            if evaluador_id
+            else MuestraEtiquetado.evaluador_id.is_(None)
+        )
+        existentes = db.query(MuestraEtiquetado).filter(alcance).count()
         if existentes and not reemplazar:
             return {
                 "creada": False,
                 "motivo": (
-                    f"Ya existe un plan de muestreo con {existentes} frases. "
+                    f"Ya existe un plan de muestreo con {existentes} frases "
+                    f"{'para este evaluador' if evaluador_id else 'compartido'}. "
                     "Usá reemplazar=true para rehacerlo."
                 ),
                 "n": existentes,
+                "de_quien": "propia" if evaluador_id else "compartida",
             }
         if existentes and reemplazar:
-            ya_etiquetadas = (
-                db.query(EtiquetaFrase)
-                .filter(EtiquetaFrase.es_muestra_metrica.is_(True))
-                .count()
+            q_et = db.query(EtiquetaFrase).filter(
+                EtiquetaFrase.es_muestra_metrica.is_(True)
             )
+            if evaluador_id:
+                q_et = q_et.filter(EtiquetaFrase.evaluador_id == evaluador_id)
+            ya_etiquetadas = q_et.count()
             if ya_etiquetadas:
                 raise ValueError(
                     f"No se puede rehacer el muestreo: ya hay {ya_etiquetadas} "
@@ -313,7 +348,9 @@ class EtiquetadoService:
                     "con lo etiquetado y las métricas proyectadas dejarían de "
                     "ser válidas."
                 )
-            db.query(MuestraEtiquetado).delete(synchronize_session=False)
+            db.query(MuestraEtiquetado).filter(alcance).delete(
+                synchronize_session=False
+            )
             db.flush()
 
         frases = EtiquetadoService.corpus_frases(db)
@@ -367,6 +404,7 @@ class EtiquetadoService:
         for orden, f in enumerate(muestra, start=1):
             db.add(MuestraEtiquetado(
                 codigo=f["codigo"],
+                evaluador_id=evaluador_id,
                 aplicacion_id=f["aplicacion_id"],
                 frase_numero=f["frase_numero"],
                 estrato=f["estrato"],
@@ -383,6 +421,7 @@ class EtiquetadoService:
             "n_corpus": len(frases),
             "semilla": semilla,
             "corte_desde": corte_desde(db),
+            "de_quien": "propia" if evaluador_id else "compartida",
             "estratos": resumen,
         }
 
@@ -414,11 +453,8 @@ class EtiquetadoService:
         }
 
         # ── Fase 1: la muestra de medición ────────────────────────────
-        plan = (
-            db.query(MuestraEtiquetado)
-            .order_by(MuestraEtiquetado.orden)
-            .all()
-        )
+        # El plan propio si lo tiene; si no, el compartido.
+        plan = EtiquetadoService.plan_de(db, evaluador_id)
         n_muestra = len(plan)
         hechas_muestra = 0
         pendiente_muestra = None
@@ -511,13 +547,16 @@ class EtiquetadoService:
                 f"La frase {ref} no está en el corpus etiquetable."
             )
 
-        m = (
-            db.query(MuestraEtiquetado)
-            .filter(
-                MuestraEtiquetado.aplicacion_id == aplicacion_id,
-                MuestraEtiquetado.frase_numero == frase_numero,
-            )
-            .first()
+        # Estrato y peso salen del plan de ESTE evaluador: si cada una tiene
+        # su propio sorteo, los pesos son distintos y mezclarlos daría
+        # proyecciones mal calculadas.
+        m = next(
+            (
+                x for x in EtiquetadoService.plan_de(db, evaluador_id)
+                if x.aplicacion_id == aplicacion_id
+                and x.frase_numero == frase_numero
+            ),
+            None,
         )
 
         fila = (
@@ -962,7 +1001,9 @@ class EtiquetadoService:
     @staticmethod
     def progreso(db: Session, evaluador_id: str) -> dict:
         corpus = EtiquetadoService.corpus_frases(db)
-        n_plan = db.query(MuestraEtiquetado).count()
+        plan = EtiquetadoService.plan_de(db, evaluador_id)
+        n_plan = len(plan)
+        muestra_propia = bool(plan) and plan[0].evaluador_id == evaluador_id
 
         mis_frases = (
             db.query(EtiquetaFrase)
@@ -1008,6 +1049,7 @@ class EtiquetadoService:
                 f[0] for f in db.query(EtiquetaFrase.evaluador_id).distinct().all()
             } - ids_evaluadores_prueba(db)),
             "muestra_generada": n_plan > 0,
+            "muestra_propia": muestra_propia,
         }
 
     # ══════════════════════════════════════════════════════════════════

@@ -94,28 +94,50 @@ async def fijar_corte_fecha(
 
 class GenerarMuestraIn(BaseModel):
     n: int = Field(100, ge=10, le=600)
+    # Semilla del sorteo. Cambiarla da una muestra distinta del mismo corpus,
+    # que es justo lo que se quiere si cada psicóloga arma la suya.
     semilla: int = 20260910
     reemplazar: bool = False
+    # Solo admin. Muestra única que usan todas las que no tengan una propia:
+    # es la que permite calcular el acuerdo entre evaluadoras.
+    compartida: bool = False
 
 
 @router.post("/muestra/generar")
 async def generar_muestra(
     payload: GenerarMuestraIn,
+    current_user: User = Depends(require_role("psicologo", "admin")),
     db: Session = Depends(get_db),
-    _admin=Depends(require_role("admin")),
 ):
     """
-    Sortea la muestra de medición, estratificada por el score del modelo.
+    Sortea una muestra de medición, estratificada por el score del modelo.
 
-    Hay que correrlo una vez antes de que el psicólogo empiece. Tiene que ser
-    antes: si se regenera con etiquetas ya puestas, los pesos del estrato
-    dejan de corresponder a lo etiquetado y las métricas proyectadas quedan
-    inválidas. El servicio se niega a hacerlo en ese caso.
+    Cada psicóloga puede generar **la suya**: así cada una produce una prueba
+    de BETO independiente, con su propio sorteo y sus propios pesos. Es lo que
+    pasa por defecto cuando la pide un rol `psicologo`.
+
+    Un admin puede además generar una muestra **compartida**
+    (`compartida=true`), que usan todas las que no tengan una propia. Esa es
+    la que sirve para el acuerdo entre evaluadoras: si cada una etiqueta
+    frases distintas no hay solapamiento, y el κ inter-evaluador no se puede
+    calcular.
+
+    Hay que hacerlo antes de empezar a etiquetar: si se regenera con etiquetas
+    ya puestas, los pesos dejan de corresponder a lo etiquetado y las métricas
+    proyectadas quedan inválidas. El servicio se niega en ese caso.
     """
+    es_admin = current_user.role == "admin"
+    if payload.compartida and not es_admin:
+        raise HTTPException(
+            403, "La muestra compartida la genera un administrador."
+        )
     try:
         return EtiquetadoService.generar_muestra(
-            db, n=payload.n, semilla=payload.semilla,
+            db,
+            n=payload.n,
+            semilla=payload.semilla,
             reemplazar=payload.reemplazar,
+            evaluador_id=None if payload.compartida else current_user.id,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))

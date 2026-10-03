@@ -91,15 +91,52 @@ class PsychologistService:
         }
 
     @staticmethod
+    def _es_evaluador(db: Session, psicologo_id: str | None) -> bool:
+        """
+        ¿Es una cuenta de evaluador (código SAMI-PSI-…)?
+
+        Esas cuentas existen para validar el sistema, no para atender a nadie,
+        así que no son titulares de ningún alumno. Con el filtro normal por
+        `psicologo_id` les aparecería la lista vacía.
+        """
+        if not psicologo_id:
+            return False
+        u = db.query(User).filter(User.id == psicologo_id).first()
+        return bool(u and (u.codigo_acceso or "").startswith("SAMI-PSI"))
+
+    @staticmethod
     def listar_estudiantes(db: Session, psicologo_id: str | None = None,
                            es_admin: bool = False) -> list:
-        """Lista estudiantes. Los psicólogos solo ven los suyos; admin ve todos."""
+        """
+        Lista estudiantes. Los psicólogos solo ven los suyos; admin ve todos.
+
+        Excepción: las cuentas de evaluador (`SAMI-PSI-…`) ven los alumnos de
+        la cohorte que se está validando, aunque no sean sus titulares. Es
+        deliberado y es la alternativa buena a reasignarles los alumnos:
+        reasignar no copia, mueve — y se los sacaría del panel del equipo
+        psicopedagógico, que es quien de verdad los atiende.
+        """
         q = (
             db.query(User)
             .filter(User.role == "estudiante", User.activo == True)
             .order_by(User.created_at.desc())
         )
-        if not es_admin and psicologo_id:
+        evaluador = PsychologistService._es_evaluador(db, psicologo_id)
+        if evaluador:
+            # Solo los de la cohorte vigente: el corte del etiquetado deja
+            # fuera las aplicaciones viejas, que quedan como registro.
+            from app.services.etiquetado_service import corte_desde
+            desde = corte_desde(db)
+            sub = db.query(AplicacionCuestionario.estudiante_id).filter(
+                AplicacionCuestionario.resultado_json.isnot(None)
+            )
+            if desde:
+                sub = sub.filter(
+                    AplicacionCuestionario.completada_at
+                    >= datetime.strptime(desde, "%Y-%m-%d")
+                )
+            q = q.filter(User.id.in_(sub.subquery().select()))
+        elif not es_admin and psicologo_id:
             q = q.filter(User.psicologo_id == psicologo_id)
         estudiantes = q.all()
         out = []
@@ -116,9 +153,19 @@ class PsychologistService:
                 "apellido": est.apellido,
                 "email": est.email,
                 "total_cuestionarios": total_apps,
-                "ultimo_riesgo": ultima.riesgo_global if ultima else None,
+                # Al evaluador se le oculta el riesgo que calculó el sistema.
+                # Si lo viera en la lista abriría cada caso sabiendo la
+                # respuesta, y su juicio dejaría de ser independiente: lo que
+                # mediríamos después sería anclaje, no concordancia. Lo ve
+                # recién al guardar su evaluación, en la pantalla de Evaluar.
+                "ultimo_riesgo": (
+                    None if evaluador else (ultima.riesgo_global if ultima else None)
+                ),
                 "ultima_evaluacion": ultima.completada_at.isoformat() if ultima and ultima.completada_at else None,
-                "crisis_activada": bool(ultima.crisis_activada) if ultima else False,
+                "crisis_activada": (
+                    False if evaluador
+                    else (bool(ultima.crisis_activada) if ultima else False)
+                ),
                 "estado_caso": getattr(est, "estado_caso", None) or "activo",
                 "psicologo_id": getattr(est, "psicologo_id", None),
                 "grado": getattr(est, "grado", None),
@@ -153,7 +200,14 @@ class PsychologistService:
         if not estudiante:
             raise ValueError("Estudiante no encontrado")
         # Un psicólogo solo puede ver el historial de sus propios estudiantes.
-        if not es_admin and psicologo_id and estudiante.psicologo_id != psicologo_id:
+        # Las cuentas de evaluador son la excepción: ven la cohorte que están
+        # validando sin ser titulares de nadie (ver `listar_estudiantes`).
+        if (
+            not es_admin
+            and psicologo_id
+            and estudiante.psicologo_id != psicologo_id
+            and not PsychologistService._es_evaluador(db, psicologo_id)
+        ):
             raise ValueError("No tienes acceso al historial de este estudiante.")
 
         aplicaciones = (
@@ -162,6 +216,9 @@ class PsychologistService:
             .order_by(desc(AplicacionCuestionario.asignada_at))
             .all()
         )
+        # Mismo criterio que en el listado: el evaluador no ve el riesgo
+        # calculado hasta después de emitir su juicio.
+        evaluador = PsychologistService._es_evaluador(db, psicologo_id)
 
         return {
             "estudiante": {
@@ -177,8 +234,10 @@ class PsychologistService:
                     "id": a.id,
                     "plantilla_id": a.plantilla_id,
                     "estado": a.estado,
-                    "riesgo_global": a.riesgo_global,
-                    "crisis_activada": bool(a.crisis_activada),
+                    "riesgo_global": None if evaluador else a.riesgo_global,
+                    "crisis_activada": (
+                        False if evaluador else bool(a.crisis_activada)
+                    ),
                     "asignada_at": a.asignada_at.isoformat() if a.asignada_at else None,
                     "completada_at": a.completada_at.isoformat() if a.completada_at else None,
                 }

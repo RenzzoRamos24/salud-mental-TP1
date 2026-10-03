@@ -291,9 +291,11 @@ export const api = {
     const { data } = await client.post("/etiquetado/corte", { desde });
     return data;
   },
-  async etiquetadoGenerarMuestra({ n = 100, semilla = 20260910, reemplazar = false } = {}) {
+  async etiquetadoGenerarMuestra(
+    { n = 100, semilla = 20260910, reemplazar = false, compartida = false } = {},
+  ) {
     const { data } = await client.post("/etiquetado/muestra/generar", {
-      n, semilla, reemplazar,
+      n, semilla, reemplazar, compartida,
     });
     return data;
   },

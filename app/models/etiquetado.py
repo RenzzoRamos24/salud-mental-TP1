@@ -85,8 +85,22 @@ class MuestraEtiquetado(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     # Código opaco que se le muestra al evaluador (F-1008). No revela de qué
-    # alumno viene ni en qué orden se respondió.
-    codigo = Column(String(16), nullable=False, unique=True)
+    # alumno viene ni en qué orden se respondió. No es único global: dos
+    # muestras distintas pueden sortear la misma frase y mostrarla con el
+    # mismo código.
+    codigo = Column(String(16), nullable=False, index=True)
+
+    # De quién es esta muestra. NULL = muestra compartida, la ven todos los
+    # que no tengan una propia.
+    #
+    # Existe porque cada psicóloga puede querer su propio sorteo: así cada
+    # una produce una prueba de BETO independiente, con sus propios pesos y
+    # su propia estimación. El precio es que si cada una etiqueta frases
+    # distintas, no hay solapamiento y el acuerdo entre evaluadoras no se
+    # puede calcular — para eso sirve la muestra compartida.
+    evaluador_id = Column(
+        String(36), ForeignKey("users.id"), nullable=True, index=True
+    )
 
     aplicacion_id = Column(
         Integer,
@@ -105,10 +119,13 @@ class MuestraEtiquetado(Base):
     generada_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
+        # Una frase no se repite DENTRO de la misma muestra, pero sí puede
+        # aparecer en la muestra de otra evaluadora.
         UniqueConstraint(
-            "aplicacion_id", "frase_numero", name="uq_muestra_frase"
+            "evaluador_id", "aplicacion_id", "frase_numero",
+            name="uq_muestra_frase_evaluador",
         ),
-        Index("ix_muestra_orden", "orden"),
+        Index("ix_muestra_orden", "evaluador_id", "orden"),
     )
 
 

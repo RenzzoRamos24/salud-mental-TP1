@@ -402,6 +402,52 @@ def _migrar_esquema(db) -> None:
             "fijar las 10 frases del piloto del colegio",
         )
 
+    # ── muestra_etiquetado: evaluador_id (muestra por psicóloga) ───────
+    if "muestra_etiquetado" in tablas:
+        columnas_m = {c["name"] for c in inspector.get_columns("muestra_etiquetado")}
+        if "evaluador_id" not in columnas_m:
+            # La tabla nació con una sola muestra global. Ahora cada psicóloga
+            # puede tener la suya, lo que cambia el UNIQUE y el índice además
+            # de agregar la columna. Si está vacía —el caso normal, porque el
+            # sorteo se hace una vez y recién al arrancar la validación— se
+            # recrea limpia y `create_all` la deja al día. Si tuviera filas no
+            # se toca: borrar un plan de muestreo invalidaría los pesos de las
+            # etiquetas ya puestas.
+            from sqlalchemy import text
+
+            try:
+                filas = db.execute(
+                    text("SELECT COUNT(*) FROM muestra_etiquetado")
+                ).scalar() or 0
+            except Exception:
+                db.rollback()
+                filas = -1
+
+            if filas == 0:
+                _ejecutar(
+                    db,
+                    "DROP TABLE muestra_etiquetado",
+                    "borrar 'muestra_etiquetado' para recrearla",
+                )
+                # Hay que recrearla acá: `startup.sh` corre `create_all`
+                # ANTES de esta migración, así que si solo se borrara la
+                # tabla nadie la volvería a crear hasta el reinicio
+                # siguiente, y el etiquetado quedaría roto en el medio.
+                try:
+                    from app.models.etiquetado import MuestraEtiquetado
+                    MuestraEtiquetado.__table__.create(bind=db.get_bind())
+                    print("  - muestra_etiquetado recreada con evaluador_id")
+                except Exception as e:      # noqa: BLE001
+                    db.rollback()
+                    print(f"  (no se pudo recrear muestra_etiquetado: {e})")
+            else:
+                print(
+                    f"  ! muestra_etiquetado tiene {filas} filas y le falta "
+                    "evaluador_id. NO se toca para no invalidar pesos ya "
+                    "usados. Hay que migrarla a mano si se quiere muestra "
+                    "por psicóloga."
+                )
+
     if "resultado_feedback" not in tablas:
         return      # create_all ya la habrá creado con el esquema al día
 

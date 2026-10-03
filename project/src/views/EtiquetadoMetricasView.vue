@@ -56,13 +56,26 @@ async function cargar() {
   }
 }
 
-async function generarMuestra() {
+// Cada psicóloga genera SU muestra: así cada una produce una prueba de BETO
+// independiente, con su propio sorteo y sus propios pesos. La semilla cambia
+// por persona para que no les toque la misma selección.
+async function generarMuestra({ compartida = false } = {}) {
   generando.value = true;
   avisoMuestra.value = "";
   try {
-    const r = await api.etiquetadoGenerarMuestra({ n: 100 });
+    const r = await api.etiquetadoGenerarMuestra({
+      n: 100,
+      compartida,
+      // Derivo la semilla del id de usuario cuando la muestra es propia.
+      semilla: compartida
+        ? 20260910
+        : 20260910 +
+          ((authStore.state.user?.id || "")
+            .split("")
+            .reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 100000, 7)),
+    });
     avisoMuestra.value = r.creada
-      ? `Muestra creada: ${r.n} frases de un corpus de ${r.n_corpus}.`
+      ? `Muestra ${r.de_quien} creada: ${r.n} frases sorteadas de ${r.n_corpus}.`
       : r.motivo;
     await cargar();
   } catch (e) {
@@ -121,7 +134,12 @@ function colorMeta(valor, meta) {
           <p class="text-2xl font-semibold text-green-900">
             {{ progreso.frases.muestra_hechas }}/{{ progreso.frases.muestra_total }}
           </p>
-          <p class="text-[11px] text-ink-400">frases etiquetadas</p>
+          <p class="text-[11px] text-ink-400">
+            frases etiquetadas
+            <span v-if="progreso.muestra_generada">
+              · muestra {{ progreso.muestra_propia ? "propia" : "compartida" }}
+            </span>
+          </p>
         </div>
         <div class="card p-4">
           <p class="text-xs text-ink-500">Resto del corpus</p>
@@ -212,16 +230,31 @@ function colorMeta(valor, meta) {
           los pesos dejan de corresponder a lo etiquetado y las métricas
           proyectadas al corpus pierden validez.
         </p>
-        <button
-          v-if="esAdmin"
-          class="btn-primary btn-sm"
-          :disabled="generando"
-          @click="generarMuestra"
-        >
-          {{ generando ? "Generando…" : "Generar muestra (100 frases)" }}
-        </button>
-        <p v-else class="text-xs text-ink-400">
-          Lo tiene que hacer un administrador.
+        <div class="flex flex-wrap gap-2">
+          <button
+            class="btn-primary btn-sm"
+            :disabled="generando"
+            @click="generarMuestra()"
+          >
+            {{ generando ? "Generando…" : "Generar mi muestra (100 frases)" }}
+          </button>
+          <button
+            v-if="esAdmin"
+            class="btn-ghost btn-sm"
+            :disabled="generando"
+            @click="generarMuestra({ compartida: true })"
+          >
+            Generar muestra compartida
+          </button>
+        </div>
+        <p class="text-[11px] text-ink-400 mt-2">
+          <strong>Mi muestra</strong>: tu propio sorteo, con tus propios pesos
+          — cada psicóloga produce así una prueba de BETO independiente.
+          <span v-if="esAdmin">
+            <strong>Compartida</strong>: una sola muestra para todas, que es la
+            única forma de medir el acuerdo entre evaluadoras (si cada una
+            etiqueta frases distintas, no hay solapamiento que comparar).
+          </span>
         </p>
         <p v-if="avisoMuestra" class="text-xs text-green-700 mt-2">
           {{ avisoMuestra }}
