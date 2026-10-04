@@ -27,8 +27,19 @@ if (inicial) {
   state.user = inicial.user;
 }
 
+// Si la cuenta es de evaluador, el panel clínico queda cerrado hasta que
+// termina de evaluar. Se guarda acá para que el sidebar, el topbar y el guard
+// del router lean lo mismo y no se contradigan entre sí.
+const evaluacion = reactive({ panelDesbloqueado: false, faltan: null });
+
 export const authStore = {
   state: readonly(state),
+  evaluacion: readonly(evaluacion),
+
+  setEvaluacion({ panel_desbloqueado, casos_para_desbloquear }) {
+    evaluacion.panelDesbloqueado = !!panel_desbloqueado;
+    evaluacion.faltan = casos_para_desbloquear ?? null;
+  },
 
   isAuthenticated: computed(() => !!state.token && !!state.user),
   consentimientoAceptado: computed(() => !!state.user?.consentimiento_aceptado),

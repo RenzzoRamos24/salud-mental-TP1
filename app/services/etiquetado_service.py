@@ -1044,6 +1044,15 @@ class EtiquetadoService:
             } - ids_evaluadores_prueba(db)),
             "muestra_generada": n_plan > 0,
             "muestra_propia": muestra_propia,
+            # El panel clínico se le abre al evaluador recién cuando terminó
+            # de evaluar todos los casos de la cohorte. Antes no: ese panel
+            # muestra el riesgo que calculó el sistema sobre los mismos chicos
+            # que tiene que juzgar, y verlo primero convertiría su criterio en
+            # un eco del modelo. Después de emitir los 104 juicios ya no hay
+            # nada que contaminar, y puede usar el sistema como cualquier
+            # psicóloga.
+            "panel_desbloqueado": n_casos_total > 0 and mis_casos >= n_casos_total,
+            "casos_para_desbloquear": max(0, n_casos_total - mis_casos),
         }
 
     # ══════════════════════════════════════════════════════════════════

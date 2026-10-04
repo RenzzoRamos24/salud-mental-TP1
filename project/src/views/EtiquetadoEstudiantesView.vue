@@ -3,9 +3,8 @@ import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "../api";
 
-// La lista de alumnos a evaluar. Es la entrada al etiquetado: se elige un
-// alumno, se abre su caso, se emite el juicio y recién ahí aparece lo que
-// calculó el sistema.
+// La lista de alumnos a evaluar: se elige uno, se abre su caso y se emite el
+// juicio.
 //
 // A propósito no muestra el riesgo que calculó el modelo. Si la lista dijera
 // "CRÍTICO" al lado de cada nombre, se abriría cada caso ya sabiendo la
@@ -94,10 +93,27 @@ function colorRiesgo(r) {
         Alumnos por <span class="hero-mint">evaluar</span>
       </h1>
       <p class="text-sm text-ink-500 mt-2">
-        Abrí cada alumno, leé sus respuestas y dejá tu evaluación. Después de
-        guardarla vas a ver lo que calculó el sistema, para comparar.
+        Abrí cada alumno, leé sus respuestas y dejá tu evaluación clínica.
       </p>
     </header>
+
+    <div
+      v-if="datos && datos.total && datos.etiquetados >= datos.total"
+      class="banner-success mb-4 text-sm"
+    >
+      <strong>Terminaste de evaluar.</strong> El panel clínico completo ya está
+      disponible en el menú de la izquierda: alumnos con su riesgo, alertas,
+      satisfacción y todo lo demás.
+    </div>
+    <div
+      v-else-if="datos && datos.total"
+      class="banner-info mb-4 text-sm"
+    >
+      Te faltan <strong>{{ datos.total - datos.etiquetados }}</strong> de
+      {{ datos.total }} alumnos. Al terminarlos se te abre el panel clínico
+      completo — hasta entonces queda cerrado para que tu criterio no esté
+      influido por lo que calculó el sistema.
+    </div>
 
     <div v-if="esPrueba" class="banner-warn mb-4 text-sm">
       <strong>Cuenta de prueba.</strong> Podés recorrer todo el flujo y tus

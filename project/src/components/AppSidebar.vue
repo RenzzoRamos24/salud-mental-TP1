@@ -63,8 +63,23 @@ async function refrescarBadges() {
   }
 }
 
-onMounted(refrescarBadges);
-watch(() => route.path, refrescarBadges);
+async function refrescarEvaluacion() {
+  if (!esEvaluador.value) return;
+  try {
+    authStore.setEvaluacion(await api.etiquetadoProgreso());
+  } catch (_) {
+    /* si falla, el panel queda cerrado, que es el lado seguro */
+  }
+}
+
+onMounted(() => {
+  refrescarBadges();
+  refrescarEvaluacion();
+});
+watch(() => route.path, () => {
+  refrescarBadges();
+  refrescarEvaluacion();
+});
 
 // Una cuenta de evaluador no atiende alumnos: no es titular de nadie y las
 // secciones del panel clínico le mostrarían el riesgo que calculó el sistema
@@ -114,9 +129,16 @@ const itemsAdmin = computed(() => [
   { to: "/perfil", label: "Mi cuenta", icon: iconUser() },
 ]);
 
+// Una evaluadora ve su menú acotado mientras le queden casos; cuando termina
+// se le abre el panel completo y pasa a tener lo mismo que cualquier
+// psicóloga, con sus secciones de evaluación agregadas al final.
+const panelAbierto = computed(() => authStore.evaluacion.panelDesbloqueado);
+
 const items = computed(() => {
   if (rol.value === "admin") return itemsAdmin.value;
-  return esEvaluador.value ? itemsEvaluador.value : itemsPsicologo.value;
+  if (!esEvaluador.value) return itemsPsicologo.value;
+  if (!panelAbierto.value) return itemsEvaluador.value;
+  return [...itemsPsicologo.value, ...itemsEvaluador.value.slice(0, 3)];
 });
 
 function esActivo(to) {

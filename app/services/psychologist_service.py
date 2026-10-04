@@ -41,7 +41,22 @@ class PsychologistService:
             db.query(User)
             .filter(User.role == "estudiante", User.activo == True)
         )
-        if not es_admin and psicologo_id:
+        # Una cuenta de evaluador no es titular de nadie: con el filtro normal
+        # el dashboard le saldría vacío justo después de habérsele abierto.
+        # Ve los alumnos de la cohorte que acaba de evaluar.
+        if PsychologistService._es_evaluador(db, psicologo_id):
+            sub = db.query(AplicacionCuestionario.estudiante_id).filter(
+                AplicacionCuestionario.resultado_json.isnot(None)
+            )
+            from app.services.etiquetado_service import corte_desde
+            desde = corte_desde(db)
+            if desde:
+                sub = sub.filter(
+                    AplicacionCuestionario.completada_at
+                    >= datetime.strptime(desde, "%Y-%m-%d")
+                )
+            q = q.filter(User.id.in_(sub.subquery().select()))
+        elif not es_admin and psicologo_id:
             q = q.filter(User.psicologo_id == psicologo_id)
         estudiantes = q.all()
         total = len(estudiantes)
@@ -166,6 +181,37 @@ class PsychologistService:
         return bool(u and (u.codigo_acceso or "").startswith("SAMI-PSI"))
 
     @staticmethod
+    def _panel_abierto(db: Session, psicologo_id: str | None) -> bool:
+        """
+        ¿A esta evaluadora ya se le abrió el panel clínico?
+
+        Se abre cuando terminó de evaluar todos los casos de la cohorte.
+        Antes no: el panel muestra el riesgo que calculó el sistema sobre los
+        mismos alumnos que tiene que juzgar.
+        """
+        if not PsychologistService._es_evaluador(db, psicologo_id):
+            return False
+        from app.models.etiquetado import EtiquetaCaso
+        from app.services.etiquetado_service import corte_desde
+
+        q = db.query(AplicacionCuestionario).filter(
+            AplicacionCuestionario.resultado_json.isnot(None)
+        )
+        desde = corte_desde(db)
+        if desde:
+            q = q.filter(
+                AplicacionCuestionario.completada_at
+                >= datetime.strptime(desde, "%Y-%m-%d")
+            )
+        total = q.count()
+        hechas = (
+            db.query(EtiquetaCaso)
+            .filter(EtiquetaCaso.evaluador_id == psicologo_id)
+            .count()
+        )
+        return total > 0 and hechas >= total
+
+    @staticmethod
     def listar_estudiantes(db: Session, psicologo_id: str | None = None,
                            es_admin: bool = False) -> list:
         """
@@ -182,8 +228,13 @@ class PsychologistService:
             .filter(User.role == "estudiante", User.activo == True)
             .order_by(User.created_at.desc())
         )
-        evaluador = PsychologistService._es_evaluador(db, psicologo_id)
-        if evaluador:
+        es_eval = PsychologistService._es_evaluador(db, psicologo_id)
+        # Oculta el riesgo solo mientras siga evaluando. Cuando termina, el
+        # panel se le abre completo y ya no hay nada que proteger.
+        evaluador = es_eval and not PsychologistService._panel_abierto(
+            db, psicologo_id
+        )
+        if es_eval:
             # Solo los de la cohorte vigente: el corte del etiquetado deja
             # fuera las aplicaciones viejas, que quedan como registro.
             from app.services.etiquetado_service import corte_desde
@@ -279,7 +330,9 @@ class PsychologistService:
         )
         # Mismo criterio que en el listado: el evaluador no ve el riesgo
         # calculado hasta después de emitir su juicio.
-        evaluador = PsychologistService._es_evaluador(db, psicologo_id)
+        evaluador = PsychologistService._es_evaluador(
+            db, psicologo_id
+        ) and not PsychologistService._panel_abierto(db, psicologo_id)
 
         return {
             "estudiante": {

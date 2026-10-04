@@ -282,6 +282,24 @@ router.beforeEach((to) => {
   if (to.meta.roles && !to.meta.roles.includes(rol)) {
     return inicioPorRol(rol);
   }
+
+  // Panel clínico cerrado para evaluadoras que todavía están evaluando.
+  //
+  // Ocultarlo del menú no alcanza: con escribir la URL a mano se llega igual,
+  // y ese panel muestra el riesgo que calculó el sistema sobre los mismos
+  // alumnos que tienen que juzgar. Si lo ven antes, su criterio deja de ser
+  // independiente y la concordancia que midamos después no significa nada.
+  // Cuando terminan los casos se abre solo.
+  if (
+    auth &&
+    consent &&
+    authStore.state.user?.es_evaluador &&
+    !authStore.evaluacion.panelDesbloqueado &&
+    (to.path.startsWith("/psicologo") || to.path.startsWith("/admin"))
+  ) {
+    return { name: "etiquetado" };
+  }
+
   return true;
 });
 
