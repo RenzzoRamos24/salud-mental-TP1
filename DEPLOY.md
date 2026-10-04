@@ -54,7 +54,7 @@ cd /home/renzo/salud-mental-TP1
 venv/bin/python -c "
 import zipfile, os
 from pathlib import Path
-INCLUDES = ['app', 'project/dist', 'scripts/seed_admin.py', 'scripts/bootstrap_postgres.py', 'startup.sh', 'requirements.txt']
+INCLUDES = ['app', 'project/dist', 'models', 'scripts/seed_admin.py', 'scripts/bootstrap_postgres.py', 'startup.sh', 'requirements.txt']
 EXCLUDES = ('__pycache__', '.pyc', '/node_modules/', '/.git/')
 with zipfile.ZipFile('.deploy.zip', 'w', zipfile.ZIP_DEFLATED) as z:
     for inc in INCLUDES:
