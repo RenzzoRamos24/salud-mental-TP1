@@ -324,7 +324,10 @@ function fmtFecha(iso) {
         </div>
       </div>
 
-      <!-- Capa 5: SVM segunda opinión sobre DASS-21 -->
+      <!-- Capa 5: SVM segunda opinión. Hay un modelo por instrumento
+           (DASS-21 y PHQ-A); el backend elige y lo informa en
+           `instrumento`. Los resultados guardados antes de que existiera
+           el segundo modelo no traen ese campo: eran todos DASS-21. -->
       <div
         v-if="resultado?.svm_segunda_opinion"
         class="card p-5 mb-6"
@@ -333,7 +336,8 @@ function fmtFecha(iso) {
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-xs uppercase tracking-wide text-ink-500 font-semibold">
-              Segunda opinión · SVM sobre DASS-21
+              Segunda opinión · SVM sobre
+              {{ resultado.svm_segunda_opinion.instrumento || 'DASS-21' }}
             </p>
             <p class="text-lg font-semibold mt-1">
               {{ resultado.svm_segunda_opinion.clase === 'en_riesgo' ? 'En riesgo' : 'Sin riesgo' }}

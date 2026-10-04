@@ -7,8 +7,10 @@ Capas:
   2. Banderas de crisis (PHQ-A #9 ≥ 1, SRQ-20 #17 = 1, BETO ideación ≥ 0.4).
   3. Riesgo compuesto a partir del número de señales en zona de alerta.
   4. BETO sobre frases incompletas — categorías emocionales por respuesta.
-  5. SVM (segunda opinión) — solo cuando la plantilla incluye DASS-21.
-     Entrenado con datos reales de adolescentes 13-17 años (Open Psychometrics).
+  5. SVM (segunda opinión) — dos modelos, se elige por instrumento:
+     · DASS-21 → modelo Open Psychometrics (adolescentes 13-17).
+     · PHQ-A   → modelo ENDES (INEI, Perú, 15-17), que es el instrumento
+       que se aplica hoy en el colegio.
      Si discrepa con las reglas → bandera "discrepancia: revisar".
 """
 import logging
@@ -177,12 +179,66 @@ class EvaluatorService:
         y devuelve su predicción + flag de discrepancia con las reglas.
         Si no hay DASS-21 o el SVM no está disponible, devuelve None.
         """
-        # Verifica que la plantilla incluyó DASS-21 — su código aparece en los
-        # bloques evaluados.
-        if not any(b.get("codigo") == "DASS-21" for b in bloques_resultado):
+        codigos = {b.get("codigo") for b in bloques_resultado}
+
+        # Dos modelos, uno por instrumento. Se elige por lo que el alumno
+        # respondió, no por preferencia: cada SVM aprendió una frontera sobre
+        # las features de SU instrumento y no sabe leer las del otro.
+        #
+        # DASS-21 tiene prioridad porque es el modelo con el que se validó el
+        # piloto de julio; si el cuestionario trae los dos, se reporta ese
+        # para no cambiar el significado de los resultados ya publicados.
+        if "DASS-21" in codigos:
+            return EvaluatorService._svm_dass21(
+                resp_por_origen, riesgo_global, crisis_activada
+            )
+        if "PHQ-A" in codigos:
+            return EvaluatorService._svm_phq(
+                resp_por_origen, riesgo_global, crisis_activada
+            )
+        return None
+
+    @staticmethod
+    def _svm_phq(resp_por_origen, riesgo_global, crisis_activada) -> dict | None:
+        """
+        Segunda opinión sobre PHQ-A con el modelo entrenado con ENDES.
+
+        PHQ-A son los 9 ítems del PHQ-9 con redacción adaptada a
+        adolescentes, misma escala 0-3, así que el vector de entrada es
+        directamente comparable.
+        """
+        respuestas = {}
+        for i in range(1, 10):
+            r = resp_por_origen.get(f"INSTR:PHQ-A:{i}")
+            if r is None or r.valor_num is None:
+                return None  # Falta alguna respuesta — no opina.
+            respuestas[i] = int(r.valor_num)
+
+        from app.services.svm_service import SVMService
+        pred = SVMService.predecir_phq(respuestas)
+        if pred is None:
             return None
 
-        # Construye dict { numero (1..21): valor (0..3) } leyendo respuestas.
+        reglas_marcan_riesgo = (
+            crisis_activada or riesgo_global not in ("SIN_RIESGO", "BAJO")
+        )
+        return {
+            "clase": pred["clase"],
+            "probabilidad": pred["probabilidad"],
+            "confianza": pred["confianza"],
+            "discrepancia_con_reglas": (
+                reglas_marcan_riesgo != (pred["clase"] == "en_riesgo")
+            ),
+            "reglas_marcan_riesgo": reglas_marcan_riesgo,
+            "instrumento": "PHQ-A",
+            "dataset": "PHQ-9 / ENDES (INEI, Perú) — 15-17 años",
+            "modelo": "SVC RBF + StandardScaler",
+        }
+
+    @staticmethod
+    def _svm_dass21(resp_por_origen, riesgo_global, crisis_activada) -> dict | None:
+        """Segunda opinión sobre DASS-21 (modelo del piloto de julio)."""
+
         respuestas = {}
         for i in range(1, 22):
             r = resp_por_origen.get(f"INSTR:DASS-21:{i}")
@@ -207,6 +263,7 @@ class EvaluatorService:
             "confianza": pred["confianza"],
             "discrepancia_con_reglas": discrepancia,
             "reglas_marcan_riesgo": reglas_marcan_riesgo,
+            "instrumento": "DASS-21",
             "dataset": "DASS-21 / Open Psychometrics — adolescentes 13-17",
             "modelo": "SVC RBF + StandardScaler",
         }

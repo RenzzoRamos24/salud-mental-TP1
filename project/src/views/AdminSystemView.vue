@@ -117,9 +117,9 @@ function fmtBytes(n) {
           </p>
         </div>
         <div class="card p-4">
-          <p class="text-xs text-ink-400">Modelo SVM (DASS-21)</p>
-          <p class="text-lg font-semibold text-green-700 mt-1">🟢 Activo</p>
-          <p class="text-xs text-ink-500 mt-1">Segunda opinión clínica</p>
+          <p class="text-xs text-ink-400">Modelos SVM</p>
+          <p class="text-lg font-semibold text-green-700 mt-1">🟢 Activos</p>
+          <p class="text-xs text-ink-500 mt-1">PHQ-A y DASS-21</p>
         </div>
         <div class="card p-4">
           <p class="text-xs text-ink-400">Último respaldo</p>
@@ -200,34 +200,77 @@ function fmtBytes(n) {
       <!-- ── Modelo SVM ─────────────────────────────────────────── -->
       <div class="card p-6 mb-4">
         <h2 class="text-lg font-semibold mb-3 text-green-900">
-          Modelo de Machine Learning — SVM sobre DASS-21
+          Modelos de Machine Learning — SVM
         </h2>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <div>
-            <p class="text-xs text-ink-400">Algoritmo</p>
-            <p class="text-sm mt-1">SVC con kernel RBF + StandardScaler</p>
+        <p class="text-sm text-ink-600 mb-4">
+          Un modelo por instrumento. El sistema elige según lo que el alumno
+          respondió: los cuestionarios que se aplican hoy usan PHQ-A.
+        </p>
+
+        <div class="rounded-lg border border-green-200 bg-green-50/50 p-4 mb-3">
+          <p class="text-sm font-semibold text-green-900 mb-3">
+            PHQ-A · en uso
+          </p>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-ink-400">Algoritmo</p>
+              <p class="text-sm mt-1">SVC con kernel RBF + StandardScaler</p>
+            </div>
+            <div>
+              <p class="text-xs text-ink-400">Dataset de entrenamiento</p>
+              <p class="text-sm mt-1">
+                PHQ-9 / ENDES (INEI, Perú) · 1 370 adolescentes de hasta
+                17 años
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-ink-400">Métricas (test held-out 20 %)</p>
+              <p class="text-sm mt-1">
+                F1-macro <span class="font-semibold">0.94</span> · ROC-AUC
+                <span class="font-semibold">0.998</span> · Accuracy
+                <span class="font-semibold">0.98</span>
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-ink-400">Rol clínico</p>
+              <p class="text-sm mt-1">
+                Segunda opinión — no reemplaza criterio profesional
+              </p>
+            </div>
           </div>
-          <div>
-            <p class="text-xs text-ink-400">Dataset de entrenamiento</p>
-            <p class="text-sm mt-1">
-              DASS-42 (Open Psychometrics) · 7 269 adolescentes 13–17 años
-            </p>
+          <p class="text-xs text-ink-500 mt-3 pt-3 border-t border-green-200">
+            Nota metodológica: la etiqueta de entrenamiento es el corte
+            ≥ 10 sobre la suma de los mismos 9 ítems que el modelo recibe
+            como entrada, así que estas métricas miden qué tan bien el SVM
+            reproduce una suma, no qué tan bien detecta depresión. La
+            validación contra juicio clínico está en Etiquetado · Métricas.
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-cream-200 p-4">
+          <p class="text-sm font-semibold text-ink-700 mb-3">
+            DASS-21 · piloto de julio 2026
+          </p>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-ink-400">Dataset de entrenamiento</p>
+              <p class="text-sm mt-1">
+                DASS-42 (Open Psychometrics) · 7 269 adolescentes 13–17 años
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-ink-400">Métricas (test held-out 20 %)</p>
+              <p class="text-sm mt-1">
+                F1-macro <span class="font-semibold">0.92</span> · ROC-AUC
+                <span class="font-semibold">0.998</span> · Accuracy
+                <span class="font-semibold">0.97</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <p class="text-xs text-ink-400">Métricas (test held-out 20 %)</p>
-            <p class="text-sm mt-1">
-              F1-macro <span class="font-semibold">0.92</span> · ROC-AUC
-              <span class="font-semibold">0.998</span> · Accuracy
-              <span class="font-semibold">0.97</span>
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-ink-400">Rol clínico</p>
-            <p class="text-sm mt-1">
-              Segunda opinión sobre escala DASS-21 — no reemplaza criterio
-              profesional
-            </p>
-          </div>
+          <p class="text-xs text-ink-500 mt-3">
+            Se conserva para que los 39 reportes de julio sigan siendo
+            reproducibles. No se aplica a cuestionarios nuevos.
+          </p>
         </div>
       </div>
 

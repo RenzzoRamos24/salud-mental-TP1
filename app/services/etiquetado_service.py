@@ -180,10 +180,15 @@ def fijar_corte(db: Session, desde: str | None) -> str | None:
 
 
 def _svm_instalado() -> bool:
-    """¿Existe el .joblib en este servidor? En Azure no: el paquete de deploy
-    (ver DEPLOY.md) no incluye `models/`."""
+    """
+    ¿Hay algún modelo SVM cargable en este servidor?
+
+    Son dos .joblib: el de DASS-21 (piloto de julio) y el de PHQ-9/ENDES
+    (la cohorte que se está etiquetando). Alcanza con uno para que la
+    pantalla de métricas tenga algo que comparar.
+    """
     from app.services.svm_service import SVMService
-    return SVMService.disponible()
+    return SVMService.disponible() or SVMService.disponible_phq()
 
 
 def _codigo_estable(aplicacion_id: int, numero: int) -> str:

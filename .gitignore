@@ -56,3 +56,9 @@ project/.vite/
 docs/reportes_colegio/
 docs/piloto_colegio/etiquetado_ideacion/frases_para_etiquetar.csv
 docs/piloto_colegio/etiquetado_ideacion/_clave_muestra.json
+
+# Microdatos ENDES. Traen HHID_salud (identificador de hogar) junto a las
+# respuestas de salud mental, y este repositorio es publico. El modelo
+# entrenado si viaja en git (models/svm_endes_phq9.joblib); para reentrenar,
+# conseguir el archivo del INEI y ponerlo en la raiz. Ver docs/SVM_ENDES.md.
+estudiantes_phq9_endes2025.xlsx

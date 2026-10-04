@@ -65,11 +65,16 @@ jobs:
             || { echo "::error::El build de Vite no genero project/dist/index.html"; exit 1; }
           echo "Build OK — $(find project/dist -type f | wc -l) archivos"
 
-      - name: Verificar que el modelo SVM esta presente
+      - name: Verificar que los modelos SVM estan presentes
         run: |
-          test -f models/svm_dass21.joblib \
-            || { echo "::error::Falta models/svm_dass21.joblib — la segunda opinion del SVM quedaria desactivada en produccion"; exit 1; }
-          echo "SVM OK — $(du -h models/svm_dass21.joblib | cut -f1)"
+          # Son dos: PHQ-A (el instrumento que se aplica hoy) y DASS-21 (el
+          # piloto de julio). Si falta alguno, la segunda opinion sale vacia
+          # en produccion sin que nada falle de forma visible.
+          for m in models/svm_endes_phq9.joblib models/svm_dass21.joblib; do
+            test -f "$m" \
+              || { echo "::error::Falta $m — la segunda opinion del SVM quedaria desactivada en produccion"; exit 1; }
+            echo "SVM OK — $m ($(du -h "$m" | cut -f1))"
+          done
 
       - name: Armar el paquete de despliegue
         run: |
@@ -96,11 +101,13 @@ jobs:
         run: |
           cd paquete && zip -qr ../deploy.zip . && cd ..
           ls -lh deploy.zip
-          # Red de seguridad: si el modelo no quedo dentro, mejor fallar aca
+          # Red de seguridad: si un modelo no quedo dentro, mejor fallar aca
           # que descubrirlo semanas despues viendo reportes sin SVM.
-          unzip -l deploy.zip | grep -q 'models/svm_dass21.joblib' \
-            || { echo "::error::El paquete no incluye el modelo SVM"; exit 1; }
-          echo "Paquete verificado: incluye models/svm_dass21.joblib"
+          for m in models/svm_endes_phq9.joblib models/svm_dass21.joblib; do
+            unzip -l deploy.zip | grep -q "$m" \
+              || { echo "::error::El paquete no incluye $m"; exit 1; }
+            echo "Paquete verificado: incluye $m"
+          done
 
       - name: Publicar en Azure App Service
         uses: azure/webapps-deploy@v3

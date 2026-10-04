@@ -125,16 +125,32 @@ Utilidades clave en `project/src/style.css`: `.hero-serif`, `.hero-mint`, `.menu
 - `PENDIENTES.md` — qué falta (entregables académicos, no funcionales).
 - `seeds/banco_instrumentos.sql` — DDL + inserts del banco fijo.
 
-## SVM — parqueado
+## SVM — segunda opinión
 
-El SVM está **en pausa intencional**. El sistema funciona sin él: el
-`EvaluatorService` calcula el riesgo compuesto por reglas con cortes
-publicados (Johnson, Spitzer, Harding…), lo cual es la base académica
-defendible. El SVM se incorporará como segunda opinión cuando se retome.
+Hay **dos modelos**, uno por instrumento. `EvaluatorService` elige según
+los bloques que trae el cuestionario respondido.
 
-Detalles del trabajo congelado, dataset elegido (DASS-42 real con 39,775
-respuestas, 7,269 adolescentes 13–17 años) y checklist técnico para
-retomar: ver `SVM_PARKED.md`.
+| Instrumento | Artefacto | Dataset de entrenamiento |
+|---|---|---|
+| PHQ-A (el que se aplica hoy) | `models/svm_endes_phq9.joblib` | PHQ-9 / ENDES (INEI, Perú), 1 370 adolescentes ≤ 17 años |
+| DASS-21 (piloto de julio 2026) | `models/svm_dass21.joblib` | DASS-42 (Open Psychometrics), 7 269 adolescentes 13–17 |
+
+```bash
+venv/bin/python scripts/train_svm_endes.py --edad-max 17
+```
+
+El SVM es **segunda opinión**, no el motor de riesgo: ese sigue siendo
+`EvaluatorService` con cortes publicados (Johnson, Spitzer, Harding…).
+Si el SVM discrepa de las reglas, el reporte levanta una bandera
+"revisar"; no cambia la clasificación.
+
+**Advertencia metodológica que hay que repetir en la defensa:** los dos
+modelos están entrenados contra etiquetas que son función aritmética de
+sus propias features (suma de ítems vs. corte). Una regla de una línea
+les gana sobre el mismo test. La validación no circular es contra el
+juicio clínico de las psicólogas, que se recoge con el módulo de
+etiquetado. Detalle y números en `docs/SVM_ENDES.md`; el trabajo viejo de
+DASS-42 en `SVM_PARKED.md`.
 
 ## Dataset de validación BETO (incorporado)
 
