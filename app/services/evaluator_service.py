@@ -173,19 +173,23 @@ class EvaluatorService:
         crisis_activada: bool,
     ) -> dict | None:
         """
-        Si la aplicación incluye DASS-21, ejecuta el SVM con las 21 respuestas
+        Si la aplicación incluye PHQ-A, ejecuta el SVM con las 9 respuestas
         y devuelve su predicción + flag de discrepancia con las reglas.
-        Si no hay DASS-21 o el SVM no está disponible, devuelve None.
+        Si no hay PHQ-A o el SVM no está disponible, devuelve None.
+
+        Antes el gate exigía un bloque DASS-21, que ninguna plantilla de
+        producción incluye: por eso el SVM nunca opinó y las 102 etiquetas
+        clínicas quedaron con `modelo_svm_clase` en NULL.
         """
-        # Verifica que la plantilla incluyó DASS-21 — su código aparece en los
+        # Verifica que la plantilla incluyó PHQ-A — su código aparece en los
         # bloques evaluados.
-        if not any(b.get("codigo") == "DASS-21" for b in bloques_resultado):
+        if not any(b.get("codigo") == "PHQ-A" for b in bloques_resultado):
             return None
 
-        # Construye dict { numero (1..21): valor (0..3) } leyendo respuestas.
+        # Construye dict { numero (1..9): valor (0..3) } leyendo respuestas.
         respuestas = {}
-        for i in range(1, 22):
-            r = resp_por_origen.get(f"INSTR:DASS-21:{i}")
+        for i in range(1, 10):
+            r = resp_por_origen.get(f"INSTR:PHQ-A:{i}")
             if r is None or r.valor_num is None:
                 return None  # Falta alguna respuesta — no opina.
             respuestas[i] = int(r.valor_num)
@@ -207,8 +211,13 @@ class EvaluatorService:
             "confianza": pred["confianza"],
             "discrepancia_con_reglas": discrepancia,
             "reglas_marcan_riesgo": reglas_marcan_riesgo,
-            "dataset": "DASS-21 / Open Psychometrics — adolescentes 13-17",
-            "modelo": "SVC RBF + StandardScaler",
+            "dataset": "PHQ-9 / ENDES 2025 (INEI) — adolescentes 15-17, n=1,370",
+            "modelo": "SVC + StandardScaler",
+            # Transparencia obligatoria: con la etiqueta de entrenamiento
+            # actual (corte PHQ-9 >= 10) este modelo equivale a la regla de
+            # corte. No presentar su salida como información independiente
+            # de las reglas. Ver reports/svm_phq9_endes.md.
+            "equivale_a_corte": True,
         }
 
     # ── Bloque instrumento ─────────────────────────────────────────────────

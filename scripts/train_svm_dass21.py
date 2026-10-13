@@ -1,4 +1,18 @@
 """
+DEPRECADO (2026-10-13) — no usar. Reemplazado por train_svm_phq9_endes.py.
+
+Por qué se retiró
+-----------------
+1. Pedía los 21 ítems del DASS-21, que Sami no recolecta (aplica PHQ-A +
+   GAD-7). El modelo nunca emitió una predicción en producción:
+   `etiqueta_caso.modelo_svm_clase` está NULL en los 102 casos etiquetados.
+2. La etiqueta `at_risk` se deriva de los cortes de Lovibond aplicados a las
+   propias features, así que el F1-macro de 0.9215 mide aproximación a una
+   suma con umbral, no capacidad clínica.
+
+Se conserva como registro del resultado negativo para la tesis. El artefacto
+entrenado se movió a `.deprecated/svm_dass21.joblib`.
+
 Entrenamiento del SVM "segunda opinión" de Sami sobre DASS-21.
 
 Entrada

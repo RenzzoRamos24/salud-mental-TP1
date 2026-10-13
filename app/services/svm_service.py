@@ -1,20 +1,40 @@
 """
-SVMService — segunda opinión sobre DASS-21.
+SVMService — segunda opinión sobre PHQ-A (9 ítems).
 
-Carga `models/svm_dass21.joblib` una sola vez (singleton) y expone
-`predecir(respuestas_dass21)` → dict con clase + probabilidad.
+Carga `models/svm_phq9.joblib` una sola vez (singleton) y expone
+`predecir(respuestas_phq)` → dict con clase + probabilidad.
 
-El modelo fue entrenado con datos reales de Open Psychometrics, filtrado a
-adolescentes 13–17 años (n = 7,269). Features = 21 respuestas DASS-21
-(escala 0–3). Target = at_risk binario según cortes oficiales DASS-21.
+Por qué cambió respecto al SVM de DASS-21
+-----------------------------------------
+El modelo anterior esperaba los 21 ítems del DASS-21. Sami aplica PHQ-A (9)
++ GAD-7 (7), así que esas features no existían en los datos reales y el SVM
+nunca emitió una predicción: `etiqueta_caso.modelo_svm_clase` está NULL en
+los 102 casos que la psicóloga etiquetó. Este modelo consume los 9 ítems del
+PHQ-A, que sí se recolectan siempre.
 
-Métricas (test held-out 20 %):
-    - Accuracy:   0.9711
-    - F1-macro:   0.9215
-    - ROC-AUC:    0.9977
-    - CV F1-mac:  0.9287 ± 0.0066
+Qué mide y qué NO mide
+----------------------
+Se entrenó sobre ENDES 2025 (INEI), 1,370 adolescentes de 15-17 años, con
+etiqueta `phq9_total >= 10`. Esa etiqueta es la suma de las propias features,
+así que el modelo aprendió a reproducir el corte publicado — y lo hace de
+forma exacta: en la validación externa contra el juicio de la psicóloga da
+métricas **idénticas** a aplicar `PHQ-A total >= 10` directamente, y permutar
+el orden de los 9 ítems no cambia el resultado (sd = 0.0000 sobre 200
+permutaciones).
 
-Ver `reports/svm_dass21.md` para detalle.
+O sea: hoy este artefacto es, matemáticamente, la regla de corte. No agrega
+información sobre las reglas del `EvaluatorService`, que en los mismos 102
+casos dan F1-macro 0.853 / κ 0.708 contra 0.784 / 0.571 de este modelo.
+
+Se mantiene en el pipeline porque el slot de "segunda opinión" se va a
+reentrenar con las etiquetas clínicas de la psicóloga, que sí son un objetivo
+independiente. Ver `reports/svm_phq9_endes.md`.
+
+Métricas (validación externa, n=102, etiqueta clínica humana):
+    - F1-macro:  0.7843
+    - Kappa:     0.5713
+    - ROC-AUC:   0.8634
+    - Sens/Esp:  0.727 / 0.851
 """
 from __future__ import annotations
 
@@ -25,16 +45,15 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Orden de los ítems DASS-21 esperado por el modelo. DEBE coincidir con
-# scripts/train_svm_dass21.py — primero Depresión, luego Ansiedad, luego Estrés.
-ITEMS_ORDEN = [
-    # Depresión (7)
-    3, 5, 10, 13, 16, 17, 21,
-    # Ansiedad (7)
-    2, 4, 7, 9, 15, 19, 20,
-    # Estrés (7)
-    1, 6, 8, 11, 12, 14, 18,
-]
+# Orden de los ítems PHQ-A esperado por el modelo: 1..9, el orden estándar
+# del PHQ-9. DEBE coincidir con scripts/train_svm_phq9_endes.py.
+#
+# El orden es irrelevante en la práctica —el modelo se apoya en la suma, y
+# permutar las features no mueve ninguna métrica— pero se mantiene explícito
+# para que el contrato no dependa de esa coincidencia.
+ITEMS_ORDEN = list(range(1, 10))
+
+RUTA_MODELO = "svm_phq9.joblib"
 
 
 class SVMService:
@@ -53,7 +72,7 @@ class SVMService:
                 return cls._modelo
             cls._ruta = (
                 Path(__file__).resolve().parent.parent.parent
-                / "models" / "svm_dass21.joblib"
+                / "models" / RUTA_MODELO
             )
             if not cls._ruta.exists():
                 logger.warning(
@@ -66,9 +85,9 @@ class SVMService:
                 import joblib  # import perezoso para no obligar a sklearn en cold start.
                 cls._modelo = joblib.load(cls._ruta)
                 logger.info(
-                    "SVM DASS-21 cargado (CV F1=%.3f, AUC=%.3f).",
+                    "SVM PHQ-9 cargado (n_train=%s, CV F1=%.3f).",
+                    cls._modelo.get("n_train"),
                     cls._modelo.get("cv_f1_macro_mean", 0.0),
-                    cls._modelo.get("test_roc_auc", 0.0),
                 )
             except Exception as e:
                 logger.exception("Falló la carga del SVM: %s", e)
@@ -84,20 +103,27 @@ class SVMService:
         m = cls._cargar()
         if not m:
             return {"cargado": False}
+        externo = m.get("validacion_externa_piloto") or {}
         return {
             "cargado": True,
+            "instrumento": m.get("instrumento"),
+            "dataset": m.get("dataset"),
             "kernel": m.get("kernel"),
             "n_train": m.get("n_train"),
             "cv_f1_macro_mean": m.get("cv_f1_macro_mean"),
-            "test_roc_auc": m.get("test_roc_auc"),
+            # La métrica que vale: contra criterio clínico, no contra la
+            # fórmula con la que se entrenó.
+            "externo_f1_macro": externo.get("f1_macro"),
+            "externo_kappa": externo.get("kappa"),
+            "externo_roc_auc": externo.get("roc_auc"),
             "ruta": str(cls._ruta) if cls._ruta else None,
         }
 
     @classmethod
-    def predecir(cls, respuestas_dass21: dict[int, int]) -> Optional[dict]:
+    def predecir(cls, respuestas_phq: dict[int, int]) -> Optional[dict]:
         """
-        respuestas_dass21: { numero_dass21 (1..21): valor (0..3) }
-                            — vienen del cuestionario que el alumno respondió.
+        respuestas_phq: { numero_phq (1..9): valor (0..3) }
+                        — vienen del PHQ-A que el alumno respondió.
 
         Devuelve None si el modelo no está cargado o faltan respuestas.
         Caso normal: { 'clase': 'en_riesgo'|'sin_riesgo',
@@ -110,11 +136,11 @@ class SVMService:
 
         # Construye el vector en el ORDEN exacto que vio el entrenamiento.
         try:
-            x = [int(respuestas_dass21[i]) for i in ITEMS_ORDEN]
+            x = [int(respuestas_phq[i]) for i in ITEMS_ORDEN]
         except (KeyError, TypeError, ValueError):
             logger.warning(
-                "SVM DASS-21: faltan respuestas o tipos inválidos; "
-                "respuestas recibidas=%s", respuestas_dass21,
+                "SVM PHQ-9: faltan respuestas o tipos inválidos; "
+                "respuestas recibidas=%s", respuestas_phq,
             )
             return None
 

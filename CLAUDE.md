@@ -125,16 +125,49 @@ Utilidades clave en `project/src/style.css`: `.hero-serif`, `.hero-mint`, `.menu
 - `PENDIENTES.md` — qué falta (entregables académicos, no funcionales).
 - `seeds/banco_instrumentos.sql` — DDL + inserts del banco fijo.
 
-## SVM — parqueado
+## SVM — PHQ-9 / ENDES (reentrenado 2026-10-13)
 
-El SVM está **en pausa intencional**. El sistema funciona sin él: el
-`EvaluatorService` calcula el riesgo compuesto por reglas con cortes
-publicados (Johnson, Spitzer, Harding…), lo cual es la base académica
-defendible. El SVM se incorporará como segunda opinión cuando se retome.
+El SVM de DASS-21 **se retiró**: pedía 21 ítems que el sistema no recolecta,
+así que nunca emitió una predicción (`etiqueta_caso.modelo_svm_clase` estaba
+NULL en los 102 casos etiquetados) y su F1-macro de 0.9215 medía aproximación
+a los cortes de Lovibond, no capacidad clínica. Artefactos en `.deprecated/`,
+script y reporte marcados como deprecados para dejar registro.
 
-Detalles del trabajo congelado, dataset elegido (DASS-42 real con 39,775
-respuestas, 7,269 adolescentes 13–17 años) y checklist técnico para
-retomar: ver `SVM_PARKED.md`.
+El modelo vigente es `models/svm_phq9.joblib`:
+
+| | |
+|---|---|
+| Entrada | 9 ítems PHQ-A (1..9, escala 0-3) — los que el sistema sí recolecta |
+| Entrenamiento | ENDES 2025 (INEI), adolescentes 15-17, n=1,370 |
+| Etiqueta | `phq9_total >= 10` — **circular**, es la suma de las features |
+| Validación externa (n=102, criterio de la psicóloga) | F1-macro 0.784 · κ 0.571 · AUC 0.863 |
+
+**Advertencia obligatoria.** Con esa etiqueta el modelo equivale
+matemáticamente a la regla `PHQ-A total >= 10`: da métricas idénticas a
+4 decimales, y permutar el orden de los 9 ítems no mueve nada (sd 0.0000
+sobre 200 permutaciones). Las reglas del `EvaluatorService` lo superan en los
+mismos 102 casos (F1-macro 0.853 · κ 0.708). No presentarlo como segunda
+opinión independiente hasta reentrenarlo con las etiquetas clínicas.
+
+Reentrenar: `venv/bin/python scripts/train_svm_phq9_endes.py --piloto <csv>`
+Detalle completo: `reports/svm_phq9_endes.md`.
+
+### Concordancia clínica medida (2026-10-13)
+
+La psicóloga evaluadora (`SAMI-PSI-01`) etiquetó a ciegas 102 de los 104 casos
+de la cohorte. Primer patrón de oro externo del proyecto:
+
+- Reglas vs criterio clínico, **binario** (MEDIO+): F1-macro 0.853 · κ 0.708 ·
+  sens 0.782 · espec 0.936 · VPP 0.935. **Falsos negativos en CRÍTICO: 0 de 6.**
+- Reglas vs criterio clínico, **5 niveles**: κ 0.121 — mal calibrado. El
+  sistema nunca emite ALTO y manda a CRÍTICO los 39 casos con PHQ-A #9 ≥ 1,
+  donde la psicóloga vio 6.
+- SVM entrenado en los 102 (16 features, LOOCV anidado): F1-macro 0.853 ·
+  κ 0.706 · AUC 0.921 — empata con las reglas; pierde en 78.2 % de 500
+  reparticiones 50/50 pareadas.
+
+Falta: `etiqueta_frase` sigue en 0 (sin eso no hay validación de BETO contra
+criterio clínico) y `SAMI-PSI-02` no etiquetó nada (sin κ inter-evaluador).
 
 ## Dataset de validación BETO (incorporado)
 
