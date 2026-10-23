@@ -40,6 +40,23 @@ const filtrados = computed(() => {
   return usuarios.value.filter((u) => u.role === filtroRol.value);
 });
 
+// Pestañas: con 232 alumnos la tabla de asignación tapaba todo lo demás.
+const tab = ref("psicologas");
+
+// Todas las cuentas de psicóloga, activas o no (la de `psicologas` de arriba
+// filtra activas porque alimenta el selector de asignación).
+const todasPsicologas = computed(() =>
+  usuarios.value.filter((u) => u.role === "psicologo"),
+);
+
+// Las cuentas por código las crea el propio sistema con un correo interno
+// (admin.py: "@piloto.sami.local" para alumnos, "@evaluador.sami.local" para
+// evaluadoras). Entran solo con el código, así que no tiene sentido
+// ofrecerles un reset de contraseña.
+function esCuentaCodigo(u) {
+  return (u.email || "").endsWith(".sami.local");
+}
+
 async function asignarPsico(est, psicologo_id) {
   procesando.value = est.id;
   try {
@@ -132,6 +149,72 @@ function nombrePsico(id) {
         </div>
       </div>
 
+      <div class="flex gap-1 mb-6 border-b border-cream-200">
+        <button
+          v-for="t in [
+            { id: 'psicologas', label: `Psicólogas (${todasPsicologas.length})` },
+            { id: 'estudiantes', label: `Estudiantes (${estudiantes.length})` },
+            { id: 'todos', label: `Todos (${usuarios.length})` },
+          ]"
+          :key="t.id"
+          class="px-4 py-2 text-sm font-medium -mb-px border-b-2 transition"
+          :class="tab === t.id
+            ? 'border-green-700 text-green-900'
+            : 'border-transparent text-ink-500 hover:text-ink-800'"
+          @click="tab = t.id"
+        >
+          {{ t.label }}
+        </button>
+      </div>
+
+      <!-- ── Psicólogas ──────────────────────────────────────────── -->
+      <template v-if="tab === 'psicologas'">
+        <div v-if="todasPsicologas.length === 0" class="card p-6 text-ink-500">
+          No hay cuentas de psicóloga.
+        </div>
+        <div v-else class="grid gap-2">
+          <div
+            v-for="u in todasPsicologas"
+            :key="u.id"
+            class="card p-3 flex items-center justify-between text-sm"
+          >
+            <div>
+              <p class="font-semibold">{{ u.nombre }} {{ u.apellido }}</p>
+              <p class="text-xs text-ink-500">{{ u.email }}</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <span
+                v-if="u.activo"
+                class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200"
+              >
+                activo
+              </span>
+              <span
+                v-else
+                class="px-2 py-0.5 rounded-full bg-gray-50 text-gray-700 border border-gray-200"
+              >
+                inactivo
+              </span>
+              <span
+                v-if="esCuentaCodigo(u)"
+                class="px-2 py-0.5 rounded-full bg-cream-100 text-ink-600 border border-cream-200 whitespace-nowrap"
+                title="Entra solo con su código de acceso; no usa contraseña."
+              >
+                entra con código
+              </span>
+              <button
+                v-else
+                class="btn-ghost px-2 py-1 text-xs whitespace-nowrap"
+                @click="abrirReset(u)"
+              >
+                Restablecer contraseña
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-if="tab === 'estudiantes'">
       <!-- ── Asignación estudiante ↔ psicóloga ────────────────────── -->
       <h2 class="text-lg font-semibold mb-3">
         Asignar estudiantes a psicólogas
@@ -186,6 +269,9 @@ function nombrePsico(id) {
         </table>
       </div>
 
+      </template>
+
+      <template v-if="tab === 'todos'">
       <!-- ── Lista total de usuarios ─────────────────────────────── -->
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-lg font-semibold">Todos los usuarios</h2>
@@ -220,7 +306,15 @@ function nombrePsico(id) {
             >
               inactivo
             </span>
+            <span
+              v-if="esCuentaCodigo(u)"
+              class="px-2 py-0.5 rounded-full bg-cream-100 text-ink-600 border border-cream-200 whitespace-nowrap"
+              title="Entra solo con su código de acceso; no usa contraseña."
+            >
+              entra con código
+            </span>
             <button
+              v-else
               class="btn-ghost px-2 py-1 text-xs whitespace-nowrap"
               @click="abrirReset(u)"
             >
@@ -229,6 +323,7 @@ function nombrePsico(id) {
           </div>
         </div>
       </div>
+      </template>
     </template>
 
     <!-- Modal: restablecer contraseña -->
