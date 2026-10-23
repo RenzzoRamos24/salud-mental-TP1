@@ -10,6 +10,42 @@ const estudiantes = ref([]);
 const cargando = ref(true);
 const error = ref("");
 
+// ── Reporte mensual agregado (HU-18) ───────────────────────────────────
+// Por defecto el mes pasado, que es lo que suele pedir la dirección.
+const ahora = new Date();
+const mesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
+const repAnio = ref(mesAnterior.getFullYear());
+const repMes = ref(mesAnterior.getMonth() + 1);
+const generandoReporte = ref(false);
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+const aniosReporte = computed(() => {
+  const y = ahora.getFullYear();
+  return [y, y - 1, y - 2];
+});
+
+async function generarReporteMensual() {
+  if (generandoReporte.value) return;
+  generandoReporte.value = true;
+  try {
+    const blob = await api.descargarReporteMensual(repAnio.value, repMes.value);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_${repAnio.value}_${String(repMes.value).padStart(2, "0")}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e?.response?.data?.detail || "No se pudo generar el reporte mensual.");
+  } finally {
+    generandoReporte.value = false;
+  }
+}
+
 async function cargar() {
   cargando.value = true;
   try {
@@ -628,6 +664,34 @@ function iconShield() {
             <span class="apollo-chart__res-lbl">promedio por mes activo</span>
           </div>
         </div>
+      </div>
+
+      <!-- Reporte mensual agregado para la dirección (sin datos personales) -->
+      <div
+        class="flex items-end gap-2 flex-wrap mt-1 mb-4 pb-4 border-b border-gray-100"
+      >
+        <label class="text-xs text-ink-500">
+          Mes
+          <select v-model="repMes" class="input text-sm block mt-1" style="width: 140px">
+            <option v-for="(m, i) in MESES" :key="i" :value="i + 1">{{ m }}</option>
+          </select>
+        </label>
+        <label class="text-xs text-ink-500">
+          Año
+          <select v-model="repAnio" class="input text-sm block mt-1" style="width: 100px">
+            <option v-for="y in aniosReporte" :key="y" :value="y">{{ y }}</option>
+          </select>
+        </label>
+        <button
+          class="btn-mint"
+          :disabled="generandoReporte"
+          @click="generarReporteMensual"
+        >
+          {{ generandoReporte ? "Generando…" : "Generar reporte del mes" }}
+        </button>
+        <p class="text-[11px] text-ink-400 basis-full mt-1">
+          PDF agregado y anonimizado, sin nombres de estudiantes.
+        </p>
       </div>
 
       <div v-if="sinDatosBarras" class="apollo-chart__empty">

@@ -94,6 +94,10 @@ class PlantillaBloqueIn(BaseModel):
     instrumento_id: Optional[int] = None
     bloque_custom_id: Optional[int] = None
     frases_areas: Optional[List[str]] = None
+    # Subconjunto puntual de frases del banco (números 1-40). Si viene, manda
+    # sobre frases_areas: permite armar un set que cruza áreas (p. ej. las 10
+    # del piloto) en vez de traer áreas enteras.
+    frases_numeros: Optional[List[int]] = None
 
 
 class PlantillaIn(BaseModel):
@@ -109,6 +113,7 @@ class PlantillaBloqueOut(BaseModel):
     instrumento_id: Optional[int] = None
     bloque_custom_id: Optional[int] = None
     frases_areas: Optional[List[str]] = None
+    frases_numeros: Optional[List[int]] = None
 
 
 class PlantillaOut(BaseModel):

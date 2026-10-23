@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.database import get_db
 from app.core.deps import require_role
 from app.schemas.admin import UsuarioResumen, StatsUsuarios
@@ -734,3 +734,49 @@ async def listar_codigos_psicologo(
             ).count(),
         })
     return {"total": len(filas), "codigos": filas}
+
+
+# ── Restablecer contraseña de un usuario ──────────────────────────────────
+
+class ResetPasswordIn(BaseModel):
+    # Mismo mínimo que el registro (schemas/auth.py). El máximo 72 es el
+    # límite de bcrypt: más allá, trunca en silencio.
+    nueva_password: str = Field(..., min_length=8, max_length=72)
+
+
+@router.post("/users/{user_id}/reset-password")
+async def reset_password_usuario(
+    user_id: str,
+    payload: ResetPasswordIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_role("admin")),
+):
+    """
+    El admin fija una contraseña NUEVA para una cuenta. No revela ni recupera
+    la anterior —bcrypt es de un solo sentido, no existe tal cosa—: la
+    sobrescribe con un hash nuevo.
+
+    Pensado para cuando un alumno o una psicóloga olvidan su clave y no pueden
+    usar el flujo de /forgot-password. El admin les comunica la nueva por un
+    canal seguro y el usuario la cambia al entrar.
+    """
+    from app.core.security import hash_password
+
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(404, "Usuario no encontrado.")
+
+    u.hashed_password = hash_password(payload.nueva_password)
+    db.commit()
+
+    # Queda, además, en access_logs por el middleware. Esto deja el objetivo
+    # explícito para auditoría, sin registrar nunca la contraseña.
+    logger.info(
+        "Admin %s restableció la contraseña de %s (%s, rol %s)",
+        admin.email, u.email, u.id, u.role,
+    )
+    return {
+        "ok": True,
+        "usuario": f"{u.nombre} {u.apellido}",
+        "email": u.email,
+    }

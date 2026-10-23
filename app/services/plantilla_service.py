@@ -33,6 +33,7 @@ class PlantillaService:
             instrumento_id = b.get("instrumento_id")
             bloque_custom_id = b.get("bloque_custom_id")
             frases_areas = b.get("frases_areas")
+            frases_numeros = b.get("frases_numeros")
 
             if tipo == "instrumento":
                 if not instrumento_id or not db.query(BankInstrumento).filter(
@@ -49,8 +50,12 @@ class PlantillaService:
                         f"Bloque custom {bloque_custom_id} inválido o no es tuyo."
                     )
             elif tipo == "frases":
-                if not frases_areas or not isinstance(frases_areas, list):
-                    raise ValueError("Debes elegir al menos un área de frases.")
+                tiene_numeros = isinstance(frases_numeros, list) and frases_numeros
+                tiene_areas = isinstance(frases_areas, list) and frases_areas
+                if not tiene_numeros and not tiene_areas:
+                    raise ValueError(
+                        "Debes elegir al menos un área o unas frases puntuales."
+                    )
             else:
                 raise ValueError(f"Tipo de bloque desconocido: {tipo}")
 
@@ -60,7 +65,14 @@ class PlantillaService:
                 tipo=tipo,
                 instrumento_id=instrumento_id if tipo == "instrumento" else None,
                 bloque_custom_id=bloque_custom_id if tipo == "custom" else None,
-                frases_areas=",".join(frases_areas) if tipo == "frases" else None,
+                frases_areas=(
+                    ",".join(frases_areas)
+                    if tipo == "frases" and frases_areas else None
+                ),
+                frases_numeros=(
+                    ",".join(str(n) for n in frases_numeros)
+                    if tipo == "frases" and frases_numeros else None
+                ),
             ))
 
         db.commit()
@@ -140,8 +152,10 @@ class PlantillaService:
                         f"Bloque custom {b.get('bloque_custom_id')} inválido o no es tuyo."
                     )
             elif tipo == "frases":
-                if not b.get("frases_areas"):
-                    raise ValueError("Debes elegir al menos un área de frases.")
+                if not b.get("frases_areas") and not b.get("frases_numeros"):
+                    raise ValueError(
+                        "Debes elegir al menos un área o unas frases puntuales."
+                    )
             else:
                 raise ValueError(f"Tipo de bloque desconocido: {tipo}")
 
@@ -149,13 +163,21 @@ class PlantillaService:
         p.bloques.clear()
         db.flush()
         for idx, b in enumerate(bloques):
+            es_frases = b["tipo"] == "frases"
             db.add(PlantillaBloque(
                 plantilla_id=p.id,
                 orden=b.get("orden", idx),
                 tipo=b["tipo"],
                 instrumento_id=b.get("instrumento_id") if b["tipo"] == "instrumento" else None,
                 bloque_custom_id=b.get("bloque_custom_id") if b["tipo"] == "custom" else None,
-                frases_areas=",".join(b["frases_areas"]) if b["tipo"] == "frases" else None,
+                frases_areas=(
+                    ",".join(b["frases_areas"])
+                    if es_frases and b.get("frases_areas") else None
+                ),
+                frases_numeros=(
+                    ",".join(str(n) for n in b["frases_numeros"])
+                    if es_frases and b.get("frases_numeros") else None
+                ),
             ))
         db.commit()
         db.refresh(p)
@@ -196,6 +218,10 @@ class PlantillaService:
                     "bloque_custom_id": b.bloque_custom_id,
                     "frases_areas": (
                         b.frases_areas.split(",") if b.frases_areas else None
+                    ),
+                    "frases_numeros": (
+                        [int(n) for n in b.frases_numeros.split(",") if n.strip()]
+                        if getattr(b, "frases_numeros", None) else None
                     ),
                 }
                 for b in bloques

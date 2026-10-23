@@ -22,7 +22,7 @@ rm -f mental_health.db
 venv/bin/python -c "from app.database import engine, Base; import app.models; Base.metadata.create_all(bind=engine)"
 venv/bin/python -c "import sqlite3; c=sqlite3.connect('mental_health.db'); c.executescript(open('seeds/banco_instrumentos.sql').read()); c.commit()"
 
-# 3. Crear el primer admin (default: admin@admin.com / Admin12345 — cambia en .env)
+# 3. Crear el primer admin (correo y contraseña salen de ADMIN_EMAIL / ADMIN_PASSWORD en .env)
 venv/bin/python -m scripts.seed_admin
 
 # 4. Levantar servicios

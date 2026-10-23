@@ -52,6 +52,47 @@ async function asignarPsico(est, psicologo_id) {
   }
 }
 
+// ── Restablecer contraseña ──────────────────────────────────────────────
+// El admin fija una clave nueva; nunca ve la anterior (bcrypt no se revierte).
+const resetTarget = ref(null);
+const resetPwd = ref("");
+const resetPwd2 = ref("");
+const resetBusy = ref(false);
+const resetError = ref("");
+const resetOk = ref("");
+
+function abrirReset(u) {
+  resetTarget.value = u;
+  resetPwd.value = "";
+  resetPwd2.value = "";
+  resetError.value = "";
+  resetOk.value = "";
+}
+function cerrarReset() {
+  resetTarget.value = null;
+}
+async function confirmarReset() {
+  resetError.value = "";
+  if (resetPwd.value.length < 8) {
+    resetError.value = "Mínimo 8 caracteres.";
+    return;
+  }
+  if (resetPwd.value !== resetPwd2.value) {
+    resetError.value = "Las dos contraseñas no coinciden.";
+    return;
+  }
+  resetBusy.value = true;
+  try {
+    const r = await api.adminResetPassword(resetTarget.value.id, resetPwd.value);
+    resetOk.value = `Contraseña restablecida para ${r.usuario}.`;
+    setTimeout(cerrarReset, 1400);
+  } catch (e) {
+    resetError.value = e?.response?.data?.detail || "No se pudo restablecer.";
+  } finally {
+    resetBusy.value = false;
+  }
+}
+
 function nombrePsico(id) {
   if (!id) return "Sin asignar";
   const p = psicologas.value.find((x) => x.id === id);
@@ -179,9 +220,70 @@ function nombrePsico(id) {
             >
               inactivo
             </span>
+            <button
+              class="btn-ghost px-2 py-1 text-xs whitespace-nowrap"
+              @click="abrirReset(u)"
+            >
+              Restablecer contraseña
+            </button>
           </div>
         </div>
       </div>
     </template>
+
+    <!-- Modal: restablecer contraseña -->
+    <div
+      v-if="resetTarget"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style="background: rgba(15, 30, 25, 0.45)"
+      @click.self="cerrarReset"
+    >
+      <div class="card p-6 w-full max-w-md">
+        <h3 class="text-lg font-semibold">Restablecer contraseña</h3>
+        <p class="text-sm text-ink-500 mt-1">
+          {{ resetTarget.nombre }} {{ resetTarget.apellido }} ·
+          {{ resetTarget.email }}
+        </p>
+        <p class="text-xs text-ink-400 mt-2">
+          Se fija una contraseña nueva. La anterior no se recupera ni se
+          muestra. Comunícala por un canal seguro; la persona puede cambiarla
+          al entrar.
+        </p>
+
+        <label class="block text-sm font-medium mt-4 mb-1">Nueva contraseña</label>
+        <input
+          v-model="resetPwd"
+          type="text"
+          autocomplete="off"
+          class="input w-full"
+          placeholder="Mínimo 8 caracteres"
+          @keyup.enter="confirmarReset"
+        />
+        <label class="block text-sm font-medium mt-3 mb-1">Repetir</label>
+        <input
+          v-model="resetPwd2"
+          type="text"
+          autocomplete="off"
+          class="input w-full"
+          @keyup.enter="confirmarReset"
+        />
+
+        <p v-if="resetError" class="text-sm text-red-600 mt-3">{{ resetError }}</p>
+        <p v-if="resetOk" class="text-sm text-green-700 mt-3">{{ resetOk }}</p>
+
+        <div class="flex justify-end gap-2 mt-5">
+          <button class="btn-ghost" :disabled="resetBusy" @click="cerrarReset">
+            Cancelar
+          </button>
+          <button
+            class="btn-primary"
+            :disabled="resetBusy"
+            @click="confirmarReset"
+          >
+            {{ resetBusy ? "Guardando…" : "Restablecer" }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

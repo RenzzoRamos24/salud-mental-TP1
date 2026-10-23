@@ -39,6 +39,49 @@ async function marcarRevisado() {
 
 const resultado = computed(() => data.value?.resultado || null);
 const dass21Detalle = computed(() => data.value?.dass21_detalle || null);
+const instrumentos = computed(() => data.value?.instrumentos_detalle || []);
+const estudiante = computed(() => data.value?.estudiante || null);
+
+// Nombre a mostrar: código del alumno (SAMI-…) si existe, si no el nombre.
+const tituloAlumno = computed(() => {
+  const e = estudiante.value;
+  if (!e) return "Estudiante";
+  if (e.codigo_acceso) return e.codigo_acceso;
+  return [e.nombre, e.apellido].filter(Boolean).join(" ") || "Estudiante";
+});
+
+// ── Exportar reporte individual / agendar cita ─────────────────────────
+// Los endpoints trabajan sobre el estudiante, no sobre la aplicación.
+const exportando = ref(false);
+async function exportarReporte(formato = "pdf") {
+  if (exportando.value || !estudiante.value?.id) return;
+  exportando.value = true;
+  try {
+    const blob =
+      formato === "pdf"
+        ? await api.descargarReporteIndividual(estudiante.value.id)
+        : await api.descargarReporteIndividualWord(estudiante.value.id);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_${tituloAlumno.value.toLowerCase()}.${formato === "pdf" ? "pdf" : "docx"}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e?.response?.data?.detail || "No se pudo generar el reporte.");
+  } finally {
+    exportando.value = false;
+  }
+}
+const exportarPDF = () => exportarReporte("pdf");
+const exportarWord = () => exportarReporte("docx");
+
+function agendarCita() {
+  if (!estudiante.value?.id) return;
+  router.push({ name: "psicologo-citas", query: { estudiante: estudiante.value.id } });
+}
 
 // ── Veredicto de la psicóloga sobre el análisis del modelo ─────────────
 const veredicto = ref(null);          // 'aceptado' | 'rechazado' | null
@@ -156,15 +199,30 @@ function fmtFecha(iso) {
     <div v-else-if="error" class="banner-danger">{{ error }}</div>
 
     <template v-else>
-      <header class="mb-6">
-        <p class="eyebrow mb-2">Resultado del cuestionario</p>
-        <h1 class="hero-serif text-[28px]">
-          Aplicación <span class="hero-mint">#{{ data.id }}</span>
-        </h1>
-        <p class="text-sm text-ink-500 mt-2">
-          Estudiante: {{ data.estudiante_id }} — Completado el
-          {{ fmtFecha(data.completada_at) }}
-        </p>
+      <header class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p class="eyebrow mb-2">Resultado del cuestionario</p>
+          <h1 class="hero-serif text-[28px]">
+            <span class="hero-mint">{{ tituloAlumno }}</span>
+          </h1>
+          <p class="text-sm text-ink-500 mt-2">
+            <span v-if="estudiante?.nombre">
+              {{ estudiante.nombre }} {{ estudiante.apellido }} ·
+            </span>
+            <span v-if="estudiante?.grado">{{ estudiante.grado }} · </span>
+            Aplicación #{{ data.id }} (CASO-{{ String(data.id).padStart(3, "0") }})
+            · Completado el {{ fmtFecha(data.completada_at) }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="btn-ghost" @click="agendarCita">+ Cita</button>
+          <button class="btn-ghost" :disabled="exportando" @click="exportarPDF">
+            {{ exportando ? "Generando…" : "Exportar PDF" }}
+          </button>
+          <button class="btn-ghost" :disabled="exportando" @click="exportarWord">
+            Exportar Word
+          </button>
+        </div>
       </header>
 
       <div
@@ -324,107 +382,59 @@ function fmtFecha(iso) {
         </div>
       </div>
 
-      <!-- Capa 5: SVM segunda opinión sobre DASS-21 -->
-      <div
-        v-if="resultado?.svm_segunda_opinion"
-        class="card p-5 mb-6"
-        :class="resultado.svm_segunda_opinion.discrepancia_con_reglas ? 'border-amber-300 bg-amber-50' : 'border-green-200 bg-green-50/60'"
-      >
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <p class="text-xs uppercase tracking-wide text-ink-500 font-semibold">
-              Segunda opinión · SVM sobre DASS-21
-            </p>
-            <p class="text-lg font-semibold mt-1">
-              {{ resultado.svm_segunda_opinion.clase === 'en_riesgo' ? 'En riesgo' : 'Sin riesgo' }}
-              <span class="text-sm font-normal text-ink-500 ml-2">
-                · confianza {{ resultado.svm_segunda_opinion.confianza }}
-              </span>
-            </p>
-            <p class="text-xs text-ink-500 mt-2">
-              Probabilidad estimada: {{ (resultado.svm_segunda_opinion.probabilidad * 100).toFixed(1) }} %
-              · Dataset: {{ resultado.svm_segunda_opinion.dataset }}
-            </p>
-          </div>
-          <span
-            v-if="resultado.svm_segunda_opinion.discrepancia_con_reglas"
-            class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-300"
+      <!-- Respuestas ítem por ítem de cada instrumento (PHQ-A, GAD-7, …).
+           Deja ver el valor exacto de cada ítem y resalta los ítems con
+           bandera de crisis, para poder explicar por qué saltó una alerta. -->
+      <section v-if="instrumentos.length" class="mb-6">
+        <h2 class="text-lg font-semibold mb-3">Respuestas por ítem</h2>
+        <div class="grid gap-4">
+          <div
+            v-for="instr in instrumentos"
+            :key="instr.codigo"
+            class="card p-5"
           >
-            ⚠ Discrepa con las reglas — revisar
-          </span>
-          <span
-            v-else
-            class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold border border-green-300"
-          >
-            ✓ Coincide con las reglas
-          </span>
-        </div>
-
-        <!-- Detalle DASS-21 · qué respondió el alumno, agrupado por subescala.
-             Esto le permite a la psicóloga validar la opinión del SVM: si
-             levanta bandera, ver dónde específicamente están los puntajes
-             altos. -->
-        <div v-if="dass21Detalle" class="mt-5 pt-5 border-t border-current border-opacity-20">
-          <p class="text-xs uppercase tracking-wide text-ink-500 font-semibold mb-3">
-            Qué respondió el alumno · 21 ítems agrupados por subescala
-          </p>
-
-          <!-- Subtotales por subescala con severidad clínica -->
-          <div class="grid grid-cols-3 gap-3 mb-4">
-            <div class="p-3 rounded-lg bg-white/70 border border-gray-200">
-              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold">Depresión</p>
-              <p class="text-xl font-bold mt-1">{{ dass21Detalle.subtotales.depresion }}</p>
-              <span :class="'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 ' + colorSev(sevDep(dass21Detalle.subtotales.depresion))">
-                {{ sevDep(dass21Detalle.subtotales.depresion) }}
+            <div class="flex items-baseline justify-between mb-3">
+              <h3 class="font-semibold">
+                {{ instr.codigo }}
+                <span class="font-normal text-ink-500">— {{ instr.nombre }}</span>
+              </h3>
+              <span class="text-xs text-ink-400">
+                escala {{ instr.likert_min }}–{{ instr.likert_max }}
               </span>
             </div>
-            <div class="p-3 rounded-lg bg-white/70 border border-gray-200">
-              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold">Ansiedad</p>
-              <p class="text-xl font-bold mt-1">{{ dass21Detalle.subtotales.ansiedad }}</p>
-              <span :class="'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 ' + colorSev(sevAns(dass21Detalle.subtotales.ansiedad))">
-                {{ sevAns(dass21Detalle.subtotales.ansiedad) }}
-              </span>
-            </div>
-            <div class="p-3 rounded-lg bg-white/70 border border-gray-200">
-              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold">Estrés</p>
-              <p class="text-xl font-bold mt-1">{{ dass21Detalle.subtotales.estres }}</p>
-              <span :class="'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 ' + colorSev(sevEst(dass21Detalle.subtotales.estres))">
-                {{ sevEst(dass21Detalle.subtotales.estres) }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Los 21 ítems, uno por fila -->
-          <div class="space-y-1.5">
-            <div
-              v-for="grupo in [{ key: 'D', label: 'Depresión' }, { key: 'A', label: 'Ansiedad' }, { key: 'S', label: 'Estrés' }]"
-              :key="grupo.key"
-            >
-              <p class="text-[10px] uppercase tracking-wide text-ink-500 font-semibold mt-3 mb-1">{{ grupo.label }}</p>
+            <div class="grid gap-1.5">
               <div
-                v-for="it in dass21Items[grupo.key]"
+                v-for="it in instr.items"
                 :key="it.numero"
-                class="flex items-start gap-3 text-sm py-1 border-b border-gray-200 border-opacity-30 last:border-0"
+                class="flex items-start gap-3 px-3 py-2 rounded-lg text-sm"
+                :class="it.es_crisis
+                  ? 'bg-red-50 border border-red-200'
+                  : 'bg-gray-50/70'"
               >
-                <span class="w-6 text-right text-ink-500 font-mono text-xs pt-0.5">{{ it.numero }}.</span>
-                <span class="flex-1 text-ink-700">{{ it.texto }}</span>
+                <span class="font-mono text-xs text-ink-400 mt-0.5 w-6 shrink-0">
+                  {{ it.numero }}
+                </span>
+                <span class="flex-1">
+                  {{ it.texto }}
+                  <span
+                    v-if="it.es_crisis"
+                    class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-semibold border border-red-200"
+                  >
+                    ítem de crisis
+                  </span>
+                </span>
                 <span
-                  :class="'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap ' + colorValor(it.valor)"
+                  class="font-bold tabular-nums shrink-0"
+                  :class="it.es_crisis && it.valor >= 1 ? 'text-red-700' : 'text-ink-700'"
                 >
-                  {{ it.valor !== null ? it.valor : '—' }} · {{ it.etiqueta || 'sin dato' }}
+                  {{ it.valor }}
                 </span>
               </div>
             </div>
           </div>
-
-          <p class="text-[11px] text-ink-500 mt-4 italic">
-            Subtotales multiplicados × 2 para equipararlos a la escala DASS-42 (Lovibond &amp; Lovibond, 1995).
-            Cortes clínicos aplicados según normas validadas para adolescentes.
-          </p>
         </div>
-      </div>
+      </section>
 
-      <!-- Bloques por instrumento / custom -->
       <h2 class="text-lg font-semibold mb-3">Termómetros por bloque</h2>
       <div class="grid sm:grid-cols-2 gap-3 mb-6">
         <div
