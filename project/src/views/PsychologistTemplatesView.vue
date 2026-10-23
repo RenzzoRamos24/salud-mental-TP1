@@ -10,6 +10,10 @@ const bloquesCustom = ref([]);
 const areasFrases = ref([]);
 const frasesBanco = ref([]); // las 40 frases del banco, para selección puntual
 
+// Mismo tope que el backend (plantilla_service.MAX_PREGUNTAS): ítems de
+// instrumentos + ítems custom + frases. El backend rechaza igual.
+const MAX_PREGUNTAS = 26;
+
 // Las 10 frases validadas del piloto del colegio (cruzan áreas).
 const FRASES_PILOTO = [1, 6, 11, 13, 17, 22, 23, 25, 28, 31];
 
@@ -87,6 +91,8 @@ const totalPreguntas = computed(() => {
   return n;
 });
 
+const excedeMaximo = computed(() => totalPreguntas.value > MAX_PREGUNTAS);
+
 function usarFrasesPiloto() {
   nuevo.value.frases_numeros = [...FRASES_PILOTO];
 }
@@ -160,6 +166,10 @@ async function guardarPlantilla() {
   }
   if (bloques.length === 0) {
     error.value = "Elige al menos un bloque.";
+    return;
+  }
+  if (excedeMaximo.value) {
+    error.value = `El cuestionario tiene ${totalPreguntas.value} preguntas y el máximo es ${MAX_PREGUNTAS}.`;
     return;
   }
   const payload = {
@@ -367,14 +377,28 @@ function asignar(p) {
         </div>
 
         <div class="border-t pt-4 flex items-center justify-between">
-          <p class="text-sm text-ink-500">
-            Total estimado:
-            <strong class="text-green-900">{{ totalPreguntas }} preguntas</strong>
+          <p class="text-sm" :class="excedeMaximo ? 'text-red-700' : 'text-ink-500'">
+            Total:
+            <strong :class="excedeMaximo ? 'text-red-700' : 'text-green-900'">
+              {{ totalPreguntas }} / {{ MAX_PREGUNTAS }} preguntas
+            </strong>
           </p>
           <div class="flex gap-2">
             <button class="btn-ghost" @click="modoCrear = false">Cancelar</button>
-            <button class="btn-mint" @click="guardarPlantilla">Guardar</button>
+            <button
+              class="btn-mint"
+              :disabled="excedeMaximo"
+              :title="excedeMaximo ? `Máximo ${MAX_PREGUNTAS} preguntas` : ''"
+              @click="guardarPlantilla"
+            >
+              Guardar
+            </button>
           </div>
+        </div>
+        <div v-if="excedeMaximo" class="banner-danger mt-3">
+          Superaste el máximo de {{ MAX_PREGUNTAS }} preguntas: este cuestionario
+          tiene {{ totalPreguntas }}. Quita instrumentos, bloques o frases hasta
+          llegar a {{ MAX_PREGUNTAS }} o menos para poder guardarlo.
         </div>
       </div>
 

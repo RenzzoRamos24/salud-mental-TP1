@@ -134,6 +134,11 @@ class AsignarCuestionarioIn(BaseModel):
     estudiante_id: str
 
 
+class AsignarGradoIn(BaseModel):
+    plantilla_id: int
+    grado: str = Field(..., min_length=1, max_length=40)
+
+
 class PreguntaRender(BaseModel):
     """Una pregunta tal como la ve el alumno."""
     origen: str

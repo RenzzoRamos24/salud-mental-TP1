@@ -15,7 +15,7 @@ from app.core.deps import get_current_user, require_role
 from app.models.user import User
 from app.services.cuestionario_service import CuestionarioService
 from app.services.feedback_service import FeedbackService
-from app.schemas.bank import AsignarCuestionarioIn, EnviarRespuestasIn
+from app.schemas.bank import AsignarCuestionarioIn, AsignarGradoIn, EnviarRespuestasIn
 
 router = APIRouter()
 
@@ -31,6 +31,21 @@ async def asignar(
     try:
         return CuestionarioService.asignar(
             db, current_user.id, payload.plantilla_id, payload.estudiante_id,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/asignar-grado", status_code=201)
+async def asignar_por_grado(
+    payload: AsignarGradoIn,
+    current_user: User = Depends(require_role("psicologo", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Asigna una plantilla a todo un salón (p. ej. "5to secundaria")."""
+    try:
+        return CuestionarioService.asignar_por_grado(
+            db, current_user.id, payload.plantilla_id, payload.grado,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))

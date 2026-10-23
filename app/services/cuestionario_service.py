@@ -39,6 +39,8 @@ class CuestionarioService:
         )
         if not plantilla or plantilla.psicologo_id != psicologo_id:
             raise ValueError("Plantilla no encontrada o no es tuya.")
+        from app.services.plantilla_service import validar_maximo
+        validar_maximo(db, plantilla.bloques)
 
         estudiante = (
             db.query(User)
@@ -65,6 +67,72 @@ class CuestionarioService:
         }
 
     # ── Listado para alumno ─────────────────────────────────────────────────
+
+    @staticmethod
+    def asignar_por_grado(
+        db: Session, psicologo_id: str, plantilla_id: int, grado: str
+    ) -> dict:
+        """Asigna la plantilla a todo un salón (grado) de una vez.
+
+        Alcance: los alumnos activos de ese grado que tienen a esta psicóloga
+        como responsable — los mismos que ve en su lista. Salta a quien ya
+        tiene esa misma plantilla pendiente o en curso, para no duplicar.
+        Todo en una sola transacción: o se asignan todos, o ninguno.
+        """
+        from app.services.plantilla_service import validar_maximo
+
+        plantilla = (
+            db.query(PlantillaCuestionario)
+            .filter(PlantillaCuestionario.id == plantilla_id)
+            .first()
+        )
+        if not plantilla or plantilla.psicologo_id != psicologo_id:
+            raise ValueError("Plantilla no encontrada o no es tuya.")
+        n_preguntas = validar_maximo(db, plantilla.bloques)
+
+        grado = (grado or "").strip()
+        if not grado:
+            raise ValueError("Elige un salón.")
+
+        alumnos = (
+            db.query(User)
+            .filter(
+                User.role == "estudiante",
+                User.activo == True,  # noqa: E712
+                User.grado == grado,
+                User.psicologo_id == psicologo_id,
+            )
+            .all()
+        )
+        if not alumnos:
+            raise ValueError(f"No tienes alumnos de {grado} a tu cargo.")
+
+        ya_activos = {
+            a.estudiante_id
+            for a in db.query(AplicacionCuestionario)
+            .filter(
+                AplicacionCuestionario.plantilla_id == plantilla_id,
+                AplicacionCuestionario.estudiante_id.in_([u.id for u in alumnos]),
+                AplicacionCuestionario.estado.in_(["pendiente", "en_progreso"]),
+            )
+            .all()
+        }
+        nuevos = [u for u in alumnos if u.id not in ya_activos]
+        for u in nuevos:
+            db.add(AplicacionCuestionario(
+                plantilla_id=plantilla_id,
+                estudiante_id=u.id,
+                psicologo_id=psicologo_id,
+            ))
+        db.commit()
+        return {
+            "grado": grado,
+            "plantilla": plantilla.nombre,
+            "n_preguntas": n_preguntas,
+            "alumnos_en_grado": len(alumnos),
+            "asignados": len(nuevos),
+            "omitidos_ya_tenian": len(ya_activos),
+        }
 
     @staticmethod
     def listar_para_estudiante(db: Session, estudiante_id: str) -> list[dict]:

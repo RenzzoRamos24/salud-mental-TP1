@@ -3,13 +3,69 @@ Servicio de plantillas: la psicóloga arma cuestionarios combinando bloques
 del banco fijo, bloques custom y áreas de frases incompletas.
 """
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 from app.models.bank import (
     PlantillaCuestionario,
     PlantillaBloque,
     BankInstrumento,
+    BankFraseIncompleta,
     BloqueCustom,
+    BloqueCustomItem,
 )
+
+# Tope de preguntas por cuestionario (ítems de instrumentos + ítems custom +
+# frases). El cuestionario del piloto —PHQ-A 9 + GAD-7 7 + 10 frases— queda
+# justo en 26. El frontend repite este número para avisar antes de guardar;
+# el que manda es este.
+MAX_PREGUNTAS = 26
+
+
+def _campo(b, nombre):
+    """Lee un campo de un bloque venga como dict (payload) o como fila ORM."""
+    return b.get(nombre) if isinstance(b, dict) else getattr(b, nombre, None)
+
+
+def contar_preguntas(db: Session, bloques) -> int:
+    """Cuenta las preguntas que verá el alumno con estos bloques."""
+    total = 0
+    for b in bloques:
+        tipo = _campo(b, "tipo")
+        if tipo == "instrumento":
+            ins = db.query(BankInstrumento).filter(
+                BankInstrumento.id == _campo(b, "instrumento_id")
+            ).first()
+            total += ins.n_items if ins else 0
+        elif tipo == "custom":
+            total += db.query(BloqueCustomItem).filter(
+                BloqueCustomItem.bloque_id == _campo(b, "bloque_custom_id")
+            ).count()
+        elif tipo == "frases":
+            numeros = _campo(b, "frases_numeros")
+            if isinstance(numeros, str):
+                numeros = [n for n in numeros.split(",") if n.strip()]
+            if numeros:
+                total += len(numeros)
+                continue
+            areas = _campo(b, "frases_areas")
+            if isinstance(areas, str):
+                areas = [a.strip() for a in areas.split(",") if a.strip()]
+            if areas:
+                total += db.query(BankFraseIncompleta).filter(
+                    BankFraseIncompleta.area.in_(areas),
+                    BankFraseIncompleta.activo == 1,
+                ).count()
+    return total
+
+
+def validar_maximo(db: Session, bloques) -> int:
+    n = contar_preguntas(db, bloques)
+    if n > MAX_PREGUNTAS:
+        raise ValueError(
+            f"El cuestionario tiene {n} preguntas y el máximo permitido es "
+            f"{MAX_PREGUNTAS}. Quita bloques o frases hasta llegar a "
+            f"{MAX_PREGUNTAS} o menos."
+        )
+    return n
 
 
 class PlantillaService:
@@ -19,6 +75,7 @@ class PlantillaService:
         bloques = payload.get("bloques") or []
         if not bloques:
             raise ValueError("La plantilla debe tener al menos un bloque.")
+        validar_maximo(db, bloques)
 
         plantilla = PlantillaCuestionario(
             psicologo_id=psicologo_id,
@@ -130,6 +187,7 @@ class PlantillaService:
         bloques = payload.get("bloques") or []
         if not bloques:
             raise ValueError("La plantilla debe tener al menos un bloque.")
+        validar_maximo(db, bloques)
 
         p.nombre = payload["nombre"].strip()
         p.descripcion = (payload.get("descripcion") or "").strip() or None
@@ -202,7 +260,10 @@ class PlantillaService:
     @staticmethod
     def _serializar(p: PlantillaCuestionario) -> dict:
         bloques = sorted(p.bloques, key=lambda x: x.orden)
+        db = object_session(p)
         return {
+            "n_preguntas": contar_preguntas(db, bloques) if db else None,
+            "max_preguntas": MAX_PREGUNTAS,
             "id": p.id,
             "psicologo_id": p.psicologo_id,
             "nombre": p.nombre,

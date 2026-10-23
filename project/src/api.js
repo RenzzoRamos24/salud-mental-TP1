@@ -205,6 +205,13 @@ export const api = {
     });
     return data;
   },
+  async asignarCuestionarioGrado(plantilla_id, grado) {
+    const { data } = await client.post("/cuestionarios/asignar-grado", {
+      plantilla_id,
+      grado,
+    });
+    return data;
+  },
   async misCuestionarios() {
     const { data } = await client.get("/cuestionarios/mis-cuestionarios");
     return data;
