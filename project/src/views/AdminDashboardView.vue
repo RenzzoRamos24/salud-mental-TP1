@@ -40,8 +40,29 @@ const filtrados = computed(() => {
   return usuarios.value.filter((u) => u.role === filtroRol.value);
 });
 
-// Pestañas: con 232 alumnos la tabla de asignación tapaba todo lo demás.
-const tab = ref("psicologas");
+// Dos columnas (psicólogas | alumnos), 30 por página cada una. Con 232
+// alumnos, una lista única tapaba todo lo demás.
+const POR_PAGINA = 30;
+const pagPsico = ref(1);
+const pagAlum = ref(1);
+const totalPagPsico = computed(() =>
+  Math.max(1, Math.ceil(todasPsicologas.value.length / POR_PAGINA)),
+);
+const totalPagAlum = computed(() =>
+  Math.max(1, Math.ceil(estudiantes.value.length / POR_PAGINA)),
+);
+const psicoPagina = computed(() =>
+  todasPsicologas.value.slice((pagPsico.value - 1) * POR_PAGINA, pagPsico.value * POR_PAGINA),
+);
+const alumPagina = computed(() =>
+  estudiantes.value.slice((pagAlum.value - 1) * POR_PAGINA, pagAlum.value * POR_PAGINA),
+);
+function rango(pag, total) {
+  if (!total) return "0";
+  const desde = (pag - 1) * POR_PAGINA + 1;
+  const hasta = Math.min(pag * POR_PAGINA, total);
+  return `${desde}–${hasta} de ${total}`;
+}
 
 // Todas las cuentas de psicóloga, activas o no (la de `psicologas` de arriba
 // filtra activas porque alimenta el selector de asignación).
@@ -149,181 +170,124 @@ function nombrePsico(id) {
         </div>
       </div>
 
-      <div class="flex gap-1 mb-6 border-b border-cream-200">
-        <button
-          v-for="t in [
-            { id: 'psicologas', label: `Psicólogas (${todasPsicologas.length})` },
-            { id: 'estudiantes', label: `Estudiantes (${estudiantes.length})` },
-            { id: 'todos', label: `Todos (${usuarios.length})` },
-          ]"
-          :key="t.id"
-          class="px-4 py-2 text-sm font-medium -mb-px border-b-2 transition"
-          :class="tab === t.id
-            ? 'border-green-700 text-green-900'
-            : 'border-transparent text-ink-500 hover:text-ink-800'"
-          @click="tab = t.id"
-        >
-          {{ t.label }}
-        </button>
-      </div>
-
-      <!-- ── Psicólogas ──────────────────────────────────────────── -->
-      <template v-if="tab === 'psicologas'">
-        <div v-if="todasPsicologas.length === 0" class="card p-6 text-ink-500">
-          No hay cuentas de psicóloga.
-        </div>
-        <div v-else class="grid gap-2">
-          <div
-            v-for="u in todasPsicologas"
-            :key="u.id"
-            class="card p-3 flex items-center justify-between text-sm"
-          >
-            <div>
-              <p class="font-semibold">{{ u.nombre }} {{ u.apellido }}</p>
-              <p class="text-xs text-ink-500">{{ u.email }}</p>
-            </div>
-            <div class="flex items-center gap-2 text-xs">
-              <span
-                v-if="u.activo"
-                class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200"
-              >
-                activo
-              </span>
-              <span
-                v-else
-                class="px-2 py-0.5 rounded-full bg-gray-50 text-gray-700 border border-gray-200"
-              >
-                inactivo
-              </span>
-              <span
-                v-if="esCuentaCodigo(u)"
-                class="px-2 py-0.5 rounded-full bg-cream-100 text-ink-600 border border-cream-200 whitespace-nowrap"
-                title="Entra solo con su código de acceso; no usa contraseña."
-              >
-                entra con código
-              </span>
-              <button
-                v-else
-                class="btn-ghost px-2 py-1 text-xs whitespace-nowrap"
-                @click="abrirReset(u)"
-              >
-                Restablecer contraseña
-              </button>
+      <div class="grid lg:grid-cols-2 gap-6 items-start">
+        <!-- ── Columna: psicólogas ─────────────────────────────── -->
+        <section>
+          <div class="flex items-baseline justify-between mb-3">
+            <h2 class="text-lg font-semibold">Psicólogas</h2>
+            <span class="text-xs text-ink-400">{{ rango(pagPsico, todasPsicologas.length) }}</span>
+          </div>
+          <div v-if="todasPsicologas.length === 0" class="card p-6 text-ink-500">
+            No hay cuentas de psicóloga.
+          </div>
+          <div v-else class="grid gap-2">
+            <div v-for="u in psicoPagina" :key="u.id" class="card p-3 text-sm">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold truncate">{{ u.nombre }} {{ u.apellido }}</p>
+                  <p class="text-xs text-ink-500 truncate">{{ u.email }}</p>
+                </div>
+                <span
+                  v-if="u.activo"
+                  class="px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200 shrink-0"
+                >activo</span>
+                <span
+                  v-else
+                  class="px-2 py-0.5 rounded-full text-xs bg-gray-50 text-gray-700 border border-gray-200 shrink-0"
+                >inactivo</span>
+              </div>
+              <div class="mt-2 flex justify-end">
+                <span
+                  v-if="esCuentaCodigo(u)"
+                  class="px-2 py-0.5 rounded-full text-xs bg-cream-100 text-ink-600 border border-cream-200 whitespace-nowrap"
+                  title="Entra solo con su código de acceso; no usa contraseña."
+                >entra con código</span>
+                <button
+                  v-else
+                  class="btn-ghost px-2 py-1 text-xs whitespace-nowrap"
+                  @click="abrirReset(u)"
+                >Restablecer contraseña</button>
+              </div>
             </div>
           </div>
-        </div>
-      </template>
+          <div v-if="totalPagPsico > 1" class="flex flex-wrap gap-1 mt-3">
+            <button
+              v-for="n in totalPagPsico"
+              :key="n"
+              class="w-8 h-8 rounded-lg text-xs border transition"
+              :class="n === pagPsico
+                ? 'bg-green-700 text-white border-green-700'
+                : 'bg-white text-ink-600 border-cream-200 hover:border-green-400'"
+              @click="pagPsico = n"
+            >{{ n }}</button>
+          </div>
+        </section>
 
-      <template v-if="tab === 'estudiantes'">
-      <!-- ── Asignación estudiante ↔ psicóloga ────────────────────── -->
-      <h2 class="text-lg font-semibold mb-3">
-        Asignar estudiantes a psicólogas
-      </h2>
-      <p class="text-xs text-ink-500 mb-3">
-        Cada estudiante puede tener una psicóloga responsable. Las alertas y
-        SOS llegan a ella primero.
-      </p>
-      <div v-if="estudiantes.length === 0" class="card p-6 text-ink-500 mb-8">
-        No hay estudiantes registrados todavía.
-      </div>
-      <div v-else class="card p-2 mb-8 overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-xs text-ink-400 border-b border-cream-200">
-              <th class="p-2">Estudiante</th>
-              <th class="p-2">Email</th>
-              <th class="p-2">Psicóloga asignada</th>
-              <th class="p-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="e in estudiantes"
-              :key="e.id"
-              class="border-b border-cream-100"
-            >
-              <td class="p-2 font-medium">{{ e.nombre }} {{ e.apellido }}</td>
-              <td class="p-2 text-xs text-ink-500">{{ e.email }}</td>
-              <td class="p-2 text-xs text-ink-500">
-                {{ nombrePsico(e.psicologo_id) }}
-              </td>
-              <td class="p-2">
+        <!-- ── Columna: alumnos (con su psicóloga asignada) ───────── -->
+        <section>
+          <div class="flex items-baseline justify-between mb-3">
+            <h2 class="text-lg font-semibold">Alumnos</h2>
+            <span class="text-xs text-ink-400">{{ rango(pagAlum, estudiantes.length) }}</span>
+          </div>
+          <div v-if="estudiantes.length === 0" class="card p-6 text-ink-500">
+            No hay estudiantes registrados todavía.
+          </div>
+          <div v-else class="grid gap-2">
+            <div v-for="e in alumPagina" :key="e.id" class="card p-3 text-sm">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold truncate">{{ e.nombre }} {{ e.apellido }}</p>
+                  <p class="text-xs text-ink-500 truncate">{{ e.email }}</p>
+                </div>
+                <span
+                  v-if="e.activo"
+                  class="px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200 shrink-0"
+                >activo</span>
+                <span
+                  v-else
+                  class="px-2 py-0.5 rounded-full text-xs bg-gray-50 text-gray-700 border border-gray-200 shrink-0"
+                >inactivo</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between gap-2">
                 <select
-                  class="input text-sm"
+                  class="input text-xs py-1"
+                  style="max-width: 60%"
                   :value="e.psicologo_id || ''"
                   :disabled="procesando === e.id"
+                  :title="'Psicóloga asignada: ' + nombrePsico(e.psicologo_id)"
                   @change="asignarPsico(e, $event.target.value)"
                 >
-                  <option value="">Sin asignar</option>
-                  <option
-                    v-for="p in psicologas"
-                    :key="p.id"
-                    :value="p.id"
-                  >
+                  <option value="">Sin psicóloga asignada</option>
+                  <option v-for="p in psicologas" :key="p.id" :value="p.id">
                     {{ p.nombre }} {{ p.apellido }}
                   </option>
                 </select>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      </template>
-
-      <template v-if="tab === 'todos'">
-      <!-- ── Lista total de usuarios ─────────────────────────────── -->
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold">Todos los usuarios</h2>
-        <select v-model="filtroRol" class="input text-sm" style="width: 200px">
-          <option value="">Todos los roles</option>
-          <option value="estudiante">Estudiantes</option>
-          <option value="psicologo">Psicólogas</option>
-          <option value="admin">Administradores</option>
-        </select>
-      </div>
-      <div class="grid gap-2">
-        <div
-          v-for="u in filtrados"
-          :key="u.id"
-          class="card p-3 flex items-center justify-between text-sm"
-        >
-          <div>
-            <p class="font-semibold">{{ u.nombre }} {{ u.apellido }}</p>
-            <p class="text-xs text-ink-500">{{ u.email }}</p>
+                <span
+                  v-if="esCuentaCodigo(e)"
+                  class="px-2 py-0.5 rounded-full text-xs bg-cream-100 text-ink-600 border border-cream-200 whitespace-nowrap"
+                  title="Entra solo con su código de acceso; no usa contraseña."
+                >entra con código</span>
+                <button
+                  v-else
+                  class="btn-ghost px-2 py-1 text-xs whitespace-nowrap"
+                  @click="abrirReset(e)"
+                >Restablecer contraseña</button>
+              </div>
+            </div>
           </div>
-          <div class="flex items-center gap-2 text-xs">
-            <span class="chip-mint">{{ u.role }}</span>
-            <span
-              v-if="u.activo"
-              class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200"
-            >
-              activo
-            </span>
-            <span
-              v-else
-              class="px-2 py-0.5 rounded-full bg-gray-50 text-gray-700 border border-gray-200"
-            >
-              inactivo
-            </span>
-            <span
-              v-if="esCuentaCodigo(u)"
-              class="px-2 py-0.5 rounded-full bg-cream-100 text-ink-600 border border-cream-200 whitespace-nowrap"
-              title="Entra solo con su código de acceso; no usa contraseña."
-            >
-              entra con código
-            </span>
+          <div v-if="totalPagAlum > 1" class="flex flex-wrap gap-1 mt-3">
             <button
-              v-else
-              class="btn-ghost px-2 py-1 text-xs whitespace-nowrap"
-              @click="abrirReset(u)"
-            >
-              Restablecer contraseña
-            </button>
+              v-for="n in totalPagAlum"
+              :key="n"
+              class="w-8 h-8 rounded-lg text-xs border transition"
+              :class="n === pagAlum
+                ? 'bg-green-700 text-white border-green-700'
+                : 'bg-white text-ink-600 border-cream-200 hover:border-green-400'"
+              @click="pagAlum = n"
+            >{{ n }}</button>
           </div>
-        </div>
+        </section>
       </div>
-      </template>
     </template>
 
     <!-- Modal: restablecer contraseña -->
