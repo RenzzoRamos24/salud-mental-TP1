@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 from app.models.satisfaction_survey import SatisfactionSurvey
+from app.services.equipo_service import ids_equipo
 
 
 class SurveyService:
@@ -95,7 +96,7 @@ class SurveyService:
         # Alumnos en vista: los del psicólogo, o todos si es admin.
         q_al = db.query(User.id).filter(User.role == "estudiante", User.activo == True)
         if not es_admin and psicologo_id:
-            q_al = q_al.filter(User.psicologo_id == psicologo_id)
+            q_al = q_al.filter(User.psicologo_id.in_(ids_equipo(db, psicologo_id)))
         ids_alumnos = {r[0] for r in q_al.all()}
 
         # Cuántos de ellos llegaron a cerrar un cuestionario: es contra ese

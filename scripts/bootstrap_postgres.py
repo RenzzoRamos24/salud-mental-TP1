@@ -358,6 +358,21 @@ def _migrar_esquema(db) -> None:
                 "indexar 'users.codigo_acceso'",
             )
             print("  - columna users.codigo_acceso (login por código)")
+        # users.equipo_titular_id (equipo psicopedagógico: varias psicólogas
+        # comparten la cartera de una titular).
+        if "equipo_titular_id" not in cols_users:
+            _ejecutar(
+                db,
+                "ALTER TABLE users ADD COLUMN equipo_titular_id VARCHAR(36)",
+                "agregar 'users.equipo_titular_id'",
+            )
+            _ejecutar(
+                db,
+                "CREATE INDEX IF NOT EXISTS ix_users_equipo_titular_id "
+                "ON users (equipo_titular_id)",
+                "indexar 'users.equipo_titular_id'",
+            )
+            print("  - columna users.equipo_titular_id (equipo psicopedagógico)")
 
     # 3. satisfaction_surveys → 5 dimensiones nuevas.
     if "satisfaction_surveys" in tablas:

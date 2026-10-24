@@ -18,6 +18,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.models.bank import AplicacionCuestionario, ResultadoFeedback
+from app.services.equipo_service import ids_equipo
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ class FeedbackService:
         """
         q = db.query(ResultadoFeedback)
         if not es_admin:
-            q = q.filter(ResultadoFeedback.psicologo_id == psicologo_id)
+            q = q.filter(ResultadoFeedback.psicologo_id.in_(ids_equipo(db, psicologo_id)))
         filas = q.all()
 
         aceptados = sum(1 for f in filas if f.veredicto == "aceptado")
@@ -153,7 +154,7 @@ class FeedbackService:
         )
         if not es_admin:
             q_total = q_total.filter(
-                AplicacionCuestionario.psicologo_id == psicologo_id
+                AplicacionCuestionario.psicologo_id.in_(ids_equipo(db, psicologo_id))
             )
         total_evaluados = q_total.count()
 
@@ -190,7 +191,7 @@ class FeedbackService:
         )
         if apl is None:
             raise ValueError("Aplicación no encontrada.")
-        if not es_admin and apl.psicologo_id != psicologo_id:
+        if not es_admin and apl.psicologo_id not in ids_equipo(db, psicologo_id):
             raise ValueError("No tienes acceso a esta aplicación.")
         return apl
 

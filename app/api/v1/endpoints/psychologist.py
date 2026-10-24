@@ -18,6 +18,7 @@ from app.services.cita_service import CitaService
 from app.services import report_service, word_service
 from fastapi.responses import Response
 from app.services.notes_service import NotesService
+from app.services.equipo_service import ids_equipo
 from app.core.deps import require_role
 from app.models.user import User
 from app.models.cita import Cita  # noqa: F401 (Base.metadata)
@@ -265,12 +266,13 @@ async def listar_padres_disponibles(
 
 
 def _validar_acceso_psi_a_alumno(db: Session, psi: User, student_id: str) -> User:
-    """El psicólogo solo puede tocar alumnos que tiene asignados (admin todo)."""
+    """El psicólogo solo puede tocar alumnos de su cartera o de su equipo
+    psicopedagógico (admin todo)."""
     est = db.query(User).filter(User.id == student_id, User.role == "estudiante").first()
     if not est:
         raise HTTPException(404, "Estudiante no encontrado.")
-    if psi.role == "psicologo" and est.psicologo_id != psi.id:
-        raise HTTPException(403, "El estudiante no está asignado a ti.")
+    if psi.role == "psicologo" and est.psicologo_id not in ids_equipo(db, psi.id):
+        raise HTTPException(403, "El estudiante no está asignado a ti ni a tu equipo.")
     return est
 
 

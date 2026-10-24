@@ -10,6 +10,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.models.user import User
+from app.services.equipo_service import ids_equipo
 from app.models.bank import (
     AplicacionCuestionario,
     RespuestaAplicacion,
@@ -74,8 +75,8 @@ class CuestionarioService:
     ) -> dict:
         """Asigna la plantilla a todo un salón (grado) de una vez.
 
-        Alcance: los alumnos activos de ese grado que tienen a esta psicóloga
-        como responsable — los mismos que ve en su lista. Salta a quien ya
+        Alcance: los alumnos activos de ese grado a cargo de esta psicóloga o
+        de su equipo psicopedagógico — los mismos que ve en su lista. Salta a quien ya
         tiene esa misma plantilla pendiente o en curso, para no duplicar.
         Todo en una sola transacción: o se asignan todos, o ninguno.
         """
@@ -100,12 +101,12 @@ class CuestionarioService:
                 User.role == "estudiante",
                 User.activo == True,  # noqa: E712
                 User.grado == grado,
-                User.psicologo_id == psicologo_id,
+                User.psicologo_id.in_(ids_equipo(db, psicologo_id)),
             )
             .all()
         )
         if not alumnos:
-            raise ValueError(f"No tienes alumnos de {grado} a tu cargo.")
+            raise ValueError(f"No tienes alumnos de {grado} a tu cargo ni en tu equipo.")
 
         ya_activos = {
             a.estudiante_id
@@ -352,7 +353,7 @@ class CuestionarioService:
         )
         if not app_:
             raise ValueError("Aplicación no encontrada.")
-        if not es_admin and app_.psicologo_id != psicologo_id:
+        if not es_admin and app_.psicologo_id not in ids_equipo(db, psicologo_id):
             raise ValueError("No tienes acceso a este resultado.")
 
         resultado = json.loads(app_.resultado_json) if app_.resultado_json else None
@@ -512,7 +513,7 @@ class CuestionarioService:
             db.query(AplicacionCuestionario)
             .filter(
                 AplicacionCuestionario.id == aplicacion_id,
-                AplicacionCuestionario.psicologo_id == psicologo_id,
+                AplicacionCuestionario.psicologo_id.in_(ids_equipo(db, psicologo_id)),
             )
             .first()
         )

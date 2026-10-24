@@ -39,6 +39,13 @@ class User(Base):
     # se llena cuando role="psicologo"). Se inserta al final del informe.
     firma_path = Column(String(255), nullable=True)
 
+    # ── Equipo psicopedagógico ──────────────────────────────────────
+    # Solo para role="psicologo": la psicóloga titular cuya cartera comparte.
+    # Todas las del equipo (la titular y quienes apuntan a ella) ven los
+    # mismos alumnos y resultados, sin que ningún alumno cambie de
+    # responsable (`psicologo_id` sigue siendo una sola). NULL = sin equipo.
+    equipo_titular_id = Column(String(36), nullable=True, index=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

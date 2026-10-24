@@ -517,6 +517,10 @@ export const api = {
     const { data } = await client.get("/admin/stats");
     return data;
   },
+  async adminCrearPsicologa(payload) {
+    const { data } = await client.post("/admin/psicologas", payload);
+    return data;
+  },
   async adminResetPassword(user_id, nueva_password) {
     const { data } = await client.post(
       `/admin/users/${user_id}/reset-password`,

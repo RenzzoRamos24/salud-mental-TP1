@@ -99,6 +99,88 @@ const resetBusy = ref(false);
 const resetError = ref("");
 const resetOk = ref("");
 
+// ── Crear psicóloga (con equipo opcional) ──────────────────────────────
+// Candidatas a titular: psicólogas que entran con correo (no evaluadoras por
+// código) y que no son a su vez integrantes de otro equipo.
+const titulares = computed(() =>
+  todasPsicologas.value.filter((p) => !esCuentaCodigo(p) && !p.equipo_titular_id),
+);
+// Por defecto, la titular con más alumnos a cargo (en el piloto, el Equipo
+// Psicopedagógico Cervantes): es a quien se suelen sumar las nuevas.
+const titularSugerida = computed(() => {
+  const conteo = {};
+  for (const e of estudiantes.value) {
+    if (e.psicologo_id) conteo[e.psicologo_id] = (conteo[e.psicologo_id] || 0) + 1;
+  }
+  const ids = new Set(titulares.value.map((p) => p.id));
+  let mejor = null;
+  for (const [id, n] of Object.entries(conteo)) {
+    if (ids.has(id) && (!mejor || n > mejor.n)) mejor = { id, n };
+  }
+  return mejor?.id || "";
+});
+function nombreDe(id) {
+  const p = usuarios.value.find((u) => u.id === id);
+  return p ? `${p.nombre} ${p.apellido}` : "—";
+}
+
+const nueva = ref(null); // null = formulario cerrado
+const nuevaPwd2 = ref("");
+const creando = ref(false);
+const errorNueva = ref("");
+const okNueva = ref("");
+
+function abrirNueva() {
+  nueva.value = {
+    nombre: "",
+    apellido: "",
+    email: "",
+    password: "",
+    equipo_titular_id: titularSugerida.value,
+  };
+  nuevaPwd2.value = "";
+  errorNueva.value = "";
+  okNueva.value = "";
+}
+async function crearPsicologa() {
+  errorNueva.value = "";
+  okNueva.value = "";
+  const n = nueva.value;
+  if (!n.nombre.trim() || !n.apellido.trim() || !n.email.trim()) {
+    errorNueva.value = "Completa nombre, apellido y correo.";
+    return;
+  }
+  if (n.password.length < 8) {
+    errorNueva.value = "La contraseña debe tener al menos 8 caracteres.";
+    return;
+  }
+  if (n.password !== nuevaPwd2.value) {
+    errorNueva.value = "Las dos contraseñas no coinciden.";
+    return;
+  }
+  creando.value = true;
+  try {
+    const r = await api.adminCrearPsicologa({
+      ...n,
+      equipo_titular_id: n.equipo_titular_id || null,
+    });
+    const msg =
+      `Cuenta creada: ${r.nombre} (${r.email})` +
+      (r.equipo_titular_id ? ` · equipo de ${nombreDe(r.equipo_titular_id)}` : "") +
+      ".";
+    await cargar();
+    // Deja el formulario listo para la siguiente, con el mismo equipo.
+    const equipo = n.equipo_titular_id;
+    abrirNueva(); // limpia campos y mensajes
+    nueva.value.equipo_titular_id = equipo;
+    okNueva.value = msg;
+  } catch (e) {
+    errorNueva.value = e?.response?.data?.detail || "No se pudo crear la cuenta.";
+  } finally {
+    creando.value = false;
+  }
+}
+
 function abrirReset(u) {
   resetTarget.value = u;
   resetPwd.value = "";
@@ -175,7 +257,63 @@ function nombrePsico(id) {
         <section>
           <div class="flex items-baseline justify-between mb-3">
             <h2 class="text-lg font-semibold">Psicólogas</h2>
-            <span class="text-xs text-ink-400">{{ rango(pagPsico, todasPsicologas.length) }}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-ink-400">{{ rango(pagPsico, todasPsicologas.length) }}</span>
+              <button v-if="!nueva" class="btn-mint btn-sm" @click="abrirNueva">
+                + Crear psicóloga
+              </button>
+            </div>
+          </div>
+
+          <div v-if="okNueva && !nueva" class="banner-success mb-3">{{ okNueva }}</div>
+          <div v-if="nueva" class="card p-4 mb-3 text-sm">
+            <h3 class="font-semibold mb-3">Nueva psicóloga</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <input v-model="nueva.nombre" class="input" placeholder="Nombre" />
+              <input v-model="nueva.apellido" class="input" placeholder="Apellido" />
+            </div>
+            <input
+              v-model="nueva.email"
+              type="email"
+              class="input w-full mt-2"
+              placeholder="Correo (con este entra)"
+              autocomplete="off"
+            />
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <input
+                v-model="nueva.password"
+                type="text"
+                class="input"
+                placeholder="Contraseña (mín. 8)"
+                autocomplete="off"
+              />
+              <input
+                v-model="nuevaPwd2"
+                type="text"
+                class="input"
+                placeholder="Repetir contraseña"
+                autocomplete="off"
+              />
+            </div>
+            <label class="block text-xs text-ink-500 mt-3 mb-1">
+              Equipo psicopedagógico (ve los alumnos de esa psicóloga)
+            </label>
+            <select v-model="nueva.equipo_titular_id" class="input w-full">
+              <option value="">Sin equipo: solo verá los alumnos que se le asignen</option>
+              <option v-for="t in titulares" :key="t.id" :value="t.id">
+                Equipo de {{ t.nombre }} {{ t.apellido }}
+              </option>
+            </select>
+            <p v-if="errorNueva" class="text-red-600 mt-2">{{ errorNueva }}</p>
+            <p v-if="okNueva" class="text-green-700 mt-2">{{ okNueva }}</p>
+            <div class="flex justify-end gap-2 mt-3">
+              <button class="btn-ghost btn-sm" :disabled="creando" @click="nueva = null">
+                Cerrar
+              </button>
+              <button class="btn-mint btn-sm" :disabled="creando" @click="crearPsicologa">
+                {{ creando ? "Creando…" : "Crear cuenta" }}
+              </button>
+            </div>
           </div>
           <div v-if="todasPsicologas.length === 0" class="card p-6 text-ink-500">
             No hay cuentas de psicóloga.
@@ -186,6 +324,9 @@ function nombrePsico(id) {
                 <div class="min-w-0">
                   <p class="font-semibold truncate">{{ u.nombre }} {{ u.apellido }}</p>
                   <p class="text-xs text-ink-500 truncate">{{ u.email }}</p>
+                  <p v-if="u.equipo_titular_id" class="text-[11px] text-green-800 mt-0.5 truncate">
+                    Equipo de {{ nombreDe(u.equipo_titular_id) }}
+                  </p>
                 </div>
                 <span
                   v-if="u.activo"

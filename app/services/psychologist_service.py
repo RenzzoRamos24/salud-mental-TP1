@@ -9,6 +9,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.models.user import User
+from app.services.equipo_service import ids_equipo
 from app.models.bank import AplicacionCuestionario
 from app.models.clinical_note import ClinicalNote
 
@@ -57,7 +58,7 @@ class PsychologistService:
                 )
             q = q.filter(User.id.in_(sub.subquery().select()))
         elif not es_admin and psicologo_id:
-            q = q.filter(User.psicologo_id == psicologo_id)
+            q = q.filter(User.psicologo_id.in_(ids_equipo(db, psicologo_id)))
         estudiantes = q.all()
         total = len(estudiantes)
         distribucion = {
@@ -151,7 +152,7 @@ class PsychologistService:
         aplicaciones_q = db.query(AplicacionCuestionario)
         if not es_admin and psicologo_id:
             aplicaciones_q = aplicaciones_q.filter(
-                AplicacionCuestionario.psicologo_id == psicologo_id
+                AplicacionCuestionario.psicologo_id.in_(ids_equipo(db, psicologo_id))
             )
 
         return {
@@ -249,7 +250,7 @@ class PsychologistService:
                 )
             q = q.filter(User.id.in_(sub.subquery().select()))
         elif not es_admin and psicologo_id:
-            q = q.filter(User.psicologo_id == psicologo_id)
+            q = q.filter(User.psicologo_id.in_(ids_equipo(db, psicologo_id)))
         estudiantes = q.all()
         out = []
         for est in estudiantes:
@@ -317,7 +318,7 @@ class PsychologistService:
         if (
             not es_admin
             and psicologo_id
-            and estudiante.psicologo_id != psicologo_id
+            and estudiante.psicologo_id not in ids_equipo(db, psicologo_id)
             and not PsychologistService._es_evaluador(db, psicologo_id)
         ):
             raise ValueError("No tienes acceso al historial de este estudiante.")
@@ -390,7 +391,7 @@ class PsychologistService:
             )
         )
         if not es_admin and psicologo_id:
-            q = q.filter(AplicacionCuestionario.psicologo_id == psicologo_id)
+            q = q.filter(AplicacionCuestionario.psicologo_id.in_(ids_equipo(db, psicologo_id)))
         if solo_sin_revisar:
             q = q.filter(AplicacionCuestionario.revisada_at.is_(None))
 

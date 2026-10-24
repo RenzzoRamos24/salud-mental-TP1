@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from app.database import get_db
 from app.core.deps import require_role
 from app.schemas.admin import UsuarioResumen, StatsUsuarios
@@ -779,4 +779,78 @@ async def reset_password_usuario(
         "ok": True,
         "usuario": f"{u.nombre} {u.apellido}",
         "email": u.email,
+    }
+
+
+
+# ── Alta de psicólogas (con equipo psicopedagógico opcional) ──────────────
+
+class CrearPsicologaIn(BaseModel):
+    nombre: str = Field(..., min_length=1, max_length=100)
+    apellido: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    # Mismo criterio que el registro: 8 mínimo, 72 es el límite de bcrypt.
+    password: str = Field(..., min_length=8, max_length=72)
+    # Psicóloga titular cuya cartera comparte (equipo). Opcional.
+    equipo_titular_id: Optional[str] = None
+
+
+@router.post("/psicologas", status_code=201)
+async def crear_psicologa(
+    payload: CrearPsicologaIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_role("admin")),
+):
+    """
+    Crea una cuenta de psicóloga que entra con correo y contraseña. Con
+    `equipo_titular_id` comparte la cartera de esa titular: ve sus alumnos,
+    resultados y alertas sin que ningún alumno cambie de responsable.
+    """
+    import uuid
+
+    from app.core.security import hash_password
+
+    email = payload.email.lower().strip()
+    if email.endswith(".sami.local"):
+        raise HTTPException(
+            400, "Ese dominio está reservado para las cuentas que entran por código."
+        )
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(409, "Ya existe una cuenta con ese correo.")
+
+    titular_id = None
+    if payload.equipo_titular_id:
+        t = db.query(User).filter(
+            User.id == payload.equipo_titular_id, User.role == "psicologo"
+        ).first()
+        if not t:
+            raise HTTPException(400, "La titular del equipo no existe o no es psicóloga.")
+        if (t.codigo_acceso or "").startswith("SAMI-PSI"):
+            raise HTTPException(
+                400, "Una cuenta de evaluadora no puede ser titular de un equipo."
+            )
+        # Un solo nivel de equipo: si se elige a una integrante, cuenta su titular.
+        titular_id = t.equipo_titular_id or t.id
+
+    u = User(
+        id=str(uuid.uuid4()),
+        email=email,
+        hashed_password=hash_password(payload.password),
+        nombre=payload.nombre.strip(),
+        apellido=payload.apellido.strip(),
+        role="psicologo",
+        activo=True,
+        equipo_titular_id=titular_id,
+    )
+    db.add(u)
+    db.commit()
+    logger.info(
+        "Admin %s creó la psicóloga %s (equipo de %s)", admin.email, email, titular_id
+    )
+    return {
+        "ok": True,
+        "id": u.id,
+        "email": u.email,
+        "nombre": f"{u.nombre} {u.apellido}",
+        "equipo_titular_id": titular_id,
     }
