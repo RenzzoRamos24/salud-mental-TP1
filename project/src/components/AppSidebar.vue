@@ -95,7 +95,14 @@ const itemsEvaluador = computed(() => [
 
 const itemsPsicologo = computed(() => [
   { to: "/psicologo", label: "Panel clínico", icon: iconHome() },
-  { to: "/etiquetado", label: "Evaluación clínica", icon: iconStudents() },
+  // Las tres pantallas de evaluación viven acá adentro, no en un shell aparte.
+  // Antes solo estaba "Evaluación clínica" apuntando a /etiquetado, así que a
+  // frases y a resultados solo se llegaba con una cuenta de evaluador.
+  { seccion: "Evaluación clínica" },
+  { to: "/etiquetado", label: "Evaluar alumnos", icon: iconStudents() },
+  { to: "/etiquetado/frases", label: "Evaluar frases", icon: iconBook() },
+  { to: "/etiquetado/metricas", label: "Resultados", icon: iconSend() },
+  { seccion: "Seguimiento" },
   { to: "/psicologo/estudiantes", label: "Estudiantes", icon: iconStudents() },
   {
     to: "/psicologo/alertas",
@@ -138,7 +145,10 @@ const items = computed(() => {
   if (rol.value === "admin") return itemsAdmin.value;
   if (!esEvaluador.value) return itemsPsicologo.value;
   if (!panelAbierto.value) return itemsEvaluador.value;
-  return [...itemsPsicologo.value, ...itemsEvaluador.value.slice(0, 3)];
+  // Al desbloquearse el panel ya no hay que concatenar las tres pantallas de
+  // evaluación: `itemsPsicologo` las trae de serie. Concatenarlas acá las
+  // duplicaría en el menú.
+  return itemsPsicologo.value;
 });
 
 function esActivo(to) {
@@ -243,9 +253,10 @@ function iconPhone() {
 
     <!-- nav -->
     <nav class="apollo-nav">
+      <template v-for="(it, i) in items" :key="it.to || `s-${i}`">
+      <div v-if="it.seccion" class="apollo-nav__seccion">{{ it.seccion }}</div>
       <a
-        v-for="it in items"
-        :key="it.to"
+        v-else
         href="#"
         class="apollo-nav__item"
         :class="{ 'is-active': esActivo(it.to) }"
@@ -267,6 +278,7 @@ function iconPhone() {
         <span class="apollo-nav__label">{{ it.label }}</span>
         <span v-if="it.badge" class="apollo-nav__badge">{{ it.badge }}</span>
       </a>
+      </template>
     </nav>
 
     <!-- support card -->
@@ -404,6 +416,20 @@ function iconPhone() {
   border-radius: 6px;
 }
 
+/* Encabezado de grupo dentro del menú. No es clickeable: solo separa. */
+.apollo-nav__seccion {
+  margin: 14px 0 6px;
+  padding: 0 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9aa7ab;
+}
+.apollo-nav__seccion:first-child {
+  margin-top: 0;
+}
+
 .apollo-nav__item {
   display: flex;
   align-items: center;
@@ -515,6 +541,7 @@ function iconPhone() {
   .apollo-profile__name,
   .apollo-profile__role,
   .apollo-nav__label,
+  .apollo-nav__seccion,
   .apollo-support__txt { display: none; }
   .apollo-nav__item { justify-content: center; padding: 10px 8px; }
   .apollo-logo { justify-content: center; padding: 0 12px; }

@@ -4,12 +4,17 @@ Llena la «Plantilla 02 - Casos de Prueba» oficial del curso.
 
 Estructura exigida por la plantilla:
   · hoja «LISTA CP» — listado con CP, descripción, HU, # escenario y criterio.
-  · una hoja por cada caso de prueba, con autor, precondiciones, pasos
-    numerados, datos de prueba, resultados esperados, HU relacionada y
-    postcondiciones.
+  · una hoja por cada caso de prueba con su autor, la HU relacionada y el
+    escenario en formato Gherkin: Característica (la HU), Escenario y una fila
+    por paso con su palabra clave (Dado / Cuando / Entonces / Y).
+
+Con --clasico se genera el formato anterior (precondiciones, pasos numerados,
+datos de prueba, resultados esperados y postcondiciones), que es el de los
+entregables de septiembre.
 
 Uso:  venv/bin/python -m scripts.llenar_plantilla_cp
 """
+import sys
 from copy import copy
 from pathlib import Path
 import re
@@ -18,13 +23,13 @@ import openpyxl
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
-from scripts.criterios_aceptacion import CRITERIOS
-from scripts.generar_hu_cp import leer_backlog, CODIGO
+from scripts.generar_hu_cp import leer_backlog, CODIGO, CRITERIOS, SUFIJO
 from scripts.llenar_plantilla_hu import id_plantilla, tres_columnas
 
 PLANTILLA = Path("Plantilla 02 - Casos de Prueba.xlsx")
-DESTINO = Path(f"{CODIGO}_CP.xlsx")
+DESTINO = Path(f"{CODIGO}_CP{SUFIJO}.xlsx")
 AUTOR = "Renzo Gutiérrez Ramos"
+CLASICO = "--clasico" in sys.argv
 
 RE_COMILLAS = re.compile(r'"([^"]{1,60})"')
 
@@ -111,12 +116,20 @@ def main():
                 "actor": f["rol"],
                 "ctx": ctx, "evt": evt, "res": res,
                 "datos": datos_de_prueba(texto),
+                "historia": f["historia"],
+                "pasos": esc["pasos"],
             })
 
     wb = openpyxl.load_workbook(PLANTILLA)
 
     # ── Hoja «LISTA CP» ──────────────────────────────────────────────
     ws = wb["LISTA CP"]
+    # La plantilla trae combinadas B16:F16 y B17:F17 para sus notas al pie.
+    # openpyxl no deshace las combinaciones al borrar filas: si quedan, las
+    # filas 16 y 17 (CP014 y CP015) se combinan y pierden todo salvo el código.
+    for rango in list(ws.merged_cells.ranges):
+        if rango.min_row >= 3:
+            ws.unmerge_cells(str(rango))
     ws.delete_rows(3, ws.max_row)
     for i, c in enumerate(casos):
         r = 3 + i
@@ -156,6 +169,45 @@ def main():
         hoja.cell(2, 1, "Autor:")
         hoja.cell(2, 2, AUTOR)
         hoja.merge_cells("B2:D2")
+
+        if not CLASICO:
+            # ── Formato Gherkin ─────────────────────────────────────
+            hoja.cell(3, 1, f"Característica: {c['historia']}")
+            hoja.merge_cells("A3:D3")
+            hoja["A3"].font = Font(bold=True, size=10.5)
+            hoja["A3"].alignment = Alignment(wrap_text=True, vertical="center")
+            hoja.row_dimensions[3].height = 32
+
+            hoja.cell(4, 1, f"Escenario: {c['criterio']}")
+            hoja.merge_cells("A4:D4")
+            hoja["A4"].font = Font(bold=True, size=10.5, color="1F4E79")
+            hoja["A4"].alignment = Alignment(wrap_text=True, vertical="center")
+
+            for col, txt in ((1, "#"), (2, "Palabra clave"), (3, "Paso")):
+                cel = hoja.cell(5, col, txt)
+                cel._style = copy(estilo_cab)
+                cel.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            hoja.merge_cells("C5:D5")
+
+            r = 6
+            for i, paso in enumerate(c["pasos"], 1):
+                clave, _, resto = paso.strip().partition(" ")
+                hoja.cell(r, 1, i).alignment = Alignment(horizontal="center", vertical="top")
+                cel = hoja.cell(r, 2, clave)
+                cel.font = Font(bold=True, color="1F4E79")
+                cel.alignment = Alignment(vertical="top")
+                hoja.cell(r, 3, resto).alignment = Alignment(wrap_text=True, vertical="top")
+                hoja.merge_cells(start_row=r, start_column=3, end_row=r, end_column=4)
+                r += 1
+
+            hoja.cell(r, 1, f"HU relacionada : {c['hu']} — escenario {c['n_esc']} "
+                            f"({c['criterio']})")
+            hoja.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
+            hoja.cell(r, 1).alignment = Alignment(wrap_text=True, vertical="center")
+
+            for col, w in (("A", 6), ("B", 15), ("C", 60), ("D", 50)):
+                hoja.column_dimensions[col].width = w
+            continue
 
         hoja.cell(3, 1, "Precondiciones: " + c["ctx"].replace("\n", "  ·  "))
         hoja.merge_cells("A3:D5")

@@ -8,6 +8,19 @@ const plantillas = ref([]);
 const instrumentos = ref([]);
 const bloquesCustom = ref([]);
 const areasFrases = ref([]);
+const frasesBanco = ref([]); // las 40 frases del banco, para selección puntual
+
+// Las 10 frases validadas del piloto del colegio (cruzan áreas).
+const FRASES_PILOTO = [1, 6, 11, 13, 17, 22, 23, 25, 28, 31];
+
+// Agrupa las 40 frases por área, para pintarlas con checkboxes.
+const frasesPorArea = computed(() => {
+  const g = {};
+  for (const f of frasesBanco.value) {
+    (g[f.area] = g[f.area] || []).push(f);
+  }
+  return g;
+});
 const cargando = ref(true);
 const error = ref("");
 const modoCrear = ref(false);
@@ -19,21 +32,24 @@ const nuevo = ref({
   instrumentos_ids: [],
   bloques_custom_ids: [],
   frases_areas: [],
+  frases_numeros: [],
 });
 
 async function cargar() {
   cargando.value = true;
   try {
-    const [ps, ins, bc, af] = await Promise.all([
+    const [ps, ins, bc, af, fr] = await Promise.all([
       api.listarPlantillas(),
       api.listarInstrumentos(),
       api.listarBloquesCustom(),
       api.listarAreasFrases(),
+      api.listarFrases(),
     ]);
     plantillas.value = ps;
     instrumentos.value = ins;
     bloquesCustom.value = bc;
     areasFrases.value = af;
+    frasesBanco.value = fr;
   } catch (e) {
     error.value = e?.response?.data?.detail || "No se pudo cargar.";
   } finally {
@@ -59,12 +75,27 @@ const totalPreguntas = computed(() => {
     const bc = bloquesCustom.value.find((x) => x.id === id);
     if (bc) n += bc.n_items;
   }
-  for (const area of nuevo.value.frases_areas) {
-    const a = areasFrases.value.find((x) => x.area === area);
-    if (a) n += a.n_frases;
+  // Las frases puntuales mandan sobre las áreas (igual que en el backend).
+  if (nuevo.value.frases_numeros.length > 0) {
+    n += nuevo.value.frases_numeros.length;
+  } else {
+    for (const area of nuevo.value.frases_areas) {
+      const a = areasFrases.value.find((x) => x.area === area);
+      if (a) n += a.n_frases;
+    }
   }
   return n;
 });
+
+function usarFrasesPiloto() {
+  nuevo.value.frases_numeros = [...FRASES_PILOTO];
+}
+function toggleFraseNumero(numero) {
+  const arr = nuevo.value.frases_numeros;
+  const i = arr.indexOf(numero);
+  if (i === -1) arr.push(numero);
+  else arr.splice(i, 1);
+}
 
 function abrirCrear() {
   modoCrear.value = true;
@@ -75,6 +106,7 @@ function abrirCrear() {
     instrumentos_ids: [],
     bloques_custom_ids: [],
     frases_areas: [],
+    frases_numeros: [],
   };
 }
 
@@ -93,6 +125,9 @@ function abrirEditar(p) {
     frases_areas: (
       p.bloques.find((b) => b.tipo === "frases")?.frases_areas || []
     ).slice(),
+    frases_numeros: (
+      p.bloques.find((b) => b.tipo === "frases")?.frases_numeros || []
+    ).slice(),
   };
 }
 
@@ -110,7 +145,13 @@ async function guardarPlantilla() {
   for (const id of nuevo.value.bloques_custom_ids) {
     bloques.push({ orden: orden++, tipo: "custom", bloque_custom_id: id });
   }
-  if (nuevo.value.frases_areas.length > 0) {
+  if (nuevo.value.frases_numeros.length > 0) {
+    bloques.push({
+      orden: orden++,
+      tipo: "frases",
+      frases_numeros: [...nuevo.value.frases_numeros].sort((a, b) => a - b),
+    });
+  } else if (nuevo.value.frases_areas.length > 0) {
     bloques.push({
       orden: orden++,
       tipo: "frases",
@@ -256,6 +297,13 @@ function asignar(p) {
         <h3 class="text-sm font-semibold text-ink-700 mb-2">
           Frases incompletas (elige áreas)
         </h3>
+        <p
+          v-if="nuevo.frases_numeros.length > 0"
+          class="text-xs text-ink-400 mb-2"
+        >
+          Hay frases puntuales seleccionadas más abajo: tienen prioridad y las
+          áreas se ignoran.
+        </p>
         <div class="flex flex-wrap gap-2 mb-6">
           <button
             v-for="a in areasFrases"
@@ -265,11 +313,57 @@ function asignar(p) {
             :class="{
               'ring-2 ring-green-500':
                 nuevo.frases_areas.includes(a.area),
+              'opacity-40': nuevo.frases_numeros.length > 0,
             }"
             @click="toggle(nuevo.frases_areas, a.area)"
           >
             {{ a.area }} ({{ a.n_frases }})
           </button>
+        </div>
+
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-ink-700">
+            …o elige frases puntuales
+          </h3>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              class="btn-ghost btn-sm"
+              @click="usarFrasesPiloto"
+            >
+              Usar las 10 del piloto
+            </button>
+            <button
+              v-if="nuevo.frases_numeros.length > 0"
+              type="button"
+              class="btn-ghost btn-sm"
+              @click="nuevo.frases_numeros = []"
+            >
+              Limpiar ({{ nuevo.frases_numeros.length }})
+            </button>
+          </div>
+        </div>
+        <div class="space-y-3 mb-6">
+          <div v-for="(frases, area) in frasesPorArea" :key="area">
+            <p class="text-xs uppercase tracking-wide text-ink-400 mb-1">
+              {{ area }}
+            </p>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="f in frases"
+                :key="f.numero"
+                type="button"
+                :title="f.texto"
+                class="px-2 py-1 rounded-lg text-xs border cursor-pointer transition"
+                :class="nuevo.frases_numeros.includes(f.numero)
+                  ? 'bg-green-100 border-green-400 text-green-900'
+                  : 'bg-gray-50 border-gray-200 text-ink-600 hover:border-green-300'"
+                @click="toggleFraseNumero(f.numero)"
+              >
+                #{{ f.numero }}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="border-t pt-4 flex items-center justify-between">

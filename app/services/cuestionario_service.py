@@ -288,15 +288,32 @@ class CuestionarioService:
             raise ValueError("No tienes acceso a este resultado.")
 
         resultado = json.loads(app_.resultado_json) if app_.resultado_json else None
+
+        est = db.query(User).filter(User.id == app_.estudiante_id).first()
+        estudiante = {
+            "id": app_.estudiante_id,
+            "nombre": est.nombre if est else None,
+            "apellido": est.apellido if est else None,
+            "codigo_acceso": getattr(est, "codigo_acceso", None) if est else None,
+            "grado": getattr(est, "grado", None) if est else None,
+        }
+
         return {
             "id": app_.id,
             "estudiante_id": app_.estudiante_id,
+            "estudiante": estudiante,
             "psicologo_id": app_.psicologo_id,
             "plantilla_id": app_.plantilla_id,
             "estado": app_.estado,
             "asignada_at": app_.asignada_at.isoformat() if app_.asignada_at else None,
             "completada_at": app_.completada_at.isoformat() if app_.completada_at else None,
             "resultado": resultado,
+            # Respuestas ítem por ítem de TODOS los instrumentos del cuestionario
+            # (PHQ-A, GAD-7, etc.), para que la psicóloga pueda señalar el ítem
+            # exacto que levantó una bandera. Antes solo existía para DASS-21.
+            "instrumentos_detalle": CuestionarioService._instrumentos_detalle(
+                db, aplicacion_id
+            ),
             # Detalle DASS-21 para que la psicóloga pueda validar la opinión
             # del SVM viendo exactamente qué respondió el alumno.
             "dass21_detalle": CuestionarioService._dass21_detalle(db, aplicacion_id),
@@ -304,6 +321,66 @@ class CuestionarioService:
             # vista pinte los botones en el estado en que quedaron.
             "feedback": FeedbackService.por_aplicacion(db, aplicacion_id),
         }
+
+    # ── Respuestas ítem por ítem de cada instrumento del cuestionario ──────
+    @staticmethod
+    def _instrumentos_detalle(db: Session, aplicacion_id: int) -> list[dict]:
+        """Para cada bloque de instrumento respondido, los ítems con su valor,
+        el texto del ítem y si es un ítem con bandera de crisis (p. ej. PHQ-A
+        #9). Ordenado por código de instrumento y número de ítem."""
+        from app.models.bank import RespuestaAplicacion, BankInstrumento
+
+        rows = (
+            db.query(RespuestaAplicacion)
+            .filter(RespuestaAplicacion.aplicacion_id == aplicacion_id)
+            .filter(RespuestaAplicacion.origen.like("INSTR:%"))
+            .filter(RespuestaAplicacion.valor_num.isnot(None))
+            .all()
+        )
+        if not rows:
+            return []
+
+        # origen = "INSTR:<codigo>:<numero>" → agrupar por código.
+        por_codigo: dict[str, dict[int, int]] = {}
+        for r in rows:
+            partes = r.origen.split(":")
+            if len(partes) != 3:
+                continue
+            codigo, numero = partes[1], partes[2]
+            try:
+                por_codigo.setdefault(codigo, {})[int(numero)] = int(r.valor_num)
+            except (ValueError, TypeError):
+                continue
+
+        salida = []
+        for codigo, valores in por_codigo.items():
+            instr = (
+                db.query(BankInstrumento)
+                .filter(BankInstrumento.codigo == codigo)
+                .first()
+            )
+            if not instr:
+                continue
+            items = []
+            for it in sorted(instr.items, key=lambda x: x.numero):
+                if it.numero not in valores:
+                    continue
+                items.append({
+                    "numero": it.numero,
+                    "texto": it.texto,
+                    "valor": valores[it.numero],
+                    "es_crisis": bool(it.bandera_crisis),
+                })
+            if items:
+                salida.append({
+                    "codigo": instr.codigo,
+                    "nombre": instr.nombre,
+                    "likert_min": instr.likert_min,
+                    "likert_max": instr.likert_max,
+                    "items": items,
+                })
+        salida.sort(key=lambda b: b["codigo"])
+        return salida
 
     # ── Detalle DASS-21 (respuestas item-a-item por subescala) ─────────────
     @staticmethod

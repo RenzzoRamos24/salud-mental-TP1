@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Llena la «Plantilla 01 - Historias de Usuario y Criterios de Aceptación»
-oficial del curso con las 69 HU y los 164 escenarios del proyecto.
+oficial del curso con las HU y los escenarios del backlog vigente
+(v5 por defecto; SAMI_BACKLOG=v4 para la versión de septiembre).
 
 Respeta la estructura original: no se agregan ni quitan columnas, se conservan
 las hojas «Instructivo» y «Ejemplo», y se mantienen las fórmulas REDACCION
@@ -16,11 +17,10 @@ import re
 import openpyxl
 from openpyxl.styles import Alignment
 
-from scripts.criterios_aceptacion import CRITERIOS
-from scripts.generar_hu_cp import leer_backlog, EPICAS, num_sprint, CODIGO
+from scripts.generar_hu_cp import leer_backlog, EPICAS, num_sprint, CODIGO, CRITERIOS, SUFIJO
 
 PLANTILLA = Path("Plantilla 01 - Historias de Usuario y Criterios de Aceptación_v1.0.xlsx")
-DESTINO = Path(f"{CODIGO}_HU.xlsx")
+DESTINO = Path(f"{CODIGO}_HU{SUFIJO}.xlsx")
 
 RE_HISTORIA = re.compile(
     r"^Como\s+(?:un[ao]?\s+)?(.+?)\s+quiero\s+(.+?)\s+para\s+(.+)$",

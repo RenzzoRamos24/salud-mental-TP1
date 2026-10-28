@@ -20,7 +20,18 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 
 import sys
 
-from scripts.criterios_aceptacion import CRITERIOS, ESTADO
+import os
+
+# ── Versión del backlog ─────────────────────────────────────────────────
+# Por defecto la vigente (v5). Con SAMI_BACKLOG=v4 se reproducen exactamente
+# los entregables de septiembre. Los llenadores de plantilla importan
+# CRITERIOS/ESTADO de acá, así la versión se elige en un solo lugar.
+VERSION = os.environ.get("SAMI_BACKLOG", "v5")
+if VERSION == "v4":
+    from scripts.criterios_aceptacion import CRITERIOS, ESTADO
+else:
+    from scripts.criterios_v5 import CRITERIOS, ESTADO
+SUFIJO = "" if VERSION == "v4" else f"_{VERSION}"
 
 # El entregable de Test Estático se revisa como artefacto, no contra el código:
 # no lleva columna de estado de implementación. Con --con-estado se produce la
@@ -30,7 +41,7 @@ CON_ESTADO = "--con-estado" in sys.argv
 # ── Identidad del entregable ────────────────────────────────────────────
 CODIGO = "SAMI"
 PROYECTO = "Sami — Sistema inteligente de detección temprana de señales de depresión y ansiedad en estudiantes de secundaria"
-BACKLOG = Path("Product_Backlog_Sprints_v4.xlsx")
+BACKLOG = Path(f"Product_Backlog_Sprints_{VERSION}.xlsx")
 
 AZUL_TITULO = "1F4E79"
 AZUL_HEADER = "2E5F8F"
@@ -54,6 +65,11 @@ EPICAS = {
     "EPICA0008": "Despliegue, infraestructura y operación",
     "EPICA0009": "Acompañamiento del padre o tutor",
 }
+if VERSION != "v4":
+    EPICAS.update({
+        "EPICA0007": "Modelo de aprendizaje automático (SVM) — descartada en producción",
+        "EPICA0010": "Validación clínica ciega del sistema",
+    })
 
 OBJETIVO_SPRINT = {
     1: "Cimientos del sistema: autenticación y consentimiento informado",
@@ -238,6 +254,10 @@ def leer_backlog():
         hu = ws.cell(r, 2).value
         if not hu or not str(hu).startswith("HU-"):
             continue
+        # Las descartadas siguen en el backlog por trazabilidad, pero no son
+        # parte del sistema: no van en las HU ni en los casos de prueba.
+        if str(ws.cell(r, 11).value or "").strip() == "Descartada":
+            continue
         filas.append({
             "id": str(hu).strip(),
             "rol": ws.cell(r, 3).value,
@@ -350,7 +370,7 @@ def generar_hu(filas):
         for col in (1, 3, 4):
             ws.cell(r - 1, col).alignment = Alignment(horizontal="center", vertical="center")
 
-    destino = Path(f"{CODIGO}_HU.xlsx")
+    destino = Path(f"{CODIGO}_HU{SUFIJO}.xlsx")
     wb.save(destino)
     return destino
 
@@ -499,7 +519,7 @@ def generar_cp(filas, casos):
         ws.cell(r - 1, 1).font = Font(size=10, bold=True, color="222222")
         ws.cell(r - 1, 2).alignment = Alignment(horizontal="center", vertical="center")
 
-    destino = Path(f"{CODIGO}_CP.xlsx")
+    destino = Path(f"{CODIGO}_CP{SUFIJO}.xlsx")
     wb.save(destino)
     return destino
 

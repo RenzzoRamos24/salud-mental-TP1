@@ -510,6 +510,13 @@ export const api = {
     const { data } = await client.get("/admin/stats");
     return data;
   },
+  async adminResetPassword(user_id, nueva_password) {
+    const { data } = await client.post(
+      `/admin/users/${user_id}/reset-password`,
+      { nueva_password },
+    );
+    return data;
+  },
   async adminGetAuditLogs({ limit = 100, offset = 0, role, endpoint } = {}) {
     const { data } = await client.get("/admin/audit-logs", {
       params: {

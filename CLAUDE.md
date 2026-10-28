@@ -125,49 +125,77 @@ Utilidades clave en `project/src/style.css`: `.hero-serif`, `.hero-mint`, `.menu
 - `PENDIENTES.md` — qué falta (entregables académicos, no funcionales).
 - `seeds/banco_instrumentos.sql` — DDL + inserts del banco fijo.
 
-## SVM — PHQ-9 / ENDES (reentrenado 2026-10-13)
+## SVM clínico (vigente, 2026-10-15)
 
-El SVM de DASS-21 **se retiró**: pedía 21 ítems que el sistema no recolecta,
-así que nunca emitió una predicción (`etiqueta_caso.modelo_svm_clase` estaba
-NULL en los 102 casos etiquetados) y su F1-macro de 0.9215 medía aproximación
-a los cortes de Lovibond, no capacidad clínica. Artefactos en `.deprecated/`,
-script y reporte marcados como deprecados para dejar registro.
-
-El modelo vigente es `models/svm_phq9.joblib`:
+`models/svm_clinico.joblib` es el primer modelo de Sami entrenado contra
+**criterio clínico humano** y no contra el corte de un instrumento.
 
 | | |
 |---|---|
-| Entrada | 9 ítems PHQ-A (1..9, escala 0-3) — los que el sistema sí recolecta |
-| Entrenamiento | ENDES 2025 (INEI), adolescentes 15-17, n=1,370 |
-| Etiqueta | `phq9_total >= 10` — **circular**, es la suma de las features |
-| Validación externa (n=102, criterio de la psicóloga) | F1-macro 0.784 · κ 0.571 · AUC 0.863 |
+| Entrada | los 16 ítems que el sistema ya recolecta: PHQ-A 1..9 + GAD-7 1..7 (0-3) |
+| Features | 29 (16 crudas + 13 derivadas de reglas publicadas, `app/services/svm_features.py`) |
+| Etiqueta | juicio ciego de `SAMI-PSI-01`, binarizado en `riesgo_clinico >= MEDIO` |
+| Entrenamiento | 102 casos del piloto del colegio (55 en alerta / 47 fuera) |
+| Validación | LOOCV anidado: **F1-macro 0.9313 · κ 0.8630 · AUC 0.9443 · sens 0.891 · espec 0.979 · VPP 0.980** |
+| Modelo final | `kernel=linear`, `C=3`, `k=6` — sobreviven `phq_total`, `gad_total`, `total`, `gad_n_ge2`, `crisis`, `phq_cognitiva` |
 
-**Advertencia obligatoria.** Con esa etiqueta el modelo equivale
-matemáticamente a la regla `PHQ-A total >= 10`: da métricas idénticas a
-4 decimales, y permutar el orden de los 9 ítems no mueve nada (sd 0.0000
-sobre 200 permutaciones). Las reglas del `EvaluatorService` lo superan en los
-mismos 102 casos (F1-macro 0.853 · κ 0.708). No presentarlo como segunda
-opinión independiente hasta reentrenarlo con las etiquetas clínicas.
+Supera a las reglas del `EvaluatorService` (F1-macro 0.8529 · κ 0.7081):
+Δ F1 +0.0797, IC95 [+0.0199, +0.1381], gana en 99.6 % de 5 000 remuestreos
+pareados. De los 10 casos donde discrepan, el SVM acierta 9 — 8 son estudiantes
+con PHQ-A 9-15 sin ideación que las reglas dejaban pasar.
 
-Reentrenar: `venv/bin/python scripts/train_svm_phq9_endes.py --piloto <csv>`
-Detalle completo: `reports/svm_phq9_endes.md`.
+**No es caja negra**: el modelo final es lineal sobre 6 cantidades con
+significado clínico, auditable a mano. Ecuación explícita en
+`paper-datos-medidos-v1.md` (verificada: reproduce `decision_function` a 4e-6).
 
-### Concordancia clínica medida (2026-10-13)
+El conjunto de features **no está inflado**: repitiendo el LOOCV con la
+elección de representación anidada dentro de cada fold da exactamente lo mismo
+(0.9313), y elige las 29+SelectKBest en 90 de 102 vueltas. Lo que sí queda por
+declarar: las candidatas y la rejilla se definieron explorando estos 102 casos.
+
+Reentrenar: `venv/bin/python scripts/train_svm_clinico.py --casos data/clinico/casos_etiquetados.csv`
+(exportar el CSV antes con `scripts/exportar_casos_etiquetados.py`; `data/` no se
+versiona porque son respuestas de menores). Detalle: `reports/svm_clinico.md`.
+
+**Advertencia de uso**: va como segunda opinión, no reemplaza al
+`EvaluatorService`. Las reglas tienen 0 falsos negativos en CRÍTICO y son
+auditables ítem por ítem; además el SVM es binario y no modela los 5 niveles.
+
+### SVM de ENDES (superado, 2026-10-13)
+
+`models/svm_phq9.joblib` — entrenaba contra `phq9_total >= 10`, que es la suma
+de sus propias features, así que equivale matemáticamente a la regla
+"PHQ-A total >= 10" (métricas idénticas a 4 decimales; permutar los 9 ítems no
+mueve nada, sd 0.0000 sobre 200 permutaciones). Validación externa contra los
+102 casos: F1-macro 0.784 · κ 0.571 · AUC 0.863 — por debajo de las reglas.
+Sirve como contraejemplo de circularidad, no como modelo. Antes de él estuvo el
+de DASS-21, que pedía 21 ítems que el sistema nunca recolectó y por eso jamás
+emitió una predicción (artefactos en `.deprecated/`).
+
+### Concordancia clínica medida (2026-10-13/15)
 
 La psicóloga evaluadora (`SAMI-PSI-01`) etiquetó a ciegas 102 de los 104 casos
-de la cohorte. Primer patrón de oro externo del proyecto:
+de la cohorte. Primer patrón de oro externo del proyecto.
 
 - Reglas vs criterio clínico, **binario** (MEDIO+): F1-macro 0.853 · κ 0.708 ·
   sens 0.782 · espec 0.936 · VPP 0.935. **Falsos negativos en CRÍTICO: 0 de 6.**
-- Reglas vs criterio clínico, **5 niveles**: κ 0.121 — mal calibrado. El
-  sistema nunca emite ALTO y manda a CRÍTICO los 39 casos con PHQ-A #9 ≥ 1,
-  donde la psicóloga vio 6.
-- SVM entrenado en los 102 (16 features, LOOCV anidado): F1-macro 0.853 ·
-  κ 0.706 · AUC 0.921 — empata con las reglas; pierde en 78.2 % de 500
-  reparticiones 50/50 pareadas.
+- Reglas vs criterio clínico, **5 niveles**: κ simple 0.121, pero κ ponderado
+  lineal 0.447 y cuadrático 0.665. O sea: el sistema **ordena** igual que la
+  psicóloga y lo que está mal son los cortes. Nunca emite ALTO (la columna está
+  vacía: los 21 ALTO de la psicóloga caen en CRÍTICO 20 / MEDIO 1).
+- **Acortar el instrumento cuesta caro.** PHQ-2+GAD-2 (4 ítems): F1-macro 0.784,
+  y pierde 8 de los 30 casos con ideación. Hay 6 estudiantes bajo el corte de
+  ambas escalas cortas que marcaron el ítem 9, y la psicóloga derivó a los 6.
+  Añadir solo el ítem 9 a los 4 ítems recupera 30/30.
 
 Falta: `etiqueta_frase` sigue en 0 (sin eso no hay validación de BETO contra
-criterio clínico) y `SAMI-PSI-02` no etiquetó nada (sin κ inter-evaluador).
+criterio clínico) y `SAMI-PSI-02` no etiquetó nada (sin κ inter-evaluador — es
+la limitación más fuerte del trabajo).
+
+**Pendiente de verificar**: `modelo_crisis` es True en 39 casos pero solo 31
+tienen PHQ-A #9 >= 1. Los otros 8 vienen de otra vía de la capa 2 —
+probablemente BETO con ideación >= 0.40 sobre las frases. Si se confirma, es el
+primer dato de impacto real de BETO en decisiones del sistema.
 
 ## Dataset de validación BETO (incorporado)
 
