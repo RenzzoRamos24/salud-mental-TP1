@@ -7,7 +7,7 @@ Proyecto de tesis: sistema de evaluación de salud mental para estudiantes de se
 | Capa | Tecnología | Path |
 |------|------------|------|
 | Backend | FastAPI + SQLAlchemy + SQLite | `app/` |
-| NLP | `Recognai/bert-base-spanish-wwm-cased-xnli` (BETO + XNLI zero-shot multi-label) | `app/services/nlp_service.py` |
+| NLP | `Recognai/bert-base-spanish-wwm-cased-xnli` (BETO + XNLI zero-shot, **4 categorías**: adaptativo, neutral, depresión, ansiedad) | `app/services/nlp_service.py` |
 | Frontend | Vue 3 + Vite + Tailwind | `project/` |
 | Auth | JWT (estudiante / psicologo / admin) | `app/api/v1/endpoints/auth.py` |
 
@@ -70,7 +70,7 @@ app/
     bank (todos los modelos del sistema de cuestionarios)
   services/
     auth, consent, user, content, survey, sos, cita, notes, oauth,
-    nlp (BETO zero-shot 8 categorías), admin, psychologist, scheduler,
+    nlp (BETO zero-shot, 4 categorías), admin, psychologist, scheduler,
     bank, plantilla, cuestionario, evaluator
   schemas/    pydantic in/out (auth, user, consent, cita, admin,
               psychologist, bank)
@@ -105,9 +105,15 @@ seeds/
 2. **Bloques custom**: la psicóloga define nombre, escala (likert o binaria), ítems y cortes. El sistema sugiere cortes por tercios (`GET /banco/sugerir-cortes`).
 3. **Evaluación por capas** (`EvaluatorService`):
    - Capa 1: puntaje por bloque con cortes científicos.
-   - Capa 2: banderas de crisis (PHQ-A #9 ≥ 1, SRQ-20 #17 = 1, BETO ideación ≥ 0.40).
+   - Capa 2: banderas de crisis (PHQ-A #9 ≥ 1, SRQ-20 #17 = 1, y BETO: una frase con
+     **depresión como categoría dominante y score ≥ 0.55**). BETO no tiene categoría de
+     «ideación»: la bandera de frases es depresión dominante por encima de ese umbral.
    - Capa 3: riesgo compuesto a partir del número de bloques en zona de alerta.
-   - Capa 4: BETO clasifica las frases incompletas en 8 categorías emocionales.
+   - Capa 4: BETO clasifica las frases incompletas en **4 categorías** (adaptativo,
+     neutral, depresión, ansiedad). Una categoría clínica queda «detectada» solo si
+     domina **y** su score ≥ 0.40. La taxonomía de 8 categorías se retiró: los umbrales
+     están calibrados para softmax de 4 (`app/services/nlp_service.py`). No volver a 8
+     sin recalibrar y revalidar contra el criterio de la psicóloga.
 4. **El alumno nunca ve el reporte clínico**. Solo confirmación de cierre y SOS.
 5. **El sistema no diagnostica**: reporta señales y banderas, la psicóloga interpreta.
 
