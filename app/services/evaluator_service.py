@@ -70,6 +70,25 @@ DASS21_CORTES = [
 ]
 
 
+CORTES_POR_INSTRUMENTO = {
+    "PHQ-A": PHQA_CORTES, "GAD-7": GAD7_CORTES, "SRQ-20": SRQ_CORTES,
+    "RSES": RSES_CORTES, "WHO-5": WHO5_CORTES, "UCLA-3": UCLA_CORTES,
+    "DASS-21": DASS21_CORTES,
+}
+
+
+def cortes_de(codigo: str) -> list[dict]:
+    """Cortes publicados de un instrumento, de menor a mayor puntaje.
+
+    Única fuente de verdad: la misma tabla que usa `_severidad_instrumento`, así
+    lo que ve la psicóloga en el banco no puede divergir de lo que calcula el
+    evaluador (QA CP104).
+    """
+    tabla = sorted(CORTES_POR_INSTRUMENTO.get(codigo, []), key=lambda t: t[0])
+    return [{"desde": lo, "hasta": hi, "severidad": et, "alerta": bool(al)}
+            for lo, hi, et, al in tabla]
+
+
 def _aplicar_cortes(total: int, tabla) -> tuple[str, bool]:
     for lo, hi, etiqueta, alerta in tabla:
         if lo <= total <= hi:

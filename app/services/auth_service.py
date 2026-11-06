@@ -2,7 +2,7 @@
 Servicio de autenticación: registro, login, logout, recuperación de contraseña.
 """
 import logging
-import random
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -110,7 +110,7 @@ class AuthService:
             return user
 
         # Cuenta nueva via OAuth.
-        random_pw = hash_password(f"oauth-{random.randint(0, 10**12):012d}")
+        random_pw = hash_password(f"oauth-{secrets.token_urlsafe(32)}")
         user = User(
             email=email_lower,
             hashed_password=random_pw,
@@ -145,7 +145,7 @@ class AuthService:
             PasswordResetToken.usado == False,
         ).update({"usado": True})
 
-        token_str = f"{random.randint(0, 999999):06d}"
+        token_str = f"{secrets.randbelow(1_000_000):06d}"  # CSPRNG
         reset = PasswordResetToken(
             user_id=user.id,
             token=token_str,
@@ -158,15 +158,11 @@ class AuthService:
         db.commit()
         db.refresh(reset)
 
-        # 🔑 En modo dev, el token se imprime en consola.
-        # En prod conectar con SendGrid/Mailtrap.
-        logger.info("=" * 70)
-        logger.info("🔑 TOKEN DE RECUPERACIÓN DE CONTRASEÑA")
-        logger.info(f"   Email:   {user.email}")
-        logger.info(f"   Token:   {token_str}")
-        logger.info(f"   Expira:  {reset.expira_en.isoformat()} UTC "
-                    f"({settings.PASSWORD_RESET_TOKEN_MINUTOS} min)")
-        logger.info("=" * 70)
+        # El código lo envía el endpoint por correo (mail_service). Solo en DEBUG
+        # se deja en el log, para desarrollo local sin SMTP; nunca en producción.
+        if settings.DEBUG:
+            logger.info("[DEBUG] código de recuperación para %s: %s",
+                        user.email, token_str)
 
         return reset
 

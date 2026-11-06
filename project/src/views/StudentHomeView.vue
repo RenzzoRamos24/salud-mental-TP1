@@ -882,6 +882,12 @@ const recursosPorTipo = (categoria) => {
         <div class="al-card">
           <div class="al-side-title">Agendar nueva reunión</div>
           <div class="al-side-sub">Horarios sugeridos esta semana</div>
+          <!-- QA CP083-085 (HU-30): sin psicóloga asignada la solicitud no se pierde,
+               la recibe la psicóloga de guardia. Se dice, para que no sorprenda. -->
+          <p v-if="!psicologo" class="al-side-sub" data-testid="aviso-sin-psicologa">
+            Aún no tienes psicóloga asignada: tu solicitud la recibirá la
+            psicóloga de guardia y no se pierde.
+          </p>
           <div class="al-slots">
             <button
               v-for="(s, idx) in slots"

@@ -25,7 +25,7 @@ client.interceptors.response.use(
     if (error.response?.status === 401) {
       authStore.clear();
       if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+        window.location.href = "/login?expirada=1";
       }
     }
     return Promise.reject(error);
@@ -543,6 +543,25 @@ export const api = {
     const { data } = await client.post("/admin/backup");
     return data;
   },
+  // ─── Parámetros generales (HU0021) y planificador ───
+  async adminListarConfiguracion() {
+    const { data } = await client.get("/admin/configuracion");
+    return data;
+  },
+  async adminActualizarConfiguracion(clave, valor) {
+    const { data } = await client.put(`/admin/configuracion/${clave}`, { valor });
+    return data;
+  },
+  async adminAuditoriaConfiguracion(limite = 20) {
+    const { data } = await client.get("/admin/configuracion/auditoria", {
+      params: { limite },
+    });
+    return data;
+  },
+  async adminSchedulerInfo() {
+    const { data } = await client.get("/admin/scheduler/info");
+    return data;
+  },
   async adminListarBackups() {
     const { data } = await client.get("/admin/backups");
     return data;
@@ -622,3 +641,21 @@ export const api = {
     await client.delete(`/content/admin/${id}`);
   },
 };
+
+/**
+ * Mensaje de error de una respuesta de la API. Con `responseType: "blob"` el
+ * cuerpo del error llega como Blob y `e.response.data.detail` queda vacío:
+ * acá se lee el Blob para no perder el motivo (p. ej. "sin datos suficientes").
+ */
+export async function detalleError(e, porDefecto = "Ocurrió un error.") {
+  const data = e?.response?.data;
+  try {
+    if (data instanceof Blob) {
+      const j = JSON.parse(await data.text());
+      return j?.detail || porDefecto;
+    }
+  } catch {
+    /* cuerpo que no es JSON */
+  }
+  return data?.detail || porDefecto;
+}

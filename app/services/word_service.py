@@ -22,6 +22,7 @@ from app.models.user import User
 from app.models.bank import AplicacionCuestionario, PlantillaCuestionario
 from app.models.clinical_note import ClinicalNote
 from app.models.cita import Cita
+from app.services import resultado_resumen as _rs
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,11 @@ def reporte_individual_docx(db: Session, estudiante_id: str) -> bytes:
         .order_by(AplicacionCuestionario.asignada_at.desc())
         .all()
     )
+    con_res = _rs.con_resultado(aplicaciones)
+    if not con_res:
+        raise _rs.SinDatosSuficientes(
+            "Sin datos suficientes: el estudiante no tiene cuestionarios completados."
+        )
     notas = (
         db.query(ClinicalNote)
         .filter(ClinicalNote.estudiante_id == estudiante_id)
@@ -136,6 +142,36 @@ def reporte_individual_docx(db: Session, estudiante_id: str) -> bytes:
             r[3].text = a.riesgo_global or "—"
     else:
         doc.add_paragraph("Sin cuestionarios respondidos aún.")
+
+    # Resultados clínicos (QA CP093)
+    _h2(doc, "Resultados clínicos (últimos cuestionarios)", d)
+    doc.add_paragraph(_rs.DECLARACION_NO_DIAGNOSTICO)
+    for a in con_res[:3]:
+        r = _rs.resumen(a.resultado_json)
+        doc.add_paragraph(
+            f"{a.completada_at.strftime('%d/%m/%Y')} · riesgo global: "
+            f"{r['riesgo_global'] or '—'}"
+            + (" · CRISIS ACTIVADA" if r["crisis_activada"] else "")
+        )
+        if r["bloques"]:
+            t = doc.add_table(rows=1, cols=4)
+            for i, h in enumerate(["Instrumento / bloque", "Puntaje", "Severidad", "Bandera de crisis"]):
+                t.rows[0].cells[i].text = h
+            for b in r["bloques"]:
+                c = t.add_row().cells
+                c[0].text = b["nombre"][:48]
+                c[1].text = _rs.texto_puntaje(b)
+                c[2].text = b["severidad"]
+                c[3].text = "Sí" if b["bandera_crisis"] else "No"
+        fr = r["frases"]
+        if fr["total"]:
+            cats = ", ".join(f"{k}: {v}" for k, v in sorted(fr["por_categoria"].items()))
+            crisis = ", ".join(str(n) for n in fr["con_crisis"]) or "ninguna"
+            doc.add_paragraph(
+                f"Frases incompletas: {fr['total']} analizadas, {fr['con_deteccion']} con "
+                f"señal clínica detectada. Categoría dominante por frase — {cats}. "
+                f"Frases con bandera de crisis: {crisis}."
+            )
 
     # Citas
     _h2(doc, "Citas recientes", d)

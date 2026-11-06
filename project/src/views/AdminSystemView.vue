@@ -9,6 +9,51 @@ const statsCuest = ref(null);
 const cargando = ref(true);
 const error = ref("");
 const procesando = ref(false);
+const scheduler = ref(null);
+const parametros = ref([]);
+const edicion = ref({});          // clave -> valor tecleado
+const errorParam = ref({});       // clave -> mensaje de validación
+const mensajeParam = ref("");
+const auditoria = ref([]);
+
+async function cargarParametros() {
+  const [ps, au, sch] = await Promise.all([
+    api.adminListarConfiguracion().catch(() => []),
+    api.adminAuditoriaConfiguracion(20).catch(() => []),
+    api.adminSchedulerInfo().catch(() => null),
+  ]);
+  parametros.value = ps || [];
+  auditoria.value = au || [];
+  scheduler.value = sch;
+  edicion.value = Object.fromEntries((ps || []).map((p) => [p.clave, p.valor]));
+}
+
+async function guardarParametro(p) {
+  errorParam.value = { ...errorParam.value, [p.clave]: "" };
+  mensajeParam.value = "";
+  const valor = Number(edicion.value[p.clave]);
+  if (!Number.isInteger(valor)) {
+    errorParam.value = { ...errorParam.value, [p.clave]: "Debe ser un número entero." };
+    return;
+  }
+  try {
+    const r = await api.adminActualizarConfiguracion(p.clave, valor);
+    mensajeParam.value = r.cambio
+      ? `${p.etiqueta}: guardado (${r.anterior} → ${r.valor} ${p.unidad}).`
+      : `${p.etiqueta}: sin cambios.`;
+    await cargarParametros();
+  } catch (e) {
+    errorParam.value = {
+      ...errorParam.value,
+      [p.clave]: e?.response?.data?.detail || "No se pudo guardar.",
+    };
+  }
+}
+
+function fmtFecha(iso) {
+  if (!iso) return "—";
+  return new Date(iso.endsWith("Z") ? iso : iso + "Z").toLocaleString("es-PE");
+}
 
 async function cargar() {
   cargando.value = true;
@@ -19,6 +64,7 @@ async function cargar() {
       api.statsUsuarios().catch(() => null),
       api.adminStatsCuestionarios().catch(() => null),
     ]);
+    await cargarParametros();
     modelo.value = m;
     backups.value = b || [];
     stats.value = s;
@@ -231,25 +277,96 @@ function fmtBytes(n) {
         </div>
       </div>
 
-      <!-- ── Tareas programadas ─────────────────────────────────── -->
+      <!-- ── Tareas programadas (estado real del planificador) ─────── -->
       <div class="card p-6 mb-4">
         <h2 class="text-lg font-semibold mb-3 text-green-900">
           Tareas programadas (APScheduler)
         </h2>
-        <ul class="text-sm space-y-2">
-          <li class="flex justify-between py-2 border-b border-cream-200">
-            <span>🕑 Respaldo diario de la base de datos</span>
-            <span class="text-ink-500 text-xs">02:00 (hora del servidor)</span>
-          </li>
-          <li class="flex justify-between py-2 border-b border-cream-200">
-            <span>🕒 Cierre automático de ciclos {{ ">" }} 14 días</span>
-            <span class="text-ink-500 text-xs">03:00 (hora del servidor)</span>
-          </li>
-          <li class="flex justify-between py-2">
-            <span>🧹 Purga de respaldos antiguos</span>
-            <span class="text-ink-500 text-xs">Retención: 14 días</span>
-          </li>
-        </ul>
+        <p v-if="!scheduler" class="text-sm text-ink-500">
+          No se pudo consultar el estado del planificador.
+        </p>
+        <template v-else>
+          <p class="text-sm mb-3">
+            Estado:
+            <strong :class="scheduler.activo ? 'text-green-700' : 'text-red-700'">
+              {{ scheduler.activo ? "activo" : "detenido" }}
+            </strong>
+            <span v-if="scheduler.activo" class="text-ink-500">
+              · respaldo diario a las {{ String(scheduler.hora_diaria).padStart(2, "0") }}:00
+              · retención {{ scheduler.retencion_dias }} días
+            </span>
+          </p>
+          <ul v-if="scheduler.jobs?.length" class="text-sm space-y-2">
+            <li
+              v-for="j in scheduler.jobs"
+              :key="j.id"
+              class="flex justify-between py-2 border-b border-cream-200 last:border-0"
+            >
+              <span>{{ j.name }}</span>
+              <span class="text-ink-500 text-xs">próxima ejecución: {{ fmtFecha(j.next_run) }}</span>
+            </li>
+          </ul>
+          <p v-else class="text-sm text-ink-500">No hay tareas registradas.</p>
+        </template>
+      </div>
+
+      <!-- ── Parámetros generales (HU0021) ─────────────────────────── -->
+      <div class="card p-6 mb-4" data-testid="parametros-generales">
+        <h2 class="text-lg font-semibold mb-1 text-green-900">Parámetros generales</h2>
+        <p class="text-xs text-ink-500 mb-4">
+          Cada valor tiene un rango permitido. Los cambios quedan registrados.
+        </p>
+        <p v-if="mensajeParam" class="banner-success mb-3">{{ mensajeParam }}</p>
+        <div class="grid gap-4">
+          <form
+            v-for="p in parametros"
+            :key="p.clave"
+            class="grid sm:grid-cols-[1fr_auto] gap-3 items-end"
+            @submit.prevent="guardarParametro(p)"
+          >
+            <div>
+              <label class="label" :for="`par-${p.clave}`">
+                {{ p.etiqueta }} ({{ p.unidad }})
+              </label>
+              <input
+                :id="`par-${p.clave}`"
+                v-model.number="edicion[p.clave]"
+                type="number"
+                class="input"
+                :min="p.min"
+                :max="p.max"
+              />
+              <p class="field-hint">
+                {{ p.descripcion }} Rango {{ p.min }}–{{ p.max }}; por defecto {{ p.por_defecto }}.
+              </p>
+              <p v-if="errorParam[p.clave]" class="field-error">{{ errorParam[p.clave] }}</p>
+            </div>
+            <button type="submit" class="btn-primary">Guardar</button>
+          </form>
+        </div>
+
+        <h3 class="text-sm font-semibold mt-6 mb-2 text-green-900">
+          Auditoría de cambios (últimos 20)
+        </h3>
+        <p v-if="!auditoria.length" class="text-sm text-ink-500">
+          Todavía no hay cambios de configuración.
+        </p>
+        <table v-else class="w-full text-sm" data-testid="auditoria-configuracion">
+          <thead>
+            <tr class="text-left text-xs text-ink-400">
+              <th class="py-1">Fecha</th><th>Parámetro</th><th>Antes</th><th>Después</th><th>Quién</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in auditoria" :key="a.id" class="border-t border-cream-200">
+              <td class="py-1">{{ fmtFecha(a.timestamp) }}</td>
+              <td>{{ a.etiqueta }}</td>
+              <td>{{ a.valor_anterior }}</td>
+              <td>{{ a.valor_nuevo }}</td>
+              <td>{{ a.usuario || "—" }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <!-- ── Respaldos ─────────────────────────────────────────── -->

@@ -4,6 +4,7 @@ y administra los bloques custom de cada psicóloga.
 """
 from typing import Optional
 from sqlalchemy.orm import Session
+from app.services.evaluator_service import cortes_de
 from app.models.bank import (
     BankInstrumento,
     BankItem,
@@ -85,6 +86,13 @@ class BankService:
             "tipo_escala": instr.tipo_escala,
             "likert_min": instr.likert_min,
             "likert_max": instr.likert_max,
+            # QA CP104: escala legible y cortes publicados del instrumento
+            "escala": (
+                f"{instr.likert_min}–{instr.likert_max}"
+                if instr.likert_min is not None and instr.likert_max is not None
+                else instr.tipo_escala
+            ),
+            "cortes": cortes_de(instr.codigo),
             "n_items": instr.n_items,
             "tiempo_min": instr.tiempo_min,
             "instruccion": instr.instruccion,

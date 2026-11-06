@@ -16,6 +16,7 @@ from app.schemas.cita import CitaCreate, CitaUpdate, CitaOut
 from app.services.psychologist_service import PsychologistService
 from app.services.cita_service import CitaService
 from app.services import report_service, word_service
+from app.services.resultado_resumen import SinDatosSuficientes
 from fastapi.responses import Response
 from app.services.notes_service import NotesService
 from app.services.equipo_service import ids_equipo
@@ -231,6 +232,9 @@ async def descargar_reporte_individual(
     _validar_acceso_psi_a_alumno(db, me, student_id)
     try:
         pdf = report_service.reporte_individual_pdf(db, student_id)
+    except SinDatosSuficientes as e:
+        # QA CP094: se informa, no se entrega un archivo vacío.
+        raise HTTPException(409, str(e))
     except ValueError as e:
         raise HTTPException(404, str(e))
     except Exception as e:
@@ -341,6 +345,9 @@ async def descargar_reporte_individual_word(
     _validar_acceso_psi_a_alumno(db, me, student_id)
     try:
         docx = word_service.reporte_individual_docx(db, student_id)
+    except SinDatosSuficientes as e:
+        # QA CP094: se informa, no se entrega un archivo vacío.
+        raise HTTPException(409, str(e))
     except ValueError as e:
         raise HTTPException(404, str(e))
     except Exception as e:

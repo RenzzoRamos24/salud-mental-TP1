@@ -94,8 +94,24 @@ onMounted(cargar);
             <span class="text-xs text-ink-400 tabular">{{ i.n_items }} ítems</span>
           </div>
           <p class="text-xs text-ink-400 mt-3">
-            {{ i.autor }} ({{ i.anio }})
+            {{ i.autor }} ({{ i.anio }}) · Escala {{ i.escala }}
           </p>
+          <ul
+            v-if="i.cortes?.length"
+            class="mt-2 flex flex-wrap gap-1.5"
+            :aria-label="`Cortes de ${i.codigo}`"
+          >
+            <li
+              v-for="c in i.cortes"
+              :key="c.desde"
+              class="text-[11px] px-1.5 py-0.5 rounded border"
+              :class="c.alerta
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-gray-50 text-gray-700 border-gray-200'"
+            >
+              {{ c.desde }}–{{ c.hasta }} {{ c.severidad }}
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -107,6 +123,11 @@ onMounted(cargar);
         <ol class="list-decimal pl-5 space-y-1 text-sm">
           <li v-for="it in detalleInstrumento.items" :key="it.numero">
             {{ it.texto }}
+            <span
+              v-if="it.criterio_dsm5"
+              class="ml-2 text-xs px-1.5 py-0.5 rounded bg-green-50 text-green-800 border border-green-200"
+              title="Criterio DSM-5"
+            >DSM-5: {{ it.criterio_dsm5 }}</span>
             <span
               v-if="it.bandera_crisis"
               class="ml-2 text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200"

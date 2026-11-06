@@ -81,7 +81,7 @@ onMounted(cargar);
     <div v-else-if="error" class="banner-danger">{{ error }}</div>
 
     <template v-else>
-      <div class="grid sm:grid-cols-4 gap-3 mb-6">
+      <div class="grid sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         <div class="card p-4">
           <p class="text-xs text-ink-400">Plantillas</p>
           <p class="text-2xl font-semibold">{{ stats?.total_plantillas || 0 }}</p>
@@ -93,6 +93,14 @@ onMounted(cargar);
         <div class="card p-4">
           <p class="text-xs text-ink-400">Asignados</p>
           <p class="text-2xl font-semibold">{{ stats?.total_asignados || 0 }}</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-xs text-ink-400">Completados</p>
+          <p class="text-2xl font-semibold">{{ stats?.total_completados || 0 }}</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-xs text-ink-400">Pendientes</p>
+          <p class="text-2xl font-semibold">{{ stats?.total_pendientes || 0 }}</p>
         </div>
         <div class="card p-4">
           <p class="text-xs text-ink-400">Completitud</p>

@@ -8,6 +8,7 @@ const estudiantes = ref([]);
 const cargando = ref(true);
 const error = ref("");
 const filtroNombre = ref("");
+const filtroRiesgo = ref("");
 
 async function cargar() {
   cargando.value = true;
@@ -22,14 +23,23 @@ async function cargar() {
 
 onMounted(cargar);
 
+// Normaliza "CRÍTICO"/"CRITICO" y valores vacíos: un estudiante sin evaluación
+// no trae `ultimo_riesgo` y no debe romper el filtro (QA CP089).
+const nivel = (r) => (r || "").toUpperCase().replace("Í", "I");
+
 const filtrados = computed(() => {
   const q = filtroNombre.value.trim().toLowerCase();
-  if (!q) return estudiantes.value;
-  return estudiantes.value.filter((e) =>
-    [`${e.nombre} ${e.apellido}`.toLowerCase(), (e.email || "").toLowerCase()].some(
-      (x) => x.includes(q),
-    ),
-  );
+  const lista = estudiantes.value || [];
+  return lista.filter((e) => {
+    const coincideTexto =
+      !q ||
+      [`${e.nombre} ${e.apellido}`.toLowerCase(), (e.email || "").toLowerCase()].some(
+        (x) => x.includes(q),
+      );
+    const coincideRiesgo =
+      !filtroRiesgo.value || nivel(e.ultimo_riesgo) === filtroRiesgo.value;
+    return coincideTexto && coincideRiesgo;
+  });
 });
 
 function verEstudiante(e) {
@@ -59,14 +69,28 @@ function colorRiesgo(r) {
       </h1>
     </header>
 
-    <input
-      v-model="filtroNombre"
-      class="input mb-4"
-      placeholder="Buscar por nombre o email…"
-    />
+    <div class="flex flex-wrap gap-3 mb-4">
+      <input
+        v-model="filtroNombre"
+        class="input flex-1 min-w-[220px]"
+        placeholder="Buscar por nombre o email…"
+      />
+      <select v-model="filtroRiesgo" class="input" style="width: 200px" aria-label="Nivel de riesgo">
+        <option value="">Todos los niveles</option>
+        <option value="CRITICO">Crítico</option>
+        <option value="ALTO">Alto</option>
+        <option value="MEDIO">Medio</option>
+        <option value="BAJO">Bajo</option>
+        <option value="SIN_RIESGO">Sin riesgo</option>
+      </select>
+    </div>
 
     <div v-if="cargando" class="card p-8 text-center text-ink-500">Cargando…</div>
     <div v-else-if="error" class="banner-danger">{{ error }}</div>
+
+    <div v-else-if="filtrados.length === 0" class="card p-6 text-ink-500">
+      Ningún estudiante coincide con el filtro.
+    </div>
 
     <div v-else class="grid gap-3">
       <div

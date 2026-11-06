@@ -138,12 +138,12 @@ class NLPService:
     @classmethod
     def clasificar_frase(cls, texto: str) -> dict:
         """
-        Clasifica una respuesta a frase incompleta en las 8 categorías
-        emocionales. Devuelve:
+        Clasifica una respuesta a frase incompleta en las 4 categorías
+        (adaptativo, neutral, depresion, ansiedad). Devuelve:
             {
               "scores": {categoria: prob_float, ...},  # todas las categorías
               "detectadas": [categoria, ...],          # las que superan umbral
-              "crisis": bool,                          # ideación >= UMBRAL_CRISIS
+              "crisis": bool,                          # depresión dominante y >= UMBRAL_CRISIS
               "dominante": categoria_con_max_score,
             }
         """

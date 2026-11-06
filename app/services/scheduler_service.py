@@ -20,7 +20,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.database import SessionLocal
 from app.models.bank import AplicacionCuestionario
-from app.services.admin_service import AdminService, BACKUPS_DIR
+from app.services.admin_service import AdminService, BACKUPS_DIR, EXTENSIONES_BACKUP
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def _purgar_viejos():
     limite = datetime.utcnow() - timedelta(days=retencion)
     eliminados = 0
     for nombre in os.listdir(BACKUPS_DIR):
-        if not nombre.endswith(".db"):
+        if not nombre.endswith(EXTENSIONES_BACKUP):
             continue
         ruta = os.path.join(BACKUPS_DIR, nombre)
         if datetime.utcfromtimestamp(os.path.getmtime(ruta)) < limite:

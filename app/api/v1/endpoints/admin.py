@@ -12,6 +12,7 @@ from app.database import get_db
 from app.core.deps import require_role
 from app.schemas.admin import UsuarioResumen, StatsUsuarios
 from app.services.admin_service import AdminService
+from app.services import config_service
 from app.models.configuracion import Configuracion  # noqa: F401
 from app.models.access_log import AccessLog         # noqa: F401
 from app.models.user import User
@@ -67,6 +68,43 @@ async def crear_backup(_admin=Depends(require_role("admin"))):
 @router.get("/backups")
 async def listar_backups(_admin=Depends(require_role("admin"))):
     return AdminService.listar_backups()
+
+
+# ── Parámetros generales (HU0021, QA CP061-063) ──────────────
+
+class ParametroIn(BaseModel):
+    valor: int
+
+
+@router.get("/configuracion")
+async def listar_configuracion(
+    db: Session = Depends(get_db), _admin=Depends(require_role("admin")),
+):
+    return config_service.listar(db)
+
+
+@router.get("/configuracion/auditoria")
+async def auditoria_configuracion(
+    limite: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    return config_service.auditoria(db, limite)
+
+
+@router.put("/configuracion/{clave}")
+async def actualizar_configuracion(
+    clave: str,
+    payload: ParametroIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_role("admin")),
+):
+    try:
+        return config_service.actualizar(db, clave, payload.valor, admin)
+    except config_service.ParametroDesconocido as e:
+        raise HTTPException(404, str(e))
+    except config_service.ParametroInvalido as e:
+        raise HTTPException(422, str(e))
 
 
 # ── Modelo NLP (BETO) ───────────────────────────────────────────────────────

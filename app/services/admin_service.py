@@ -14,7 +14,43 @@ from app.models.access_log import AccessLog
 from app.models.bank import AplicacionCuestionario, PlantillaCuestionario, BloqueCustom
 
 
-BACKUPS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "backups")
+# `BACKUP_DIR` permite sacar los respaldos de `wwwroot`, que cada despliegue pisa
+# (en Azure App Service conviene `/home/backups`, que sí persiste).
+BACKUPS_DIR = os.environ.get("BACKUP_DIR") or os.path.join(
+    os.path.dirname(__file__), "..", "..", "backups"
+)
+EXTENSIONES_BACKUP = (".db", ".json.gz")
+
+
+def _es_postgres() -> bool:
+    from app.config import settings
+    return settings.DATABASE_URL.startswith(("postgres://", "postgresql"))
+
+
+def _volcar_logico(destino: str) -> None:
+    """Volcado lógico de todas las tablas a JSON comprimido (QA CP066/CP073).
+
+    Con PostgreSQL no hay archivo de base que copiar. Es un respaldo de
+    datos (tabla → filas), útil para auditar y reconstruir; no reemplaza un
+    `pg_dump` ni los respaldos administrados del servidor. Contiene respuestas
+    de menores: el archivo se crea con permisos 0600.
+    """
+    import gzip
+    from sqlalchemy import MetaData, select
+    from app.database import engine
+
+    md = MetaData()
+    md.reflect(bind=engine)
+    fd = os.open(destino, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with gzip.GzipFile(fileobj=os.fdopen(fd, "wb"), mode="wb") as gz:
+        volcado = {}
+        with engine.connect() as conn:
+            for t in sorted(md.tables.values(), key=lambda t: t.name):
+                volcado[t.name] = [dict(r._mapping) for r in conn.execute(select(t))]
+        gz.write(json.dumps(
+            {"generado_utc": datetime.utcnow().isoformat(), "tablas": volcado},
+            default=str, ensure_ascii=False,
+        ).encode("utf-8"))
 
 
 def _get_config(db: Session, clave: str, default=None):
@@ -95,6 +131,13 @@ class AdminService:
     @staticmethod
     def crear_backup() -> dict:
         from app.config import settings
+        if _es_postgres():
+            os.makedirs(BACKUPS_DIR, exist_ok=True)
+            ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            dest = os.path.join(BACKUPS_DIR, f"backup_{ts}.json.gz")
+            _volcar_logico(dest)
+            return {"archivo": os.path.basename(dest),
+                    "tamanio_bytes": os.path.getsize(dest), "timestamp": ts}
         db_path = settings.DATABASE_URL.replace("sqlite:///./", "").replace("sqlite:///", "")
         if not os.path.isabs(db_path):
             db_path = os.path.join(os.path.dirname(__file__), "..", "..", db_path)
@@ -111,7 +154,7 @@ class AdminService:
     def listar_backups() -> list[dict]:
         os.makedirs(BACKUPS_DIR, exist_ok=True)
         archivos = sorted(
-            [f for f in os.listdir(BACKUPS_DIR) if f.endswith(".db")],
+            [f for f in os.listdir(BACKUPS_DIR) if f.endswith(EXTENSIONES_BACKUP)],
             reverse=True,
         )
         return [
@@ -196,6 +239,8 @@ class AdminService:
         return {
             "total_asignados": total_asignados,
             "total_completados": total_completados,
+            # QA CP102: lo que falta por responder (asignados sin resultado)
+            "total_pendientes": max(total_asignados - total_completados, 0),
             "tasa_completitud_pct": round(
                 100 * total_completados / total_asignados, 1
             ) if total_asignados else 0,
@@ -208,5 +253,6 @@ class AdminService:
 
     @staticmethod
     def aplicar_config_inicio(db: Session):
-        """Hook de startup. Por ahora no carga nada dinámico."""
-        return None
+        """Hook de startup: re-aplica los parámetros generales guardados (HU0021)."""
+        from app.services import config_service
+        return config_service.cargar_en_settings(db)

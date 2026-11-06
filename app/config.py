@@ -13,7 +13,7 @@ class Settings:
     # ── Modelo NLP ───────────────────────────────────────────────────────
     # BETO + XNLI (Recognai/bert-base-spanish-wwm-cased-xnli) usado en
     # `NLPService` para clasificar respuestas a frases incompletas (zero-shot
-    # multi-label sobre 8 categorías emocionales).
+    # sobre 4 categorías: adaptativo, neutral, depresión y ansiedad).
     MODEL_NAME: str = os.getenv(
         "MODEL_NAME",
         "Recognai/bert-base-spanish-wwm-cased-xnli",
@@ -44,6 +44,17 @@ class Settings:
     # ── Backups automáticos ─────────────────────────────────────────────
     BACKUP_HORA_DIARIA: int = int(os.getenv("BACKUP_HORA_DIARIA", "2"))
     BACKUP_RETENCION_DIAS: int = int(os.getenv("BACKUP_RETENCION_DIAS", "14"))
+
+    # ── Correo (recuperación de contraseña) ───────────────────
+    # Solo por variables de entorno / app settings. Sin valores por defecto
+    # con credenciales: si falta SMTP_HOST el sistema lo avisa y no envía.
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "")
+    SMTP_STARTTLS: bool = os.getenv("SMTP_STARTTLS", "True") == "True"
+    SMTP_SSL: bool = os.getenv("SMTP_SSL", "False") == "True"
 
     # ── OAuth (Google / Microsoft) ──────────────────────────────────────
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")

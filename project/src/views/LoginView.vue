@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { api } from "../api";
 import { authStore } from "../store/auth";
@@ -16,6 +16,13 @@ const cargando = ref(false);
 const oauthCargando = ref(null); // "google" | "microsoft" | null
 
 const { config: oauthConfig, loginGoogle, loginMicrosoft } = useOAuth();
+
+// QA CP129: un proveedor OAuth sin configurar no se ofrece; el login con
+// contraseña sigue disponible. Mientras la config carga no se muestra nada.
+const googleActivo = computed(() => !!oauthConfig.value?.google?.configurado);
+const microsoftActivo = computed(() => !!oauthConfig.value?.microsoft?.configurado);
+const hayOAuth = computed(() => googleActivo.value || microsoftActivo.value);
+const sesionExpirada = computed(() => route.query.expirada === "1");
 
 function destinoTras(user) {
   if (!user.consentimiento_aceptado) return "/consent";
@@ -76,9 +83,14 @@ async function loginConMicrosoft() {
 
 <template>
   <AuthShell title="Hola de nuevo." subtitle="Entra para escribir.">
+    <p v-if="sesionExpirada" class="banner-info mb-4" role="status">
+      Tu sesión expiró. Vuelve a iniciar sesión para continuar.
+    </p>
+
     <!-- ─── OAuth ─── -->
-    <div class="oauth-stack">
+    <div v-if="hayOAuth" class="oauth-stack">
       <button
+        v-if="googleActivo"
         type="button"
         class="oauth-btn"
         :disabled="cargando || oauthCargando !== null"
@@ -110,6 +122,7 @@ async function loginConMicrosoft() {
       </button>
 
       <button
+        v-if="microsoftActivo"
         type="button"
         class="oauth-btn"
         :disabled="cargando || oauthCargando !== null"
@@ -131,7 +144,7 @@ async function loginConMicrosoft() {
       </button>
     </div>
 
-    <div class="auth-divider">
+    <div v-if="hayOAuth" class="auth-divider">
       <span class="line"></span>
       <span class="lbl">o con tu correo</span>
       <span class="line"></span>

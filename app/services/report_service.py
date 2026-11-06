@@ -20,6 +20,7 @@ from app.models.user import User
 from app.models.bank import AplicacionCuestionario, PlantillaCuestionario
 from app.models.clinical_note import ClinicalNote
 from app.models.cita import Cita
+from app.services import resultado_resumen as _rs
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,12 @@ def reporte_individual_pdf(db: Session, estudiante_id: str) -> bytes:
         .order_by(AplicacionCuestionario.asignada_at.desc())
         .all()
     )
+    # QA CP094 (HU0034 esc. 2): sin resultados no se genera un PDF vacío.
+    con_res = _rs.con_resultado(aplicaciones)
+    if not con_res:
+        raise _rs.SinDatosSuficientes(
+            "Sin datos suficientes: el estudiante no tiene cuestionarios completados."
+        )
     notas = (
         db.query(ClinicalNote)
         .filter(ClinicalNote.estudiante_id == estudiante_id)
@@ -142,15 +149,15 @@ def reporte_individual_pdf(db: Session, estudiante_id: str) -> bytes:
 
     # Cuestionarios
     story.append(rl["Paragraph"]("Historial de cuestionarios", s["h2"]))
+    ids = list({a.plantilla_id for a in aplicaciones if a.plantilla_id})
+    nombres_pl = {
+        p.id: p.nombre
+        for p in db.query(PlantillaCuestionario).filter(
+            PlantillaCuestionario.id.in_(ids)
+        ).all()
+    }
     if aplicaciones:
-        # Cache plantilla_id -> nombre
-        ids = list({a.plantilla_id for a in aplicaciones if a.plantilla_id})
-        nombres = {
-            p.id: p.nombre
-            for p in db.query(PlantillaCuestionario).filter(
-                PlantillaCuestionario.id.in_(ids)
-            ).all()
-        }
+        nombres = nombres_pl
         tabla = [["Fecha asignación", "Plantilla", "Estado", "Riesgo global"]]
         for a in aplicaciones[:20]:
             riesgo = a.riesgo_global or "—"
@@ -175,6 +182,46 @@ def reporte_individual_pdf(db: Session, estudiante_id: str) -> bytes:
     else:
         story.append(rl["Paragraph"]("Sin cuestionarios respondidos aún.", s["muted"]))
     story.append(rl["Spacer"](1, 12))
+
+    # QA CP093 (HU0034 esc. 1): puntajes, severidades, banderas y señales de frases
+    story.append(rl["Paragraph"]("Resultados clínicos (últimos cuestionarios)", s["h2"]))
+    story.append(rl["Paragraph"](_rs.DECLARACION_NO_DIAGNOSTICO, s["muted"]))
+    story.append(rl["Spacer"](1, 6))
+    for a in con_res[:3]:
+        r = _rs.resumen(a.resultado_json)
+        story.append(rl["Paragraph"](
+            f"<b>{a.completada_at.strftime('%d/%m/%Y')}</b> · "
+            f"{(nombres_pl.get(a.plantilla_id) or '—')[:50]} · "
+            f"riesgo global: <b>{r['riesgo_global'] or '—'}</b>"
+            + (" · <b>CRISIS ACTIVADA</b>" if r["crisis_activada"] else ""),
+            s["body"],
+        ))
+        if r["bloques"]:
+            filas = [["Instrumento / bloque", "Puntaje", "Severidad", "Bandera de crisis"]]
+            for b in r["bloques"]:
+                filas.append([b["nombre"][:48], _rs.texto_puntaje(b), b["severidad"],
+                              "Sí" if b["bandera_crisis"] else "No"])
+            t = rl["Table"](filas, colWidths=[7 * rl["cm"], 2.5 * rl["cm"], 4 * rl["cm"], 3 * rl["cm"]])
+            t.setStyle(rl["TableStyle"]([
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("BACKGROUND", (0, 0), (-1, 0), rl["colors"].HexColor(_TEAL_SOFT)),
+                ("TEXTCOLOR", (0, 0), (-1, 0), rl["colors"].HexColor(_TEAL)),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("GRID", (0, 0), (-1, -1), 0.3, rl["colors"].HexColor("#e7ecec")),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ]))
+            story.append(t)
+        fr = r["frases"]
+        if fr["total"]:
+            cats = ", ".join(f"{k}: {v}" for k, v in sorted(fr["por_categoria"].items()))
+            crisis = (", ".join(str(n) for n in fr["con_crisis"]) or "ninguna")
+            story.append(rl["Paragraph"](
+                f"Frases incompletas: {fr['total']} analizadas, {fr['con_deteccion']} con "
+                f"señal clínica detectada. Categoría dominante por frase — {cats}. "
+                f"Frases con bandera de crisis: {crisis}.", s["body"]))
+        story.append(rl["Spacer"](1, 8))
 
     # Citas
     story.append(rl["Paragraph"]("Citas recientes", s["h2"]))

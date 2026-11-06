@@ -25,6 +25,10 @@ from app.models.bank import (
 from app.services.feedback_service import FeedbackService
 
 
+class NoEncontrado(ValueError):
+    """El recurso pedido no existe. Los endpoints lo traducen a 404 (QA CP114)."""
+
+
 class CuestionarioService:
 
     # ── Asignación ──────────────────────────────────────────────────────────
@@ -39,7 +43,7 @@ class CuestionarioService:
             .first()
         )
         if not plantilla or plantilla.psicologo_id != psicologo_id:
-            raise ValueError("Plantilla no encontrada o no es tuya.")
+            raise NoEncontrado("Plantilla no encontrada o no es tuya.")
         from app.services.plantilla_service import validar_maximo
         validar_maximo(db, plantilla.bloques)
 
@@ -49,7 +53,7 @@ class CuestionarioService:
             .first()
         )
         if not estudiante:
-            raise ValueError("Estudiante no encontrado.")
+            raise NoEncontrado("Estudiante no encontrado.")
 
         app_ = AplicacionCuestionario(
             plantilla_id=plantilla_id,
@@ -519,6 +523,13 @@ class CuestionarioService:
         )
         if not app_:
             raise ValueError("Aplicación no encontrada o no es tuya.")
+        # QA CP126: sin resultado no hay nada que revisar. Una aplicación
+        # pendiente o en progreso no se puede marcar como revisada.
+        if app_.estado not in ("completado", "revisado") or app_.completada_at is None:
+            raise ValueError(
+                "No se puede marcar como revisada una aplicación sin resultado "
+                f"(estado actual: {app_.estado})."
+            )
         app_.estado = "revisado"
         app_.revisada_at = datetime.utcnow()
         db.commit()

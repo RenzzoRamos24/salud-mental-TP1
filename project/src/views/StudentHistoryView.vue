@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { api } from "../api";
+import { api, detalleError } from "../api";
 
 const route = useRoute();
 const router = useRouter();
@@ -149,7 +149,7 @@ async function exportarReporte(formato = "pdf") {
     a.remove();
     URL.revokeObjectURL(url);
   } catch (e) {
-    alert(e?.response?.data?.detail || "No se pudo generar el reporte.");
+    alert(await detalleError(e, "No se pudo generar el reporte."));
   } finally {
     exportando.value = false;
   }

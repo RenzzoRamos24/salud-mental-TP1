@@ -8,6 +8,7 @@ const cargando = ref(true);
 const error = ref("");
 const filtroRol = ref("");
 const filtroEndpoint = ref("");
+const limite = ref(200); // QA CP068: el administrador ajusta cuántos registros ver
 
 async function cargar() {
   cargando.value = true;
@@ -16,7 +17,7 @@ async function cargar() {
       api.adminGetAuditLogs({
         role: filtroRol.value || undefined,
         endpoint: filtroEndpoint.value || undefined,
-        limit: 200,
+        limit: limite.value,
       }),
       api.listarUsuarios().catch(() => []),
     ]);
@@ -174,6 +175,16 @@ function colorStatus(s) {
     <!-- Filtros -->
     <div class="card p-4 mb-4 flex gap-2 flex-wrap items-center">
       <p class="text-sm text-ink-500 font-medium">Filtrar logs:</p>
+      <label class="text-sm text-ink-500 flex items-center gap-2">
+        Mostrar
+        <select v-model.number="limite" class="input text-sm" style="width: 90px" @change="cargar">
+          <option :value="50">50</option>
+          <option :value="100">100</option>
+          <option :value="200">200</option>
+          <option :value="500">500</option>
+        </select>
+        registros, más recientes primero
+      </label>
       <input
         v-model="filtroRol"
         class="input flex-1"

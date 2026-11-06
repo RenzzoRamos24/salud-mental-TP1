@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { api } from "../api";
+import { api, detalleError } from "../api";
 
 const route = useRoute();
 const router = useRouter();
@@ -53,6 +53,14 @@ const tituloAlumno = computed(() => {
 // ── Exportar reporte individual / agendar cita ─────────────────────────
 // Los endpoints trabajan sobre el estudiante, no sobre la aplicación.
 const exportando = ref(false);
+// "adaptativo 0.62 · ansiedad 0.20 · …" de mayor a menor (4 categorías de BETO).
+function puntajesFrase(f) {
+  return Object.entries(f.scores || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k} ${Number(v).toFixed(2)}`)
+    .join(" · ");
+}
+
 async function exportarReporte(formato = "pdf") {
   if (exportando.value || !estudiante.value?.id) return;
   exportando.value = true;
@@ -70,7 +78,7 @@ async function exportarReporte(formato = "pdf") {
     a.remove();
     URL.revokeObjectURL(url);
   } catch (e) {
-    alert(e?.response?.data?.detail || "No se pudo generar el reporte.");
+    alert(await detalleError(e, "No se pudo generar el reporte."));
   } finally {
     exportando.value = false;
   }
@@ -232,6 +240,13 @@ function fmtFecha(iso) {
         PROTOCOLO DE CRISIS ACTIVADO. Revisa de inmediato las respuestas
         marcadas y deriva según protocolo.
       </div>
+
+      <!-- QA CP119: el sistema reporta señales, no diagnostica (regla 5). -->
+      <p class="banner-info mb-4" data-testid="declaracion-no-diagnostico">
+        Este resultado no es un diagnóstico. Presenta señales, puntajes y
+        banderas calculados a partir de las respuestas; la interpretación
+        clínica corresponde a la profesional.
+      </p>
 
       <div class="grid sm:grid-cols-2 gap-4 mb-6">
         <div class="card p-6 text-center">
@@ -477,6 +492,11 @@ function fmtFecha(iso) {
             <p class="text-xs text-ink-400 mb-1">{{ f.area }} — #{{ f.numero }}</p>
             <p class="text-sm italic text-ink-500 mb-2">{{ f.pregunta }}</p>
             <p class="font-medium">"{{ f.respuesta }}"</p>
+            <!-- QA CP118: la clasificación de cada frase se ve siempre, no solo las detectadas -->
+            <p v-if="f.dominante" class="text-xs text-ink-500 mt-2" data-testid="clasificacion-frase">
+              Categoría dominante: <strong>{{ f.dominante }}</strong>
+              <span class="text-ink-400"> · {{ puntajesFrase(f) }}</span>
+            </p>
             <div class="flex flex-wrap gap-1 mt-3">
               <span
                 v-for="d in f.detectadas"
@@ -489,7 +509,7 @@ function fmtFecha(iso) {
                 v-if="f.crisis"
                 class="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200"
               >
-                ideación detectada
+                bandera de crisis
               </span>
             </div>
           </div>

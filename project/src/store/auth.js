@@ -32,6 +32,18 @@ if (inicial) {
 // del router lean lo mismo y no se contradigan entre sí.
 const evaluacion = reactive({ panelDesbloqueado: false, faltan: null });
 
+// Lee `exp` (segundos) del payload del JWT. No verifica la firma: eso es del
+// backend. Sirve solo para saber, del lado del cliente, si la sesión ya venció.
+function expiraEn(token) {
+  try {
+    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const exp = JSON.parse(atob(b64)).exp;
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export const authStore = {
   state: readonly(state),
   evaluacion: readonly(evaluacion),
@@ -54,6 +66,13 @@ export const authStore = {
   setUser(user) {
     state.user = { ...state.user, ...user };
     escribirStorage({ token: state.token, user: state.user });
+  },
+
+  /** QA CP012: true si hay token y ya venció (sin esperar a una petición 401). */
+  sesionVencida() {
+    if (!state.token) return false;
+    const ms = expiraEn(state.token);
+    return ms !== null && ms <= Date.now();
   },
 
   clear() {

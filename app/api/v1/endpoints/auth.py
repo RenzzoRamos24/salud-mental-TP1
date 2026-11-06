@@ -2,7 +2,7 @@
 Endpoints de autenticación: registro, login, logout, recuperación de contraseña, /me.
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.auth import (
@@ -19,7 +19,8 @@ from app.schemas.auth import (
     OAuthConfigResponse,
 )
 from app.services.auth_service import AuthService
-from app.services import oauth_service
+from app.services import oauth_service, mail_service
+from app.config import settings
 from app.core.deps import get_current_user
 from app.models.user import User
 
@@ -131,15 +132,26 @@ async def logout(current_user: User = Depends(get_current_user)):
 # ─────────────────────────────────────────────────────────────────
 
 @router.post("/forgot-password", response_model=MensajeResponse)
-async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+async def forgot_password(
+    req: ForgotPasswordRequest,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
-    Genera un token de 6 dígitos y lo imprime en la consola del backend.
-    Siempre responde 200 con el mismo mensaje (no filtra qué emails existen).
+    Genera un código de 6 dígitos y lo envía por correo (QA CP013).
+    Siempre responde 200 con el mismo mensaje (no filtra qué emails existen);
+    el envío corre en segundo plano para que el tiempo de respuesta tampoco lo
+    delate.
     """
-    AuthService.crear_token_reset(db, req.email)
+    reset = AuthService.crear_token_reset(db, req.email)
+    if reset is not None:
+        background.add_task(
+            mail_service.enviar_codigo_recuperacion,
+            req.email.lower(), reset.token, settings.PASSWORD_RESET_TOKEN_MINUTOS,
+        )
     return MensajeResponse(
-        mensaje="Si el correo está registrado, recibirás un código de recuperación. "
-                "Revisa la consola del backend (modo dev)."
+        mensaje="Si el correo está registrado, recibirás un código de recuperación "
+                "en unos minutos. Revisa también la carpeta de spam."
     )
 
 

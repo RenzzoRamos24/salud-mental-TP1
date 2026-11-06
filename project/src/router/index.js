@@ -263,6 +263,11 @@ function inicioPorRol(rol) {
 }
 
 router.beforeEach((to) => {
+  // QA CP012: token vencido → se cierra la sesión y se vuelve al login.
+  if (authStore.sesionVencida()) {
+    authStore.clear();
+    if (to.name !== "login") return { name: "login", query: { expirada: "1" } };
+  }
   const auth = authStore.isAuthenticated.value;
   const consent = authStore.consentimientoAceptado.value;
   const rol = authStore.rol.value;

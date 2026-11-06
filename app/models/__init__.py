@@ -5,7 +5,7 @@ from app.models.password_reset import PasswordResetToken
 from app.models.cita import Cita
 from app.models.clinical_note import ClinicalNote
 from app.models.access_log import AccessLog
-from app.models.configuracion import Configuracion
+from app.models.configuracion import Configuracion, ConfiguracionCambio
 from app.models.educational_content import EducationalContent
 from app.models.satisfaction_survey import SatisfactionSurvey
 from app.models.sos_event import SosEvent
@@ -35,6 +35,7 @@ __all__ = [
     "ClinicalNote",
     "AccessLog",
     "Configuracion",
+    "ConfiguracionCambio",
     "EducationalContent",
     "SatisfactionSurvey",
     "SosEvent",

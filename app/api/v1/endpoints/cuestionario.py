@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.core.deps import get_current_user, require_role
 from app.models.user import User
-from app.services.cuestionario_service import CuestionarioService
+from app.services.cuestionario_service import CuestionarioService, NoEncontrado
 from app.services.feedback_service import FeedbackService
 from app.schemas.bank import AsignarCuestionarioIn, AsignarGradoIn, EnviarRespuestasIn
 
@@ -32,6 +32,8 @@ async def asignar(
         return CuestionarioService.asignar(
             db, current_user.id, payload.plantilla_id, payload.estudiante_id,
         )
+    except NoEncontrado as e:
+        raise HTTPException(404, str(e))
     except ValueError as e:
         raise HTTPException(400, str(e))
 
