@@ -40,6 +40,16 @@ const filtrados = computed(() => {
   return usuarios.value.filter((u) => u.role === filtroRol.value);
 });
 
+// QA CP022: padres y administradores no aparecían en ninguna de las dos
+// columnas. Se listan aparte, con filtro por rol.
+const ROLES_OTROS = { padre: "Padre", admin: "Administrador" };
+const filtroOtros = ref("");
+const otros = computed(() =>
+  usuarios.value.filter(
+    (u) => u.role in ROLES_OTROS && (!filtroOtros.value || u.role === filtroOtros.value),
+  ),
+);
+
 // Dos columnas (psicólogas | alumnos), 30 por página cada una. Con 232
 // alumnos, una lista única tapaba todo lo demás.
 const POR_PAGINA = 30;
@@ -429,6 +439,41 @@ function nombrePsico(id) {
           </div>
         </section>
       </div>
+
+      <!-- ── Padres y administradores (QA CP022) ───────────────── -->
+      <section class="mt-8" data-testid="otros-usuarios">
+        <div class="flex items-center justify-between mb-3 gap-3">
+          <h2 class="text-lg font-semibold">Padres y administradores</h2>
+          <select
+            v-model="filtroOtros"
+            class="input text-sm"
+            style="width: 200px"
+            aria-label="Filtrar por rol"
+          >
+            <option value="">Todos los roles</option>
+            <option value="padre">Padres</option>
+            <option value="admin">Administradores</option>
+          </select>
+        </div>
+        <p v-if="otros.length === 0" class="card p-4 text-sm text-ink-500">
+          No hay usuarios con ese rol.
+        </p>
+        <div v-else class="grid gap-2">
+          <div
+            v-for="u in otros"
+            :key="u.id"
+            class="card p-3 flex items-center justify-between text-sm"
+          >
+            <div>
+              <p class="font-semibold">{{ u.nombre }} {{ u.apellido }}</p>
+              <p class="text-xs text-ink-500">{{ u.email }}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs bg-cream-100 text-ink-600 border border-cream-200">
+              {{ ROLES_OTROS[u.role] }}
+            </span>
+          </div>
+        </div>
+      </section>
     </template>
 
     <!-- Modal: restablecer contraseña -->
