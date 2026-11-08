@@ -1,6 +1,6 @@
 # QA semana 10 — respuesta a los 29 tickets (Mantis P20261028)
 
-Origen: `QA_Semana10.csv` (export del 2026-11-01). Rama: `fix/qa-semana10`.
+Origen: `QA_Semana10.csv` (export del 2026-11-01). Ramas: `fix/qa-semana10` (sobre `qa`) y `deploy/qa-semana10` (los mismos arreglos sobre `main`, que es lo que corre en producción).
 Regresión automática: `PYTHONPATH=. venv/bin/python tests/test_qa_semana10.py` (18 pasos).
 
 **Alcance de la verificación.** El backend se verificó con el test de arriba. El frontend se verificó
@@ -25,9 +25,9 @@ Leyenda: **C** corregido en la rama · **E** ya existía (ubicación indicada) �
 | 0005921 | CP094 | C | Sin cuestionarios completados el reporte responde **409 «Sin datos suficientes»** y no genera archivo (PDF y Word). La pantalla muestra el motivo. |
 | 0005919 | CP093 | C | El PDF (y el Word) incluyen puntaje por instrumento (p. ej. PHQ-A 15/27), severidad, bandera de crisis y el recuento de señales de las frases por categoría. **No** incluyen el texto libre del alumno. La firma ya se incluía si está cargada. |
 | 0005916 | CP089 | C / N | En «Mis estudiantes» no existía filtro por nivel de riesgo; se agregó, con mensaje «Ningún estudiante coincide con el filtro». No pude reproducir un error en el código existente por lectura. **Si persiste, pasar pasos y captura.** |
-| 0005913 | CP085 | D | Sin psicóloga asignada la solicitud va a la **psicóloga de guardia**: es el criterio de aceptación documentado de HU-30 («la solicitud no se pierde»). Un horario tomado por esa solicitud deja de ofrecerse a los demás alumnos de esa psicóloga, que es correcto (no puede atender dos a la vez). Se agregó un aviso al alumno. **Si el criterio vigente (HU0063/HU0064) es bloquear, hay que decidirlo y cambiar HU-30.** |
+| 0005913 | CP085 | D | Sin psicóloga asignada la solicitud va a la **psicóloga de guardia**: es el criterio de aceptación documentado de HU-30 («la solicitud no se pierde»). Un horario tomado por esa solicitud deja de ofrecerse a los demás alumnos de esa psicóloga, que es correcto (no puede atender dos a la vez). **Si el criterio vigente (HU0063/HU0064) es bloquear, hay que decidirlo y cambiar HU-30.** |
 | 0005909 | CP084 | D | Igual que CP085. |
-| 0005908 | CP083 | D | Igual que CP085. El panel del alumno ya indicaba «Sin psicólogo asignado»; ahora explica a quién llega la solicitud. |
+| 0005908 | CP083 | D | Igual que CP085. El panel del alumno ya indica «Sin psicólogo asignado». **Pendiente de decisión del equipo; no se cambió nada.** |
 | 0005906 | CP073 / CP074 | E / C | CP073: el respaldo manual existe en **Configuración del sistema → Crear respaldo manual**. CP074: la sección «Tareas programadas» era **texto fijo**; ahora muestra el estado real del planificador y la próxima ejecución de cada tarea. Además se corrigió un fallo mayor: el respaldo **no funcionaba con PostgreSQL** (producción) — ver nota 1. |
 | 0005904 | CP071 / CP072 | E | Existe en **Reportes → Encuesta de satisfacción**: número de respuestas, promedio por ítem y estado vacío. Verificado leyendo el código; no ejecutado. |
 | 0005902 | CP070 | E | Existe en **Configuración del sistema → Modelo NLP → Recargar**. |
@@ -37,7 +37,7 @@ Leyenda: **C** corregido en la rama · **E** ya existía (ubicación indicada) �
 | 0005898 | CP064 / CP065 | E | Existe en **Auditoría y logs** (`access_logs`, con filtro por rol y endpoint). |
 | 0005896 | CP063 | C | Se agregó la **auditoría de cambios de configuración** (`configuracion_cambios`: parámetro, antes, después, quién, cuándo), visible bajo los parámetros. |
 | 0005895 | CP061 / CP062 / CP063 | C | Nueva sección **Parámetros generales** en Configuración del sistema: vigencia del código de recuperación, duración de la sesión y retención de respaldos, cada uno con rango; fuera de rango se rechaza (422) y se muestra el error. Solo hay parámetros que el código realmente lee. |
-| 0005890 | CP022 | C | El listado ya se filtraba por rol y es una lista única; faltaba la opción **Padres**, que se agregó. |
+| 0005890 | CP022 | C | **Defecto real en la pantalla desplegada**: el panel de usuarios del admin quedó en dos columnas (psicólogas | alumnos), sin padres ni administradores y sin filtro por rol. Se agregó la sección **Padres y administradores**, con filtro por rol. |
 | 0005889 | CP016 | C | **El tester tenía razón.** En la pestaña *Mi Perfil* del alumno los datos personales eran solo lectura y la única vía para editarlos era el enlace «Cambiar contraseña». Se agregó el botón **Editar mis datos** (en *Información personal* y en *Cuenta*), que lleva al formulario «Datos personales» con su botón Guardar. Mi primera revisión miró otra pantalla (`ProfileView`) y no la pestaña del alumno. |
 | 0005888 | CP013 / CP014 / CP015 | C / A | **El correo nunca se había implementado**: el código se escribía en el log del servidor. Ahora se envía por SMTP y deja de registrarse. **Acción del equipo:** cargar `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` como app settings. Sin ellos el sistema no envía y lo avisa en el log. CP014 y CP015 se podrán ejecutar cuando llegue el correo. |
 | 0005885 | CP012 | C | La sesión vencida se detecta en el cliente (al navegar y cada 30 s) y devuelve al login con el aviso «Tu sesión expiró». El 401 de la API también lleva al login. **El ticket está cortado en la descripción**; si faltaba otro detalle, indicarlo. |
