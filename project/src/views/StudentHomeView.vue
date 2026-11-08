@@ -1104,6 +1104,16 @@ const recursosPorTipo = (categoria) => {
               <div class="al-info-cell__val">{{ fmtFecha(user?.created_at) }}</div>
             </div>
           </div>
+          <!-- QA CP016: editar nombre y apellido tiene su propio acceso; antes solo se
+               llegaba por el enlace «Cambiar contraseña». -->
+          <button
+            class="al-btn-ghost al-btn-full"
+            style="margin-top: 14px"
+            data-testid="editar-datos"
+            @click="router.push('/perfil')"
+          >
+            Editar mis datos
+          </button>
         </div>
 
         <div class="al-card">
@@ -1157,6 +1167,10 @@ const recursosPorTipo = (categoria) => {
         <div class="al-card">
           <div class="al-side-title">Cuenta</div>
           <a class="al-account-link" href="#" @click.prevent="router.push('/perfil')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c8b90" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Editar mis datos
+          </a>
+                    <a class="al-account-link" href="#" @click.prevent="router.push('/perfil')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c8b90" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             Cambiar contraseña
           </a>

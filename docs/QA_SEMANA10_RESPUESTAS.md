@@ -8,7 +8,7 @@ compilando (`vite build`); **las pantallas no se probaron en un navegador**. Nad
 desplegado: los tickets pasan a «corregido en rama» y se cierran cuando se despliegue y QA los reverifique.
 
 Leyenda: **C** corregido en la rama · **E** ya existía (ubicación indicada) · **D** diseño documentado ·
-**A** requiere una acción del equipo · **N** no reproducible con el código actual.
+**A** requiere una acción del equipo · **N** no reproducible con el código actual (ninguno ya).
 
 | Mantis | CP | Estado | Respuesta |
 |---|---|---|---|
@@ -38,7 +38,7 @@ Leyenda: **C** corregido en la rama · **E** ya existía (ubicación indicada) �
 | 0005896 | CP063 | C | Se agregó la **auditoría de cambios de configuración** (`configuracion_cambios`: parámetro, antes, después, quién, cuándo), visible bajo los parámetros. |
 | 0005895 | CP061 / CP062 / CP063 | C | Nueva sección **Parámetros generales** en Configuración del sistema: vigencia del código de recuperación, duración de la sesión y retención de respaldos, cada uno con rango; fuera de rango se rechaza (422) y se muestra el error. Solo hay parámetros que el código realmente lee. |
 | 0005890 | CP022 | C | El listado ya se filtraba por rol y es una lista única; faltaba la opción **Padres**, que se agregó. |
-| 0005889 | CP016 | N | «Tus datos» (nombre, apellido, botón **Guardar**) y «Cambiar contraseña» son formularios **separados** en ambos diseños de la pantalla de Perfil, sin cambios desde el 2026-09-16. **Pedir captura y rol del usuario** con el que se probó. |
+| 0005889 | CP016 | C | **El tester tenía razón.** En la pestaña *Mi Perfil* del alumno los datos personales eran solo lectura y la única vía para editarlos era el enlace «Cambiar contraseña». Se agregó el botón **Editar mis datos** (en *Información personal* y en *Cuenta*), que lleva al formulario «Datos personales» con su botón Guardar. Mi primera revisión miró otra pantalla (`ProfileView`) y no la pestaña del alumno. |
 | 0005888 | CP013 / CP014 / CP015 | C / A | **El correo nunca se había implementado**: el código se escribía en el log del servidor. Ahora se envía por SMTP y deja de registrarse. **Acción del equipo:** cargar `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` como app settings. Sin ellos el sistema no envía y lo avisa en el log. CP014 y CP015 se podrán ejecutar cuando llegue el correo. |
 | 0005885 | CP012 | C | La sesión vencida se detecta en el cliente (al navegar y cada 30 s) y devuelve al login con el aviso «Tu sesión expiró». El 401 de la API también lleva al login. **El ticket está cortado en la descripción**; si faltaba otro detalle, indicarlo. |
 
